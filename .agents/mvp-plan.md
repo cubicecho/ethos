@@ -31,7 +31,7 @@ is genuinely new here is the domain: periods, cadences and streaks.
 | Email | None. The magic link is logged to the server console and returned in the API response when exposure is enabled |
 | Plan doc | `.agents/mvp-plan.md`, not the repo root — house rule |
 | Commits | Conventional Commits. **No `Co-Authored-By` trailers** |
-| Ports | **3006** server, **3007** Expo dev, Postgres on **5438** — telos owns 3001/3000/5435, eunomia 4000/5433 |
+| Ports | **3006** API, **3000** Expo dev (the port you open), Postgres on **5438** — telos owns 3001/3000/5435, eunomia 4000/5433 |
 
 ## Architecture
 
@@ -237,7 +237,7 @@ npm run db:migrate
 npm run codegen
 npm run check          # codegen + biome + tsc --noEmit
 npm test
-npm run dev            # server 3006, expo 3007
+npm run dev            # API 3006, app on http://localhost:3000
 ```
 
 Then in the browser: sign in at `/login` → create a daily habit → tick today and watch

@@ -137,28 +137,34 @@ cp .env.example .env
 sed -i "s/^JWT_SECRET=.*/JWT_SECRET=$(openssl rand -hex 32)/" .env
 
 npm install
-npm run db:up          # Postgres on 127.0.0.1:5438
+npm run db:up          # Postgres in Docker, and it prints the DATABASE_URL to use
 npm run db:migrate
 npm run codegen
-npm run dev            # API on 3006, Expo dev server on 3007
+npm run dev            # API on 3006, app on http://localhost:3000
 ```
 
 `npm run check` runs codegen, Biome and `tsc --noEmit` across all three
 workspaces; `npm test` runs the suite against an in-memory Postgres. See
 [AGENTS.md](AGENTS.md) for how the pieces fit together.
 
-If the server starts with `Cannot reach Postgres`, check whether your Docker
-daemon is this machine:
+### When the Docker daemon is another machine
 
-```bash
-docker context ls
+`docker context ls` showing a remote endpoint (`ssh://docker.lan`, `tcp://…`)
+means the database container runs over there. `npm run db:up` handles the half
+of that it can: it publishes Postgres on `0.0.0.0` rather than the daemon host's
+own loopback, waits for the healthcheck, and prints the connection string to
+put in `.env`:
+
+```
+Docker daemon is docker.lan, not this machine — publishing Postgres on 0.0.0.0:5438 so you can reach it.
+⚠️  .env points DATABASE_URL at 127.0.0.1, but the database is on docker.lan. Set:
+      DATABASE_URL=postgres://ethos:ethos@docker.lan:5438/ethos
 ```
 
-A remote endpoint (`ssh://…`, `tcp://…`) means `npm run db:up` published the
-database on *that* host's `127.0.0.1`, where nothing else can reach it. Set
-`POSTGRES_BIND=0.0.0.0` in `.env`, point `DATABASE_URL` at the daemon's
-hostname, and re-run `npm run db:up`. Only on a network you trust — the dev
-database has a throwaway password and no TLS.
+Do that on a network you trust — the dev database has a throwaway password and
+no TLS. Everything else runs here: the API on 3006, the app on 3000, both
+talking to that Postgres. If the server still says `Cannot reach Postgres`, the
+hostname in `DATABASE_URL` is the thing to check first.
 
 ### Building the image
 

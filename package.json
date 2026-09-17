@@ -34,7 +34,7 @@
     "db:migrate": "npm run migrate -w @ethos/db",
     "db:push": "npm run push -w @ethos/db",
     "db:studio": "npm run studio -w @ethos/db",
-    "db:up": "docker compose -f docker-compose.dev.yml up -d",
+    "db:up": "node scripts/db-up.mjs",
     "db:down": "docker compose -f docker-compose.dev.yml down"
   },
   "overrides": {

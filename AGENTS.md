@@ -75,8 +75,8 @@ ethos/
 ## Commands
 
 ```bash
-npm run dev              # server (3006) + Expo dev server (3007)
-npm run db:up            # Postgres on ${POSTGRES_BIND:-127.0.0.1}:5438
+npm run dev              # API (3006) + app on http://localhost:3000
+npm run db:up            # Postgres in Docker, bind and host following the active context
 npm run db:generate      # new migration from a schema change
 npm run db:migrate       # apply migrations
 npm run codegen          # GraphQL types for both server and app
@@ -214,6 +214,19 @@ and is a generated `updateHabit`; nothing deletes history on the user's behalf,
 because having kept it is most of the point. `markHabit` refuses an archived
 habit — silently accepting the day would make the archive a place where history
 keeps changing.
+
+**The dev database follows the Docker context, and TLS follows the hostname.**
+`npm run db:up` is `scripts/db-up.mjs` rather than a bare `docker compose up`
+because a remote daemon breaks two defaults at once: publishing on `127.0.0.1`
+binds the *daemon host's* loopback, and a `DATABASE_URL` naming `127.0.0.1`
+names a machine with no Postgres on it. The script reads the active context,
+binds accordingly, and prints the connection string instead of rewriting `.env`
+behind you. The other half is `db/src/ssl.ts`: demanding TLS from a plaintext
+Postgres does not degrade, it resets the connection, so "is this address
+private" has to be answered from the parsed hostname — loopback, RFC1918,
+unique-local, a dotless service name, and the private-use suffixes (`.lan`,
+`.local`, `.internal`, `.home.arpa`) all being answers of "yes". A dot in a
+hostname says nothing about reach.
 
 **Report `NOT_FOUND`, never `FORBIDDEN`.** "You may not touch this" confirms the
 row exists, which is itself something the caller is not entitled to know.

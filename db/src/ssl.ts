@@ -1,4 +1,20 @@
 /**
+ * Domain suffixes reserved for, or conventionally used on, private networks.
+ * `.local` is mDNS, `.home.arpa` is the RFC 8375 name for a home network, and
+ * the rest are what routers and Docker hosts are actually called.
+ */
+const PRIVATE_SUFFIXES = [
+  '.lan',
+  '.local',
+  '.localdomain',
+  '.home',
+  '.home.arpa',
+  '.internal',
+  '.intranet',
+  '.private',
+];
+
+/**
  * Whether to insist on TLS for a connection string.
  *
  * Read from the parsed hostname, never the raw string: a URL carrying
@@ -25,6 +41,11 @@ export function requiresSsl(url: string): boolean {
   if (hostname === 'localhost' || hostname.endsWith('.localhost')) return false;
   // A name with no dots is a container or LAN hostname, not a public address.
   if (!hostname.includes('.') && !hostname.includes(':')) return false;
+  // Nor is a name under a private-use suffix. `docker.lan`, `nas.local` and
+  // `db.internal` are resolved by the router or by mDNS and cannot route off the
+  // network you are standing on — the dot in them says nothing about reach, and
+  // the Postgres behind one is as plaintext as the container next door.
+  if (PRIVATE_SUFFIXES.some((suffix) => hostname.endsWith(suffix))) return false;
 
   const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
   if (ipv4) {
