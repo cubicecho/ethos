@@ -1,0 +1,30 @@
+# Just the database, for running the app from source. `npm run db:up`.
+#
+# Its own project name, so it never collides with the containers
+# docker-compose.yml creates — both files define a service called `postgres`.
+name: ethos-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ethos
+      POSTGRES_PASSWORD: ethos
+      POSTGRES_DB: ethos
+    ports:
+      # Loopback by default: an unencrypted Postgres with a throwaway password
+      # has no business on a network. Override POSTGRES_BIND to 0.0.0.0 when the
+      # Docker daemon is not this machine (`docker context ls` shows a remote
+      # endpoint) — the loopback it binds is the daemon host's, not yours.
+      - "${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-5438}:5432"
+    volumes:
+      - ethos_dev_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ethos -d ethos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ethos_dev_pgdata:

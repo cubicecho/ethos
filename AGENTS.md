@@ -1,0 +1,334 @@
+# AGENTS.md — Ethos
+
+## Project Overview
+
+Ethos is a self-hostable habit tracker. It is *just* habits: a habit has a name,
+a colour and a cadence, and every day you keep it is one row. Everything else —
+the grid, the streak, the completion rate — is counted off those rows. One
+monorepo (npm workspaces) with three packages — `app/` (frontend), `server/`
+(GraphQL API), `db/` (schema and connection) — and one container serves all of it.
+
+## Tech Stack
+
+| Layer    | Technology                                               |
+| -------- | -------------------------------------------------------- |
+| Frontend | React 19, Expo Router (web target), Apollo Client        |
+| UI       | Tailwind CSS via NativeWind, shadcn/ui, Radix UI         |
+| API      | Apollo Server 5 on Express 5, GraphQL                    |
+| Database | Drizzle ORM + PostgreSQL (`postgres-js`)                 |
+| Testing  | Vitest, PGlite as an in-memory Postgres fixture          |
+| Linting  | Biome (formatter + linter)                               |
+| Runtime  | Node.js 24+, ESM (`"type": "module"` throughout)         |
+
+## Project Structure
+
+```
+ethos/
+├── app/                     # Frontend (Expo Router, web target)
+│   ├── app/                 # File-based routes — the router reads THIS directory
+│   │   ├── _layout.tsx      # Root layout (ApolloProvider + Stack)
+│   │   ├── login.tsx        # Unauthenticated routes live at the top level
+│   │   ├── auth/verify.tsx  # Magic-link landing page
+│   │   └── (app)/           # Authenticated group (redirects to /login)
+│   │       ├── index.tsx    # Today — every habit, and today's square
+│   │       ├── habits/[id].tsx     # One habit: its history and its grid
+│   │       ├── archive.tsx         # Archived habits, read-only
+│   │       └── settings/index.tsx  # Theme + account
+│   ├── src/
+│   │   ├── __generated__/   # Generated GraphQL types (do not edit, not committed)
+│   │   ├── components/
+│   │   │   ├── ui/          # shadcn/ui primitives — no app logic
+│   │   │   ├── domain/      # habit/, settings/
+│   │   │   └── layouts/     # sidebar
+│   │   └── lib/             # apollo, auth, theme, cache writers, periods, cadence, graphql documents, cn()
+│   ├── public/index.html    # HTML shell; applies the theme before first paint
+│   ├── app.json             # Expo config
+│   ├── metro.config.js
+│   └── tailwind.config.js
+├── server/                  # GraphQL API (port 3006)
+│   ├── __generated__/       # Generated SDL + resolver types (not committed)
+│   └── src/
+│       ├── index.ts         # Entry point: migrate, mount /graphql, serve the SPA
+│       ├── preflight.ts     # Boot guards — imported first, on purpose
+│       ├── build-schema.ts  # createSchema(db) — buildSchema + extensions
+│       ├── schema.ts        # Binds createSchema to the real database
+│       ├── tenancy.ts       # Row scope + server-owned columns, as buildSchema config
+│       ├── periods.ts       # Where the period boundaries are drawn
+│       ├── streaks.ts       # What a run of kept days is worth
+│       ├── cadence.ts       # What a period can be asked for
+│       ├── loaders.ts       # Per-request DataLoaders
+│       ├── resolvers/       # SDL extensions for what CRUD cannot express
+│       └── __tests__/       # Server tests
+├── db/
+│   ├── drizzle/             # Generated migrations (committed)
+│   └── src/
+│       ├── models/          # One file per table — the actual definitions
+│       ├── schema.ts        # Barrel re-exporting models/
+│       ├── relations.ts     # defineRelations config (drives the GraphQL schema)
+│       └── index.ts         # DB singleton + re-exports
+├── .agents/mvp-plan.md      # The plan this repo was built from
+├── vitest.config.ts
+├── biome.json
+└── package.json
+```
+
+## Commands
+
+```bash
+npm run dev              # server (3006) + Expo dev server (3007)
+npm run db:up            # Postgres on ${POSTGRES_BIND:-127.0.0.1}:5438
+npm run db:generate      # new migration from a schema change
+npm run db:migrate       # apply migrations
+npm run codegen          # GraphQL types for both server and app
+npm run check            # codegen + biome + tsc --noEmit, all three workspaces
+npm test                 # Vitest
+```
+
+`npm run check` is the gate. Run it before saying a change is done.
+
+## How the API is built
+
+**The GraphQL schema is generated from the Drizzle schema.** There are no
+hand-written CRUD resolvers: `buildSchema(db, config)` from
+`@vantreeseba/drizzle-graphql` produces queries, mutations, filters, aggregates
+and relation fields for every table in `db/src/relations.ts`. Adding a column is
+all it takes to expose it.
+
+Three consequences worth internalising:
+
+- **`relations.ts`, not `schema.ts`, is what the library reads.** A table with no
+  entry there gets no relation fields.
+- **Only what CRUD cannot express gets a resolver.** Those live in
+  `server/src/resolvers/` and are applied by `build-schema.ts` in order.
+- **Generated names say their arity.** `typeNameMapper: 'singularize'` maps the
+  plural table key onto a singular type, and the noun is what tells the two
+  forms of an operation apart: `habits` / `habit` for reads, `createHabits` /
+  `createHabit`, `updateHabits` / `updateHabit`, `deleteHabits` / `deleteHabit`
+  for writes. The plural form filters and returns a list; the singular takes a
+  required `where` and returns one row or null. `deleteHabit(where: …)` deletes
+  one row — reach for `deleteHabits` when you mean every match.
+
+**`drizzle-orm` is a root `dependency`, and it has to stay one.** The library
+tells a column's type apart with `instanceof PgUUID` / `instanceof PgDate`, so a
+second copy of drizzle-orm nested under a workspace makes every one of those
+checks fail — silently, by degrading `UUID!` and `DateTime!` in the generated SDL
+to `String!` and `JSON!`. Hoisting it to the root is what keeps there being one
+copy. It is a `dependency` rather than a `devDependency` because the Dockerfile's
+runtime stage installs with `--omit=dev --include-workspace-root`, and a dev-only
+entry there would put the nested copy back in production. The `overrides` block
+pins the same version for anything that asks for its own.
+
+## Rules that carry weight
+
+**Every table needs a `scope` entry.** `server/src/tenancy.ts` maps each table to
+a `RowScope` that is ANDed into the SQL of every generated read, update and
+delete. A table missing from `scope` is visible across tenants, and nothing else
+in the code will say so. `tenancy.test.ts` fails when you forget — do not delete
+the test to make it pass.
+
+**`scope` cannot reach a plain insert.** Any foreign key a caller can state gets
+checked in an `onWrite` hook in `server/src/resolvers/write-guards.ts`. A new
+table with a user-facing FK needs an entry in `FOREIGN_KEYS`.
+
+**The day is the key.** A day is a `YYYY-MM-DD` label the keeper wrote, not an
+instant. `habit_entries.day` is a `date` stored as the string the client sent —
+nothing converts it on the way in or the way out, because a habit kept at 11pm on
+Tuesday is a Tuesday in the keeper's own zone and no server in another one gets
+to reinterpret it. `uq_habit_entries_day` makes one day one row, and `markHabit`
+upserts onto that constraint rather than reading first and writing after, so a
+double-click, two open tabs and a retried request are all the same tick.
+
+**A skip is not a miss, and there are two of them.** A day you deliberately
+declined comes off what the period asked for; an untouched day is the miss. That
+is right — an instance you declined was never owed — and is exactly why it is
+capped at `MAX_SKIPS_PER_PERIOD` in `server/src/streaks.ts`: a habit that can be
+skipped without limit has no completion rate left to read, because every period
+can be skipped down to owing nothing and reported as kept. The cap is counted
+over the period's *other* days, so a period at the cap can still change its mind
+about which days it declined.
+
+**A streak counts periods, not days, and the period in progress cannot break
+one.** "3× a week" is kept or not kept by the week; counting consecutive days
+would break that habit's streak every Tuesday, which is the app calling a success
+a failure. A week with one of three done is not a failed week, it is Tuesday — it
+joins the streak once it is met and is stepped over otherwise, but only for the
+period containing today. Any earlier period is finished, and a finished period
+that fell short is where the streak ends. All three rules live in
+`server/src/streaks.ts`, which is pure and has no database in its tests; anything
+the app reports about a habit is one of them applied.
+
+**Recording a day has no generated mutations.** `features` in `tenancy.ts` turns
+off insert/update/delete for `habitEntries` so every day goes through `markHabit`
+and `clearHabit`, which is where the day key and the skip cap live. A generated
+insert would write a second row for a day that already has one, or a fifty-first
+skip in a week, and every rate and streak in the app is counted off those rows.
+
+**A cadence has to fit its period.** The database refuses what is true of every
+row that will ever exist — `target_count > 0`, and a daily habit asking for more
+than one. The ceiling is not: February holds 28 days, so "20× a month" is real
+and "40× a month" is one no month could satisfy. `assertTargetsFitPeriods` in
+`server/src/cadence.ts` checks it in an `after` hook over the caller's rows,
+deliberately not a `before` hook over the arguments: a write that changes only
+`period` — month to week, target left where it was — is exactly the one a check
+reading the arguments would wave through. The ceiling is measured against the
+*shortest* instance of a period, because a cadence that works in August and fails
+in February is a habit that breaks once a year for reasons nobody wrote down.
+
+**Periods are ISO weeks, and all the arithmetic is UTC.** `server/src/periods.ts`
+never constructs a local `Date`: `new Date('2026-09-17')` is UTC midnight, which
+is the sixteenth for most of the Americas, so every calculation goes through
+`Date.UTC` where the offset is zero by construction. Weeks start on Monday, which
+is what the rest of the world writes and what puts a weekend at one end of a row
+instead of splitting it across two.
+
+**`app/src/lib/periods.ts` is a deliberate copy of `server/src/periods.ts`.** The
+grid draws the periods the streak is counted over, so if the two disagree the app
+shows a streak nobody can reproduce by counting squares. They are separate
+packages — the app is bundled by Metro and must not pull the server's Drizzle
+imports into a browser — so the rule is kept by the files being twins rather than
+by an import. Change one, change both; the two `periods.test.ts` suites assert
+the same boundaries on either side. `app/src/lib/cadence.ts` mirrors
+`server/src/cadence.ts` the same way, and for the same reason: the form refuses
+an impossible target while it is still being typed, but the server's copy is the
+one that decides.
+
+**The client sends its own `today`.** Every field whose answer depends on which
+period is the current one — `streak`, `longestStreak`, `history`, `current` —
+takes a `today` argument, and `useToday()` in `app/src/lib/use-today.ts` is where
+it comes from. A server in Berlin has no business telling someone in Auckland
+that their Monday has not started. The server's own UTC day is a fallback and
+nothing more. `today` is also part of every cache key on the client, which is why
+the hook re-checks the clock on an interval and on `focus` — a tab left open over
+midnight would otherwise keep yesterday's grid.
+
+**A derived field loads the cadence rather than reading it off the parent.** The
+generated resolvers select the columns the client asked for, so a query for
+`{ streak }` with no `period` alongside it hands the field resolver a row with no
+cadence on it — and `periodOf(undefined, day)` does not fail, it silently answers
+with a month. `loaders.cadence` in `server/src/loaders.ts` is where the derived
+fields get `period` and `targetCount`, so what a streak means never depends on
+what else the caller happened to select.
+
+**An archived habit is a record, not a practice.** Archiving sets `archivedAt`
+and is a generated `updateHabit`; nothing deletes history on the user's behalf,
+because having kept it is most of the point. `markHabit` refuses an archived
+habit — silently accepting the day would make the archive a place where history
+keeps changing.
+
+**Report `NOT_FOUND`, never `FORBIDDEN`.** "You may not touch this" confirms the
+row exists, which is itself something the caller is not entitled to know.
+
+**`UNAUTHENTICATED` means the session expired.** The client drops its token on it
+and redirects to `/login`. A bad magic link is `BAD_USER_INPUT` — it must not
+sign anyone out.
+
+**The palette is the other cubicecho apps'.** `app/global.css` carries the same
+tokens their `index.css` does — the neutral shadcn set, one done colour, a
+`--sidebar` group and `--radius: 0.625rem`. They are on Tailwind v4 and write it
+in oklch; NativeWind pins this app to v3, whose colour plumbing is
+`hsl(var(--token))`, so the identical colours are written here as HSL triples.
+Same values, different notation. The two exceptions are `--border` and `--input`
+in dark, which are white at 10% and 15% there and are composited over the
+background here, because these tokens carry no alpha channel.
+
+**The theme is applied twice, on purpose.** `app/public/index.html` sets `.dark`
+on `<html>` before the bundle loads so there is no white flash, and
+`src/lib/theme.ts` maintains it afterwards. The storage key `ethos_theme` and the
+class rule are written out in both places — the script runs before any module
+exists — so a change to one is a change to both. That HTML file is also Expo's
+own template with a script added: `app/+html.tsx` is the documented place for
+this and does nothing under `web.output: "single"`.
+
+**A write returns the habit, not the row it wrote.** `markHabit` and `clearHabit`
+write a `habit_entries` row and return the `Habit`, because the habit is what the
+screen reads — its `streak`, its `current`, its `history`. Apollo normalizes by
+id, so one full selection settles every list and screen already holding that
+habit and nothing has to refetch to find out what the write did. The catch is
+that a field's *arguments* are part of the key it is cached under: `history` and
+`entries` carry literal bounds in `HabitHistoryFields` rather than variables, so
+the query that fills the cache and the mutation that updates it land on the same
+key by construction. A selection that omits a field the query reads leaves that
+field stale, so widen the fragment rather than the document.
+
+**Nothing marks a day optimistically.** Every other write in the app edits the
+cache before the request leaves; a tick does not, because what it changes is the
+streak, and answering that on the client would mean reimplementing
+`server/src/streaks.ts` in the browser and keeping the two in step. The controls
+disable while the mutation is in flight instead. A create is still optimistic —
+what a new habit's fields are is not in question.
+
+**An empty state means the server said "none", never that we failed to ask.**
+Every `useQuery` destructures `error` and renders `ui/load-failure.tsx` in place
+of its empty state while it has nothing else to show. The ordering is the rule:
+the failure branch comes *before* the empty one, and both come after "we have
+rows, show them", so a refetch that fails while good data is on screen leaves the
+good data alone. Mutations follow the same rule from the other side — every one
+is awaited inside a `run()` that catches, because a rejected mutation with no
+`catch` is a click that did nothing and said nothing. All of it goes through
+`describeError()` in `src/lib/errors.ts` so the app has one vocabulary for going
+wrong; a raw `error.message` in a JSX tree is a call site that got missed.
+`app/_layout.tsx` exports an `ErrorBoundary` for what escapes all of that, and
+there is deliberately no toast system.
+
+**A relation list is replaced, never merged.** The `typePolicies` in
+`src/lib/apollo.ts` mark every relation list — `Habit.entries`, `Habit.history`,
+`User.habits`, `User.habitEntries` — `merge: false`. Apollo's default is to
+overwrite and warn that data may be lost, because it cannot tell a whole list
+from one page of it; here it is always the whole list, so a shorter array is the
+answer rather than a partial view of it. Clearing the last day really does leave
+`entries` empty, and merging would keep a day the habit no longer has. A new
+relation list read anywhere in the app belongs in that map.
+
+**Creates carry a client-generated id.** `newId()` in `src/lib/ids.ts` mints the
+UUID, the create mutation sends it in `values`, and Postgres keeps it. That is
+what lets a new row be written to the cache before the request leaves: the
+optimistic entry and the server's are the same normalized object, so nothing
+remounts and a tick applied in between names an id the server will recognise.
+The list fragments in `src/lib/graphql.ts` exist for the same reason — a create
+returns exactly what its list stores, so the cache never holds a half-written
+entity. A field added to a list is a field the create must return, which sharing
+the fragment makes automatic. `newId()` does not assume `crypto.randomUUID`: it
+is secure-context-only and Ethos runs on plain http.
+
+**A square is told apart by shape as well as by colour.** The fill of a kept day
+is the habit's own colour, so kept, skipped and untouched are also a fill, a
+dashed outline and a plain one — a reader who cannot tell two colours apart would
+otherwise have no way back. Today is *outlined* rather than filled, so "today"
+and "kept" are readable at once. Every square carries its day and its state in
+its label, which is what a screen reader reads and what the pointer shows on
+hover.
+
+**Text on a user-chosen colour picks its own ink.** A habit's colour comes out of
+the database, so no Tailwind variant and no theme token can be trusted to read on
+it — `readableTextColor()` in `src/lib/readable-text-color.ts` compares the two
+WCAG contrast ratios and returns absolute black or white. Absolute, not
+`--foreground`: the backdrop is the user's colour and does not flip with the
+theme, so the ink must not either. It returns `undefined` for anything it cannot
+parse, which leaves the inherited colour in place rather than painting black onto
+a value it failed to read.
+
+## Code style
+
+- Biome, single quotes, 2-space indent, 120 columns, trailing commas. `npm run check:fix`.
+- `server/` and `db/` run under `--experimental-strip-types` with no build step,
+  so **relative imports there carry an explicit `.ts` extension**. `app/` is
+  bundled by Metro and omits it.
+- **Never add `--preserve-symlinks`.** It resolves `@ethos/db` to its path inside
+  `node_modules`, and Node refuses to strip types from anything under there.
+- The app writes DOM elements and Tailwind classes, not React Native primitives.
+  `react-native` is imported only for `Platform`.
+- `import './preflight.ts';` stays first in `server/src/index.ts`, separated by a
+  blank line so Biome's import sorting leaves it there. It has to run before
+  `@ethos/db` is imported.
+- Comments explain *why*. The code already says what.
+
+## Generated output
+
+`server/__generated__/`, `app/src/__generated__/` and `.env` are never committed.
+Run `npm run codegen` after any schema change; CI regenerates from scratch.
+
+## Git conventions
+
+- Conventional Commits (`feat:`, `fix:`, `chore:`, …). semantic-release reads them.
+- **Do not add `Co-Authored-By` trailers.**
+- Never commit `.env`, generated code, or `node_modules`.

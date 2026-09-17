@@ -1,0 +1,45 @@
+# The deployment: the app and its database. `docker compose up --build`.
+name: ethos
+
+services:
+  ethos:
+    image: vantreeseba/ethos:latest
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Required — generate with: openssl rand -hex 32
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required — generate one with `openssl rand -hex 32`}
+      DATABASE_URL: postgres://ethos:${POSTGRES_PASSWORD:-ethos}@postgres:5432/ethos
+      APP_URL: ${APP_URL:-http://localhost:3006}
+      # Leave magic links on unless this instance is private and has no mail
+      # relay. See "Before you expose it" in the README.
+      AUTH_MAGIC_LINK: ${AUTH_MAGIC_LINK:-true}
+      EXPOSE_MAGIC_LINK: ${EXPOSE_MAGIC_LINK:-false}
+      NODE_ENV: production
+      PORT: 3006
+    ports:
+      - "${PORT:-3006}:3006"
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ethos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ethos}
+      POSTGRES_DB: ethos
+    # Bound to loopback: the database is for the app next to it, not the network.
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5438}:5432"
+    volumes:
+      - ethos_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ethos -d ethos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ethos_pgdata:
