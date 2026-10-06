@@ -1,4 +1,6 @@
-import { Check } from 'lucide-react';
+import { Text, View } from 'react-native';
+import { Check } from '@/components/ui/icons';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { HISTORY_PERIODS } from '@/lib/graphql';
 import { daysOf, type Period, periodLabel, recentPeriods, weekdayInitial } from '@/lib/periods';
 import { cn } from '@/lib/utils';
@@ -70,52 +72,53 @@ export function HabitGrid({
   const weekdays = period === 'month' ? null : rows[0]?.days;
 
   return (
-    <div className="flex flex-col gap-1">
-      {weekdays ? (
-        <div className="flex items-center gap-1 pl-20" aria-hidden>
-          {/* Keyed by the day rather than the initial: two of the seven repeat
-              (T, T and S, S), and the day underneath each column does not. */}
-          {weekdays.map((day) => (
-            <span key={day} className="w-5 text-center text-[10px] text-muted-foreground">
-              {weekdayInitial(day)}
-            </span>
-          ))}
-        </div>
-      ) : null}
-
-      {rows.map((row) => (
-        <div key={row.key} className="flex items-center gap-1">
-          <span className="w-20 shrink-0 truncate pr-2 text-right text-muted-foreground text-xs">{row.label}</span>
-          <div className="flex flex-wrap items-center gap-1">
-            {row.days.map((day) => (
-              <DaySquare
-                key={day}
-                day={day}
-                status={status.get(day) ?? null}
-                color={habit.color}
-                today={day === today}
-                future={day > today}
-                disabled={pending}
-                onSet={onSet}
-              />
+    // One provider for every square: a tooltip opened right after another one
+    // closes skips its delay, which is what makes sweeping along a row readable.
+    <TooltipProvider>
+      <View className="gap-1">
+        {weekdays ? (
+          <View className="flex-row items-center gap-1 pl-20" aria-hidden>
+            {/* Keyed by the day rather than the initial: two of the seven repeat
+                (T, T and S, S), and the day underneath each column does not. */}
+            {weekdays.map((day) => (
+              <Text key={day} className="w-5 text-center text-[10px] text-foreground/60">
+                {weekdayInitial(day)}
+              </Text>
             ))}
-          </div>
-          {row.tally ? (
-            <span
-              className={cn(
-                'ml-2 flex shrink-0 items-center gap-1 tabular-nums text-xs',
-                row.tally.met ? 'text-foreground' : 'text-muted-foreground',
-              )}
-            >
-              {row.tally.done}/{row.tally.effectiveTarget}
-              {/* The tick marks a period kept, including one skipped down to
-                  nothing owed — which is why it follows `met` rather than
-                  comparing the two numbers beside it. */}
-              {row.tally.met ? <Check className="h-3 w-3" /> : null}
-            </span>
-          ) : null}
-        </div>
-      ))}
-    </div>
+          </View>
+        ) : null}
+
+        {rows.map((row) => (
+          <View key={row.key} className="flex-row items-center gap-1">
+            <Text className="w-20 shrink-0 truncate pr-2 text-right text-foreground/60 text-xs">{row.label}</Text>
+            <View className="shrink flex-row flex-wrap items-center gap-1">
+              {row.days.map((day) => (
+                <DaySquare
+                  key={day}
+                  day={day}
+                  status={status.get(day) ?? null}
+                  color={habit.color}
+                  today={day === today}
+                  future={day > today}
+                  disabled={pending}
+                  onSet={onSet}
+                />
+              ))}
+            </View>
+            {row.tally ? (
+              <View className="ml-2 shrink-0 flex-row items-center gap-1">
+                <Text className={cn('text-xs tabular-nums', row.tally.met ? 'text-foreground' : 'text-foreground/60')}>
+                  {row.tally.done}/{row.tally.effectiveTarget}
+                </Text>
+                {/* The tick marks a period kept, including one skipped down to
+                    nothing owed — which is why it follows `met` rather than
+                    comparing the two numbers beside it. */}
+                {row.tally.met ? <Check className="h-3 w-3 text-foreground" /> : null}
+              </View>
+            ) : null}
+          </View>
+        ))}
+      </View>
+    </TooltipProvider>
   );
 }

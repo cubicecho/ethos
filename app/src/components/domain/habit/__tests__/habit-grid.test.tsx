@@ -158,7 +158,10 @@ describe('the squares themselves', () => {
   });
 
   it('stops taking clicks while a mark is in flight', async () => {
-    const user = userEvent.setup();
+    // A disabled Pressable is `pointer-events: none` on the web, which
+    // user-event refuses to click at all. Skip that check so the click lands
+    // and the assertion is about the handler, not about the stylesheet.
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const { onSet } = renderGrid({ pending: true });
     await user.click(square(TODAY));
     expect(onSet).not.toHaveBeenCalled();

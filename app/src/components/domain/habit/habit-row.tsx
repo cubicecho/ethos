@@ -1,6 +1,10 @@
-import { Link } from 'expo-router';
-import { Check, Flame, SkipForward } from 'lucide-react';
+import { useRouter } from 'expo-router';
+import { Text, View } from 'react-native';
+import { ActionButton } from '@/components/action-button';
+import { Flame, SkipForward } from '@/components/app-icons';
+import { ListItem } from '@/components/list-item';
 import { Badge } from '@/components/ui/badge';
+import { Check } from '@/components/ui/icons';
 import { describeCadence, describeProgress } from '@/lib/cadence';
 import type { Period } from '@/lib/periods';
 import { readableTextColor } from '@/lib/readable-text-color';
@@ -15,80 +19,78 @@ import { useMarkHabit } from './use-mark-habit';
  * The two controls are separate rather than a cycle — the grid cycles, because a
  * square has no room for two buttons — since the common action by far is
  * keeping the habit, and it should not be one click away from being undone by
- * the same button that did it.
+ * the same button that did it. Both sit outside the part of the row that opens
+ * the habit, which is what `ListItem`'s leading and action slots are for.
  */
 export function HabitRow({ habit, today }: { habit: HabitSummary; today: string }) {
+  const router = useRouter();
   const { setDay, pending, error } = useMarkHabit(today);
   const status = asStatus(habit.todayEntry[0]?.status);
   const period = habit.period as Period;
-  const ink = readableTextColor(habit.color);
+  const done = status === 'done';
+  const skipped = status === 'skipped';
 
   const toggle = (next: 'done' | 'skipped') => setDay(habit.id, today, status === next ? null : next);
 
   return (
-    <li className="flex flex-col gap-1 rounded-lg border bg-card p-3">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          aria-label={status === 'done' ? `Undo ${habit.name} for today` : `Mark ${habit.name} kept today`}
-          aria-pressed={status === 'done'}
-          disabled={pending}
-          onClick={() => toggle('done')}
-          className={cn(
-            'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 transition-colors disabled:opacity-60',
-            status === 'done' ? 'border-transparent' : 'border-border text-transparent hover:border-ring',
-          )}
-          style={status === 'done' ? { backgroundColor: habit.color, color: ink } : undefined}
-        >
-          <Check className="h-5 w-5" />
-        </button>
-
-        <div className="min-w-0 flex-1">
-          <Link
-            href={`/habits/${habit.id}`}
-            className="truncate font-medium text-foreground text-sm no-underline hover:underline"
-          >
-            {habit.name}
-          </Link>
-          <p className="truncate text-muted-foreground text-xs">
-            {describeCadence(period, habit.targetCount)}
-            {' · '}
-            {status === 'skipped'
-              ? 'Skipped today'
-              : describeProgress(habit.current.done, habit.current.effectiveTarget, period)}
-          </p>
-        </div>
-
-        {habit.streak > 0 ? (
-          <Badge variant="secondary" title={`${habit.streak} ${period}s in a row`}>
-            <Flame className="h-3 w-3" />
-            {habit.streak}
-          </Badge>
-        ) : null}
-
-        <button
-          type="button"
-          aria-label={status === 'skipped' ? `Un-skip ${habit.name} today` : `Skip ${habit.name} today`}
-          aria-pressed={status === 'skipped'}
-          disabled={pending}
-          onClick={() => toggle('skipped')}
-          className={cn(
-            'flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-60',
-            status === 'skipped' && 'bg-accent text-accent-foreground',
-          )}
-        >
-          <SkipForward className="h-4 w-4" />
-        </button>
-      </div>
+    <View role="listitem" className="gap-1 rounded-lg border border-border bg-card">
+      <ListItem
+        title={habit.name}
+        description={`${describeCadence(period, habit.targetCount)} · ${
+          skipped ? 'Skipped today' : describeProgress(habit.current.done, habit.current.effectiveTarget, period)
+        }`}
+        onPress={() => router.push(`/habits/${habit.id}`)}
+        leadingSlot={
+          <ActionButton
+            label={done ? `Undo ${habit.name} for today` : `Mark ${habit.name} kept today`}
+            aria-pressed={done}
+            disabled={pending}
+            variant="outline"
+            size="icon-sm"
+            onPress={() => toggle('done')}
+            className={cn('rounded-full border-2', done && 'border-transparent')}
+            // The habit's own colour, and whichever of black and white reads on it:
+            // a theme token would be the wrong one in one theme or the other.
+            style={done ? { backgroundColor: habit.color } : undefined}
+            // Drawn only once kept: an empty ring is the "not yet", and a grey
+            // tick inside it would read as half-done.
+            iconSlot={
+              <Check
+                className={cn('h-5 w-5', !done && 'opacity-0')}
+                color={done ? readableTextColor(habit.color) : undefined}
+              />
+            }
+          />
+        }
+        meta={
+          habit.streak > 0 ? (
+            <Badge variant="secondary" label={`${habit.streak} ${period}s in a row`}>
+              <Flame />
+              {habit.streak}
+            </Badge>
+          ) : undefined
+        }
+        actionSlot={
+          <ActionButton
+            label={skipped ? `Un-skip ${habit.name} today` : `Skip ${habit.name} today`}
+            aria-pressed={skipped}
+            disabled={pending}
+            variant={skipped ? 'secondary' : 'ghost'}
+            size="icon-sm"
+            onPress={() => toggle('skipped')}
+            iconSlot={<SkipForward />}
+          />
+        }
+      />
 
       {/* Beside the control that caused it. A skip refused because the period
           has had its two is worth reading, and a toast in a corner is not where
           the click was. */}
       {error ? (
-        <p className="pl-12 text-destructive text-xs" aria-live="polite">
+        <Text className="pb-2.5 pl-16 text-negative text-xs" aria-live="polite">
           {error}
-        </p>
+        </Text>
       ) : null}
-    </li>
+    </View>
   );
 }

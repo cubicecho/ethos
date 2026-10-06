@@ -1,9 +1,15 @@
 import { useQuery } from '@apollo/client';
-import { Link } from 'expo-router';
-import { HabitListItem } from '@/components/domain/habit/habit-list-item';
-import { LoadFailure } from '@/components/ui/load-failure';
-import { Spinner } from '@/components/ui/spinner';
+import { Link, useRouter } from 'expo-router';
+import { View } from 'react-native';
+import { Archive } from '@/components/app-icons';
+import { ListItem } from '@/components/list-item';
+import { EmptyState } from '@/components/page';
+import { PageLayout } from '@/components/page-layout';
+import { ColorDot } from '@/components/ui/color-dot';
+import { LoadState } from '@/components/ui/load-failure';
+import { describeCadence } from '@/lib/cadence';
 import { ArchivedHabitsDocument } from '@/lib/graphql';
+import type { Period } from '@/lib/periods';
 import { useToday } from '@/lib/use-today';
 
 /**
@@ -14,34 +20,50 @@ import { useToday } from '@/lib/use-today';
  * A row here is a way back to it.
  */
 export default function ArchiveScreen() {
+  const router = useRouter();
   const today = useToday();
-  const { data, loading, error, refetch } = useQuery(ArchivedHabitsDocument, { variables: { today } });
-  const habits = data?.habits ?? [];
+  const archivedQuery = useQuery(ArchivedHabitsDocument, { variables: { today } });
+  const habits = archivedQuery.data?.habits ?? [];
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-8">
-      <header className="border-b pb-4">
-        <h1 className="font-semibold text-2xl tracking-tight">Archive</h1>
-        <p className="mt-1 text-muted-foreground text-sm">
-          Every day recorded against these is still here. Open one to restore it.
-        </p>
-      </header>
-
-      {loading && habits.length === 0 ? (
-        <Spinner />
-      ) : error && habits.length === 0 ? (
-        <LoadFailure error={error} onRetry={refetch} />
-      ) : habits.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
-          Nothing archived. <Link href="/">Back to today.</Link>
-        </p>
-      ) : (
-        <div className="flex flex-col gap-0.5">
-          {habits.map((habit) => (
-            <HabitListItem key={habit.id} id={habit.id} name={habit.name} color={habit.color} active={false} />
-          ))}
-        </div>
-      )}
-    </div>
+    <PageLayout
+      width="prose"
+      title="Archive"
+      description="Every day recorded against these is still here. Open one to restore it."
+      contentSlot={
+        <View className="py-6">
+          <LoadState
+            query={archivedQuery}
+            what="the archive"
+            count={habits.length}
+            emptySlot={
+              <EmptyState
+                icon={Archive}
+                title="Nothing archived"
+                actionSlot={
+                  <Link href="/" className="text-primary text-sm underline">
+                    Back to today
+                  </Link>
+                }
+              />
+            }
+          />
+          {habits.length > 0 ? (
+            <View role="list" className="gap-0.5">
+              {habits.map((habit) => (
+                <View key={habit.id} role="listitem">
+                  <ListItem
+                    title={habit.name}
+                    description={describeCadence(habit.period as Period, habit.targetCount)}
+                    leadingSlot={<ColorDot color={habit.color} />}
+                    onPress={() => router.push(`/habits/${habit.id}`)}
+                  />
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      }
+    />
   );
 }

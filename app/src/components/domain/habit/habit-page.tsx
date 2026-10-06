@@ -1,0 +1,148 @@
+import { useMutation } from '@apollo/client';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Text, View } from 'react-native';
+import { ActionButton } from '@/components/action-button';
+import { Archive, ArchiveRestore } from '@/components/app-icons';
+import { ConfirmButton } from '@/components/confirm-button';
+import { PageLayout } from '@/components/page-layout';
+import { StatTile } from '@/components/stat-tile';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ColorDot } from '@/components/ui/color-dot';
+import { Pencil, Trash2 } from '@/components/ui/icons';
+import { placeHabit, removeHabit } from '@/lib/cache';
+import { describeCadence } from '@/lib/cadence';
+import { describeError } from '@/lib/errors';
+import { DeleteHabitDocument, UpdateHabitDocument } from '@/lib/graphql';
+import type { Period } from '@/lib/periods';
+import type { SlotNode } from '@/lib/utils';
+import { HabitFormDialog } from './habit-form-dialog';
+import type { HabitSummary } from './types';
+
+/**
+ * A habit's own screen: its name, cadence and actions in the page header, the
+ * three numbers under it, and whatever the route puts below them.
+ */
+export function HabitPage({
+  habit,
+  today,
+  contentSlot,
+}: {
+  habit: HabitSummary;
+  today: string;
+  contentSlot: SlotNode;
+}) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [updateHabit] = useMutation(UpdateHabitDocument);
+  const [deleteHabit] = useMutation(DeleteHabitDocument);
+
+  const period = habit.period as Period;
+  const archived = habit.archivedAt != null;
+
+  /**
+   * Archiving is the ordinary way to stop a habit, and it is a plain column
+   * update — so it is the generated mutation, not one written for the occasion.
+   * The days stay, which is the whole point: a habit put down after a year is a
+   * year of days worth keeping, and the archive is where it is un-put-down from.
+   */
+  async function setArchived(next: boolean) {
+    setActionError(null);
+    try {
+      await updateHabit({
+        variables: { id: habit.id, set: { archivedAt: next ? new Date().toISOString() : null }, today },
+        update(cache, { data }) {
+          if (data?.updateHabit) placeHabit(cache, today, data.updateHabit);
+        },
+      });
+    } catch (cause) {
+      setActionError(describeError(cause));
+    }
+  }
+
+  async function remove() {
+    setActionError(null);
+    try {
+      await deleteHabit({
+        variables: { id: habit.id },
+        update: (cache) => removeHabit(cache, today, habit.id),
+      });
+    } catch (cause) {
+      // Stay put. Navigating away from a habit that is still there would look
+      // like the delete worked.
+      setActionError(describeError(cause));
+      return;
+    }
+    router.replace('/');
+  }
+
+  return (
+    <>
+      <PageLayout
+        width="prose"
+        title={habit.name}
+        description={`${describeCadence(period, habit.targetCount)}${archived ? ' · Archived' : ''}`}
+        // The habit's colour is how it is recognised on every other screen.
+        iconSlot={<ColorDot color={habit.color} />}
+        actionSlot={
+          <>
+            <ActionButton
+              label="Edit habit"
+              variant="ghost"
+              size="icon"
+              onPress={() => setEditing(true)}
+              iconSlot={<Pencil />}
+            />
+            <ActionButton
+              label={archived ? 'Restore habit' : 'Archive habit'}
+              variant="ghost"
+              size="icon"
+              onPress={() => void setArchived(!archived)}
+              iconSlot={archived ? <ArchiveRestore /> : <Archive />}
+            />
+            <ConfirmButton
+              label="Delete habit"
+              variant="ghost"
+              size="icon"
+              iconSlot={<Trash2 />}
+              title={`Delete “${habit.name}”?`}
+              description="Every day recorded against it goes too. Archiving keeps them, and puts the habit away."
+              confirmLabel="Delete"
+              onConfirm={() => void remove()}
+            />
+          </>
+        }
+        contentSlot={
+          <View className="gap-6 py-6">
+            {habit.notes ? <Text className="text-foreground text-sm">{habit.notes}</Text> : null}
+
+            <View className="flex-row flex-wrap gap-3">
+              <StatTile className="min-w-32 flex-1" label="Streak" value={habit.streak} hint={`${period}s in a row`} />
+              <StatTile className="min-w-32 flex-1" label="Best" value={habit.longestStreak} />
+              <StatTile
+                className="min-w-32 flex-1"
+                label={period === 'day' ? 'Today' : `This ${period}`}
+                value={`${habit.current.done}/${habit.current.effectiveTarget}`}
+                hint={
+                  habit.current.skipped > 0
+                    ? `${habit.current.skipped} skipped, and skips come off the target`
+                    : undefined
+                }
+              />
+            </View>
+
+            {actionError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{actionError}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {contentSlot}
+          </View>
+        }
+      />
+      <HabitFormDialog open={editing} onOpenChange={setEditing} today={today} habit={habit} />
+    </>
+  );
+}
