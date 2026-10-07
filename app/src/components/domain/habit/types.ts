@@ -13,12 +13,17 @@ export type HabitSummary = HabitFieldsFragment;
 export type HabitPeriodSummary = HabitPeriodFieldsFragment;
 export type HabitEntrySummary = HabitEntryFieldsFragment;
 
+export const ENTRY_DONE = 'done';
+export const ENTRY_SKIPPED = 'skipped';
+/** What an entry says. The server's vocabulary, copied. */
+export type EntryStatus = typeof ENTRY_DONE | typeof ENTRY_SKIPPED;
+
 /** What a day says, or nothing at all — the three states a square can be in. */
-export type DayStatus = 'done' | 'skipped' | null;
+export type DayStatus = EntryStatus | null;
 
 /** The status of a day, narrowed from the `String` the schema serves. */
 export function asStatus(value: string | null | undefined): DayStatus {
-  return value === 'done' || value === 'skipped' ? value : null;
+  return value === ENTRY_DONE || value === ENTRY_SKIPPED ? value : null;
 }
 
 /**
@@ -31,7 +36,7 @@ export function asStatus(value: string | null | undefined): DayStatus {
  */
 export function nextStatus(current: DayStatus): DayStatus {
   if (current === null) {
-    return 'done';
+    return ENTRY_DONE;
   }
-  return current === 'done' ? 'skipped' : null;
+  return current === ENTRY_DONE ? ENTRY_SKIPPED : null;
 }

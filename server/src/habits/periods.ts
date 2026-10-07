@@ -1,5 +1,5 @@
-import type { Period } from '@ethos/db/schema';
-import { GraphQLError } from 'graphql';
+import { Period } from '@ethos/db/schema';
+import { badInput } from '../core/errors.ts';
 
 // Where the period boundaries are drawn, as pure functions over `YYYY-MM-DD`.
 //
@@ -15,18 +15,14 @@ const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 /** A `YYYY-MM-DD` as milliseconds at UTC midnight, or a thrown BAD_USER_INPUT. */
 function toUtc(day: string): number {
   if (DAY_PATTERN.test(day) === false) {
-    throw new GraphQLError(`"${day}" is not a date. Expected YYYY-MM-DD.`, {
-      extensions: { code: 'BAD_USER_INPUT' },
-    });
+    throw badInput(`"${day}" is not a date. Expected YYYY-MM-DD.`);
   }
   const [year, month, date] = day.split('-').map(Number);
   const milliseconds = Date.UTC(year, month - 1, date);
   // Round-tripped rather than range-checked: `2026-02-31` parses happily and
   // comes back as the third of March.
   if (Number.isNaN(milliseconds) || fromUtc(milliseconds) !== day) {
-    throw new GraphQLError(`"${day}" is not a date. Expected YYYY-MM-DD.`, {
-      extensions: { code: 'BAD_USER_INPUT' },
-    });
+    throw badInput(`"${day}" is not a date. Expected YYYY-MM-DD.`);
   }
   return milliseconds;
 }
@@ -58,10 +54,10 @@ export function daysBetween(from: string, to: string): number {
  * of the row instead of splitting it across two.
  */
 export function periodStart(period: Period, day: string): string {
-  if (period === 'day') {
+  if (period === Period.Day) {
     return day;
   }
-  if (period === 'week') {
+  if (period === Period.Week) {
     const weekday = new Date(toUtc(day)).getUTCDay();
     return addDays(day, -((weekday + 6) % 7));
   }
@@ -71,10 +67,10 @@ export function periodStart(period: Period, day: string): string {
 /** The day after the period's last — exclusive, so ranges compare as `[start, end)`. */
 export function periodEnd(period: Period, day: string): string {
   const start = periodStart(period, day);
-  if (period === 'day') {
+  if (period === Period.Day) {
     return addDays(start, 1);
   }
-  if (period === 'week') {
+  if (period === Period.Week) {
     return addDays(start, 7);
   }
   const [year, month] = start.split('-').map(Number);

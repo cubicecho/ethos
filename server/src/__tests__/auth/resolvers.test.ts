@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { signMagicToken, signToken, verifyMagicToken, verifyToken } from '../../auth/resolvers.ts';
+import { ErrorCode } from '../../core/errors.ts';
 import { createClient, createTestDb, createUser, type TestClient, type TestDb } from '../helpers.ts';
 
 const REQUEST = `mutation ($email: String!) { requestMagicLink(email: $email) { ok magicLink token userId } }`;
@@ -81,7 +82,7 @@ describe('requestMagicLink', () => {
       await anonymous.expectOk(REQUEST, { email });
     }
     const error = await anonymous.expectError(REQUEST, { email });
-    expect(error.code).toBe('TOO_MANY_REQUESTS');
+    expect(error.code).toBe(ErrorCode.TooManyRequests);
   });
 });
 
@@ -104,21 +105,21 @@ describe('verifyMagicLink', () => {
     // UNAUTHENTICATED is what the client drops its token on; a bad magic link is
     // a bad argument and must not sign anyone out.
     const error = await anonymous.expectError(VERIFY, { token: 'not-a-jwt' });
-    expect(error.code).toBe('BAD_USER_INPUT');
+    expect(error.code).toBe(ErrorCode.BadUserInput);
   });
 
   it('rejects an expired token', async () => {
     const expired = signMagicToken(nextEmail());
     process.env.JWT_SECRET = 'rotated-secret';
     const error = await anonymous.expectError(VERIFY, { token: expired });
-    expect(error.code).toBe('BAD_USER_INPUT');
+    expect(error.code).toBe(ErrorCode.BadUserInput);
   });
 });
 
 describe('authentication', () => {
   it('refuses to read anything without a session', async () => {
     const error = await anonymous.expectError(`query { habits { id } }`);
-    expect(error.code).toBe('UNAUTHENTICATED');
+    expect(error.code).toBe(ErrorCode.Unauthenticated);
   });
 
   it('shows a signed-in user only their own user row', async () => {

@@ -1,5 +1,6 @@
 import * as dbSchema from '@ethos/db/schema';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { ErrorCode } from '../../core/errors.ts';
 import { assertTargetsFitPeriods, describeCadenceLimit, maxTargetFor } from '../../habits/cadence.ts';
 import { createTestDb, createUser, type TestDb } from '../helpers.ts';
 
@@ -54,7 +55,7 @@ describe('assertTargetsFitPeriods', () => {
     await insert(mine, { name: 'Read', period: 'week', targetCount: 8 });
     await expect(assertTargetsFitPeriods(db, mine)).rejects.toMatchObject({
       message: expect.stringContaining('Read'),
-      extensions: { code: 'BAD_USER_INPUT' },
+      extensions: { code: ErrorCode.BadUserInput },
     });
   });
 

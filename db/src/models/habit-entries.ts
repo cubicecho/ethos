@@ -4,8 +4,9 @@ import { habits } from './habits.ts';
 import { users } from './users.ts';
 
 /** What a day says. A skip is not a miss — see streaks.ts. */
-export const ENTRY_STATUSES = ['done', 'skipped'] as const;
-export type EntryStatus = (typeof ENTRY_STATUSES)[number];
+export const ENTRY_DONE = 'done';
+export const ENTRY_SKIPPED = 'skipped';
+export type EntryStatus = typeof ENTRY_DONE | typeof ENTRY_SKIPPED;
 
 /**
  * One row per habit per day.
@@ -27,7 +28,7 @@ export const habitEntries = pgTable(
       .notNull()
       .references(() => habits.id, { onDelete: 'cascade' }),
     day: date('day', { mode: 'string' }).notNull(),
-    status: text('status').notNull().$type<EntryStatus>().default('done'),
+    status: text('status').notNull().$type<EntryStatus>().default(ENTRY_DONE),
     note: text('note'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })

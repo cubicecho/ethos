@@ -36,8 +36,11 @@ const authLink = setContext((_operation, { headers }) => {
 // UNAUTHENTICATED means the session is gone, not that this particular request
 // was refused — so drop the token and start over rather than leaving the app in
 // a state where every query fails.
+/** The server's code for no session, or one that has run out. */
+const UNAUTHENTICATED = 'UNAUTHENTICATED';
+
 const errorLink = onError(({ graphQLErrors }) => {
-  if (graphQLErrors?.some((error) => error.extensions?.code === 'UNAUTHENTICATED')) {
+  if (graphQLErrors?.some((error) => error.extensions?.code === UNAUTHENTICATED)) {
     clearToken();
     if (Platform.OS === 'web' && window.location.pathname.startsWith('/login') === false) {
       window.location.replace('/login');

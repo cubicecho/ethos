@@ -1,4 +1,4 @@
-import type { EntryStatus, Period } from '@ethos/db/schema';
+import { ENTRY_DONE, type EntryStatus, type Period } from '@ethos/db/schema';
 import { type PeriodRange, periodBefore, periodOf, periodStart, recentPeriods } from './periods.ts';
 
 // What a run of kept days is worth, in one place. Three rules:
@@ -54,7 +54,7 @@ export function tallyPeriod(habit: HabitLike, entries: readonly EntryLike[], ran
     if (isInRange(entry, range) === false) {
       continue;
     }
-    if (entry.status === 'done') {
+    if (entry.status === ENTRY_DONE) {
       done += 1;
     } else {
       skipped += 1;

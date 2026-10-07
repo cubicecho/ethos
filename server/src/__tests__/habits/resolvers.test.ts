@@ -1,5 +1,6 @@
 import * as dbSchema from '@ethos/db/schema';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { ErrorCode } from '../../core/errors.ts';
 import { addDays, periodBefore } from '../../habits/periods.ts';
 import { createClient, createTestDb, createUser, type TestClient, type TestDb } from '../helpers.ts';
 
@@ -79,13 +80,13 @@ describe('markHabit', () => {
 
   it('refuses a day that is not one', async () => {
     const error = await mine.expectError(MARK, { id: habitId, day: 'yesterday' });
-    expect(error.code).toBe('BAD_USER_INPUT');
+    expect(error.code).toBe(ErrorCode.BadUserInput);
     expect(error.message).toContain('Expected YYYY-MM-DD');
   });
 
   it('refuses a status that is neither done nor skipped', async () => {
     const error = await mine.expectError(MARK, { id: habitId, day: today, status: 'maybe' });
-    expect(error.code).toBe('BAD_USER_INPUT');
+    expect(error.code).toBe(ErrorCode.BadUserInput);
     expect(error.message).toContain('"done" or "skipped"');
   });
 
@@ -95,7 +96,7 @@ describe('markHabit', () => {
 
   it('refuses a day no zone on earth has reached', async () => {
     const error = await mine.expectError(MARK, { id: habitId, day: addDays(today, 2) });
-    expect(error.code).toBe('BAD_USER_INPUT');
+    expect(error.code).toBe(ErrorCode.BadUserInput);
     expect(error.message).toBe('That day has not happened yet.');
   });
 
@@ -107,19 +108,19 @@ describe('markHabit', () => {
     const error = await mine.expectError(MARK, { id: habitId, day: today });
     // An archived habit is a record, not a practice — the archive is not a place
     // where history keeps changing.
-    expect(error.code).toBe('BAD_USER_INPUT');
+    expect(error.code).toBe(ErrorCode.BadUserInput);
     expect(error.message).toContain('archived');
   });
 
   it('refuses another user’s habit as NOT_FOUND', async () => {
     const error = await mine.expectError(MARK, { id: await createHabit(theirs, { name: 'Theirs' }), day: today });
-    expect(error.code).toBe('NOT_FOUND');
+    expect(error.code).toBe(ErrorCode.NotFound);
     expect(await db.select().from(dbSchema.habitEntries)).toHaveLength(0);
   });
 
   it('refuses a request with no session at all', async () => {
     const error = await anonymous.expectError(MARK, { id: habitId, day: today });
-    expect(error.code).toBe('UNAUTHENTICATED');
+    expect(error.code).toBe(ErrorCode.Unauthenticated);
   });
 });
 
@@ -145,7 +146,7 @@ describe('the skip cap', () => {
     await skip(lastMonth);
     await skip(addDays(lastMonth, 1));
     const error = await mine.expectError(MARK, { id: monthly, day: addDays(lastMonth, 2), status: 'skipped' });
-    expect(error.code).toBe('BAD_USER_INPUT');
+    expect(error.code).toBe(ErrorCode.BadUserInput);
     expect(error.message).toContain('The limit is 2.');
   });
 
@@ -191,12 +192,12 @@ describe('clearHabit', () => {
   });
 
   it('refuses a day that is not one', async () => {
-    expect((await mine.expectError(CLEAR, { id: habitId, day: '2026-02-31' })).code).toBe('BAD_USER_INPUT');
+    expect((await mine.expectError(CLEAR, { id: habitId, day: '2026-02-31' })).code).toBe(ErrorCode.BadUserInput);
   });
 
   it('refuses another user’s habit as NOT_FOUND', async () => {
     const error = await theirs.expectError(CLEAR, { id: habitId, day: today });
-    expect(error.code).toBe('NOT_FOUND');
+    expect(error.code).toBe(ErrorCode.NotFound);
     expect(await db.select().from(dbSchema.habitEntries)).toHaveLength(2);
   });
 
@@ -240,7 +241,7 @@ describe('the fields the grid reads', () => {
 
   it('refuses a `today` that is not a day', async () => {
     const error = await mine.expectError(HISTORY, { id: habitId, today: 'now', periods: 3 });
-    expect(error.code).toBe('BAD_USER_INPUT');
+    expect(error.code).toBe(ErrorCode.BadUserInput);
   });
 
   it('falls back to the server’s own day when the client does not send one', async () => {

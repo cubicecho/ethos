@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ErrorCode } from '../../core/errors.ts';
 import {
   addDays,
   assertDay,
@@ -38,7 +39,7 @@ describe('assertDay', () => {
 
   it('refuses with BAD_USER_INPUT rather than a 500', () => {
     expect(() => assertDay('nope')).toThrow(
-      expect.objectContaining({ extensions: expect.objectContaining({ code: 'BAD_USER_INPUT' }) }),
+      expect.objectContaining({ extensions: expect.objectContaining({ code: ErrorCode.BadUserInput }) }),
     );
   });
 });

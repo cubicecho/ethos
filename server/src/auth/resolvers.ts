@@ -1,9 +1,10 @@
 import * as dbSchema from '@ethos/db/schema';
 import { eq } from 'drizzle-orm';
-import { extendSchema, GraphQLError, type GraphQLObjectType, type GraphQLSchema, parse } from 'graphql';
+import { extendSchema, type GraphQLObjectType, type GraphQLSchema, parse } from 'graphql';
 import jwt from 'jsonwebtoken';
 import { DEV_SECRET, isMagicLinkExposed, isMagicLinkRequired } from '../core/config.ts';
 import type { Context } from '../core/context.ts';
+import { badInput, rateLimited, unauthenticated } from '../core/errors.ts';
 import { createRateLimiter } from './rate-limit.ts';
 
 /** Read at call time so a test — or a reload — sees the current environment. */
@@ -90,9 +91,7 @@ export function extractUserId(request: { headers: { authorization?: string } }):
 
 export function requireAuth(context: Context): string {
   if (!context.userId) {
-    throw new GraphQLError('Unauthenticated', {
-      extensions: { code: 'UNAUTHENTICATED' },
-    });
+    throw unauthenticated('Unauthenticated');
   }
   return context.userId;
 }
@@ -132,9 +131,7 @@ export function applyAuthExtension(schema: GraphQLSchema): GraphQLSchema {
   fields.requestMagicLink.resolve = async (_parent: unknown, args: { email: string }, context: Context) => {
     const email = normalizeEmail(args.email);
     if (!signInLimiter.allow(email)) {
-      throw new GraphQLError('Too many sign-in attempts. Try again in a few minutes.', {
-        extensions: { code: 'TOO_MANY_REQUESTS' },
-      });
+      throw rateLimited('Too many sign-in attempts. Try again in a few minutes.');
     }
 
     // No-link mode: the address alone is the credential. Private instances
@@ -154,9 +151,7 @@ export function applyAuthExtension(schema: GraphQLSchema): GraphQLSchema {
   fields.verifyMagicLink.resolve = async (_parent: unknown, args: { token: string }, context: Context) => {
     const payload = verifyMagicToken(args.token);
     if (!payload) {
-      throw new GraphQLError('Invalid or expired magic link', {
-        extensions: { code: 'BAD_USER_INPUT' },
-      });
+      throw badInput('Invalid or expired magic link');
     }
     const userId = await findOrCreateUser(context.db, normalizeEmail(payload.email));
     return { token: signToken(userId), userId };

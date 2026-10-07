@@ -1,9 +1,10 @@
-import type { EntryStatus } from '@ethos/db/schema';
 import * as dbSchema from '@ethos/db/schema';
+import { ENTRY_DONE, ENTRY_SKIPPED, type EntryStatus } from '@ethos/db/schema';
 import { and, eq } from 'drizzle-orm';
-import { extendSchema, GraphQLError, type GraphQLObjectType, type GraphQLSchema, parse } from 'graphql';
+import { extendSchema, type GraphQLObjectType, type GraphQLSchema, parse } from 'graphql';
 import { requireAuth } from '../auth/resolvers.ts';
 import type { Context } from '../core/context.ts';
+import { badInput, notFound } from '../core/errors.ts';
 import { assertDay, daysBetween, periodOf } from './periods.ts';
 import {
   currentStreak,
@@ -78,7 +79,7 @@ function serverToday(): string {
 }
 
 /** One answer for a habit that is missing and a habit that is someone else's. */
-const habitNotFound = () => new GraphQLError('Habit not found', { extensions: { code: 'NOT_FOUND' } });
+const habitNotFound = () => notFound('Habit not found');
 
 /**
  * A habit the caller owns, or NOT_FOUND. The hand-written mutations sit outside
@@ -99,15 +100,13 @@ async function loadOwnedHabit(context: Context, id: string): Promise<AnyRow> {
 }
 
 function parseStatus(value: string | null | undefined): EntryStatus {
-  if (value == null || value === 'done') {
-    return 'done';
+  if (value == null || value === ENTRY_DONE) {
+    return ENTRY_DONE;
   }
-  if (value === 'skipped') {
-    return 'skipped';
+  if (value === ENTRY_SKIPPED) {
+    return ENTRY_SKIPPED;
   }
-  throw new GraphQLError(`"${value}" is not a status. Expected "done" or "skipped".`, {
-    extensions: { code: 'BAD_USER_INPUT' },
-  });
+  throw badInput(`"${value}" is not a status. Expected "done" or "skipped".`);
 }
 
 /**
@@ -120,7 +119,7 @@ function parseStatus(value: string | null | undefined): EntryStatus {
  */
 function assertNotFuture(day: string): void {
   if (daysBetween(serverToday(), day) > 1) {
-    throw new GraphQLError('That day has not happened yet.', { extensions: { code: 'BAD_USER_INPUT' } });
+    throw badInput('That day has not happened yet.');
   }
 }
 
@@ -134,14 +133,13 @@ function assertNotFuture(day: string): void {
 function assertSkipAllowed(habit: AnyRow, entries: readonly { day: string; status: EntryStatus }[], day: string): void {
   const range = periodOf(habit.period, day);
   const skips = entries.filter(
-    (entry) => entry.status === 'skipped' && entry.day >= range.start && entry.day < range.end && entry.day !== day,
+    (entry) => entry.status === ENTRY_SKIPPED && entry.day >= range.start && entry.day < range.end && entry.day !== day,
   );
   if (skips.length < MAX_SKIPS_PER_PERIOD) {
     return;
   }
-  throw new GraphQLError(
+  throw badInput(
     `Already skipped ${skips.length} days of “${habit.name}” this ${habit.period}. The limit is ${MAX_SKIPS_PER_PERIOD}.`,
-    { extensions: { code: 'BAD_USER_INPUT' } },
   );
 }
 
@@ -221,11 +219,9 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
     if (habit.archivedAt != null) {
       // An archived habit is a record, not a practice. Silently accepting the
       // day would make the archive a place where history keeps changing.
-      throw new GraphQLError(`“${habit.name}” is archived. Restore it before recording a day.`, {
-        extensions: { code: 'BAD_USER_INPUT' },
-      });
+      throw badInput(`“${habit.name}” is archived. Restore it before recording a day.`);
     }
-    if (status === 'skipped') {
+    if (status === ENTRY_SKIPPED) {
       assertSkipAllowed(habit, await entriesOf(habit, context), day);
     }
 

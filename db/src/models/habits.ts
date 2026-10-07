@@ -10,8 +10,8 @@ import { users } from './users.ts';
  * Calendar-aligned on purpose: a rolling seven-day window would make the same
  * habit's streak depend on when you asked. See periods.ts for the boundaries.
  */
-export const PERIODS = ['day', 'week', 'month'] as const;
-export type Period = (typeof PERIODS)[number];
+export const Period = { Day: 'day', Week: 'week', Month: 'month' } as const;
+export type Period = (typeof Period)[keyof typeof Period];
 
 export const habits = pgTable(
   'habits',
@@ -27,7 +27,7 @@ export const habits = pgTable(
     // The habit's colour on the grid, chosen by the user, so no theme token can
     // be trusted to read on it — see readable-text-color.ts.
     color: text('color').notNull().default('#71717a'),
-    period: text('period').notNull().$type<Period>().default('day'),
+    period: text('period').notNull().$type<Period>().default(Period.Day),
     // How many days inside the period the habit asks for.
     targetCount: integer('target_count').notNull().default(1),
     position: integer('position').notNull().default(0),

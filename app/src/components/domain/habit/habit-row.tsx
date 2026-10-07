@@ -10,7 +10,7 @@ import { habitPath } from '@/lib/habits';
 import type { Period } from '@/lib/periods';
 import { readableTextColor } from '@/lib/readable-text-color';
 import { cn } from '@/lib/utils';
-import { asStatus, type HabitSummary } from './types';
+import { asStatus, ENTRY_DONE, ENTRY_SKIPPED, type EntryStatus, type HabitSummary } from './types';
 import { useMarkHabit } from './use-mark-habit';
 
 /**
@@ -28,10 +28,10 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
   const { setDay, isPending, error } = useMarkHabit(today);
   const status = asStatus(habit.todayEntry[0]?.status);
   const period = habit.period as Period;
-  const isDone = status === 'done';
-  const isSkipped = status === 'skipped';
+  const isDone = status === ENTRY_DONE;
+  const isSkipped = status === ENTRY_SKIPPED;
 
-  const toggle = (next: 'done' | 'skipped') => setDay(habit.id, today, status === next ? null : next);
+  const toggle = (next: EntryStatus) => setDay(habit.id, today, status === next ? null : next);
 
   return (
     <View role="listitem" className="gap-1 rounded-lg border border-border bg-card">
@@ -48,7 +48,7 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
             disabled={isPending}
             variant="outline"
             size="icon-sm"
-            onPress={() => toggle('done')}
+            onPress={() => toggle(ENTRY_DONE)}
             className={cn('rounded-full border-2', isDone && 'border-transparent')}
             // The habit's own colour, and whichever of black and white reads on it:
             // a theme token would be the wrong one in one theme or the other.
@@ -78,7 +78,7 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
             disabled={isPending}
             variant={isSkipped ? 'secondary' : 'ghost'}
             size="icon-sm"
-            onPress={() => toggle('skipped')}
+            onPress={() => toggle(ENTRY_SKIPPED)}
             iconSlot={<SkipForward />}
           />
         }

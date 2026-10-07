@@ -1,9 +1,9 @@
 import * as dbSchema from '@ethos/db/schema';
 import type { BuildSchemaConfig, WriteHookPayload } from '@vantreeseba/drizzle-graphql';
 import { and, eq, inArray } from 'drizzle-orm';
-import { GraphQLError } from 'graphql';
 import { requireAuth } from '../auth/resolvers.ts';
 import type { Context } from '../core/context.ts';
+import { badInput, notFound } from '../core/errors.ts';
 import { assertTargetsFitPeriods } from '../habits/cadence.ts';
 
 // A row scope cannot reach a plain insert, and says nothing about the rows a
@@ -76,7 +76,7 @@ export async function assertForeignKeysOwned(
     if (referenced.some((id) => ownedIds.has(id) === false)) {
       // NOT_FOUND, not FORBIDDEN: "you may not touch this" would confirm the row
       // exists, which is itself something the caller is not entitled to know.
-      throw new GraphQLError(`${foreignKey.entity} not found`, { extensions: { code: 'NOT_FOUND' } });
+      throw notFound(`${foreignKey.entity} not found`);
     }
   }
 }
@@ -90,9 +90,7 @@ function assertEntriesUntouched(args: Parameters<typeof writtenRows>[0]): void {
   if (writtenRows(args).length === 0) {
     return;
   }
-  throw new GraphQLError('Use markHabit and clearHabit to record a day.', {
-    extensions: { code: 'BAD_USER_INPUT' },
-  });
+  throw badInput('Use markHabit and clearHabit to record a day.');
 }
 
 export const onWrite: NonNullable<BuildSchemaConfig['onWrite']> = {

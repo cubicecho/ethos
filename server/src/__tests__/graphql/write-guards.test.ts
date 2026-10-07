@@ -1,6 +1,7 @@
 import * as dbSchema from '@ethos/db/schema';
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { ErrorCode } from '../../core/errors.ts';
 import { assertForeignKeysOwned, writtenRows } from '../../graphql/write-guards.ts';
 import { createClient, createTestDb, createUser, type TestClient, type TestDb } from '../helpers.ts';
 
@@ -69,7 +70,7 @@ describe('foreign keys a caller states', () => {
         [{ habitId: theirHabitId }],
         [{ key: 'habitId', entity: 'Habit', parent: dbSchema.habits }],
       ),
-    ).rejects.toMatchObject({ message: 'Habit not found', extensions: { code: 'NOT_FOUND' } });
+    ).rejects.toMatchObject({ message: 'Habit not found', extensions: { code: ErrorCode.NotFound } });
   });
 
   it('checks every row of a batch, not just the first', async () => {
@@ -81,7 +82,7 @@ describe('foreign keys a caller states', () => {
         [{ habitId }, { habitId: theirHabitId }],
         [{ key: 'habitId', entity: 'Habit', parent: dbSchema.habits }],
       ),
-    ).rejects.toMatchObject({ extensions: { code: 'NOT_FOUND' } });
+    ).rejects.toMatchObject({ extensions: { code: ErrorCode.NotFound } });
   });
 });
 
@@ -104,7 +105,7 @@ describe('writtenRows', () => {
 describe('cadence, however the write arrives', () => {
   it('refuses a habit asking for more days than its period holds', async () => {
     const error = await mine.expectError(CREATE, { values: { name: 'Too much', period: 'week', targetCount: 8 } });
-    expect(error.code).toBe('BAD_USER_INPUT');
+    expect(error.code).toBe(ErrorCode.BadUserInput);
     expect(error.message).toContain('8 days a week');
     // Only the habit the other user made in beforeEach — this one rolled back.
     expect(await db.select().from(dbSchema.habits)).toHaveLength(1);
@@ -119,7 +120,7 @@ describe('cadence, however the write arrives', () => {
       `mutation ($id: UUID!) { updateHabit(set: { period: "week" }, where: { id: { eq: $id } }) { id period } }`,
       { id },
     );
-    expect(error.code).toBe('BAD_USER_INPUT');
+    expect(error.code).toBe(ErrorCode.BadUserInput);
 
     // The throw rolls the transaction back, statement included.
     const [row] = await db.select().from(dbSchema.habits).where(eq(dbSchema.habits.id, id));

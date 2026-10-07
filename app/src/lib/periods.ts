@@ -9,7 +9,22 @@
  * day it is for the person holding the device is what the server needs told.
  */
 
-export type Period = 'day' | 'week' | 'month';
+/** How often a habit is meant to happen. The server's vocabulary, copied. */
+export const Period = { Day: 'day', Week: 'week', Month: 'month' } as const;
+export type Period = (typeof Period)[keyof typeof Period];
+
+/** The period `from` falls in, by name. */
+export const THIS_PERIOD = {
+  [Period.Day]: 'Today',
+  [Period.Week]: 'This week',
+  [Period.Month]: 'This month',
+} satisfies Record<Period, string>;
+
+const LAST_PERIOD = {
+  [Period.Day]: 'Yesterday',
+  [Period.Week]: 'Last week',
+  [Period.Month]: 'Last month',
+} satisfies Record<Period, string>;
 
 const DAY_MS = 86_400_000;
 const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -51,10 +66,10 @@ export function daysBetween(from: string, to: string): number {
 
 /** The first day of the period `day` falls in. Weeks start on Monday (ISO 8601). */
 export function periodStart(period: Period, day: string): string {
-  if (period === 'day') {
+  if (period === Period.Day) {
     return day;
   }
-  if (period === 'week') {
+  if (period === Period.Week) {
     const weekday = new Date(toUtc(day)).getUTCDay();
     return addDays(day, -((weekday + 6) % 7));
   }
@@ -64,10 +79,10 @@ export function periodStart(period: Period, day: string): string {
 /** The day after the period's last — exclusive, so periods tile without overlapping. */
 export function periodEnd(period: Period, day: string): string {
   const start = periodStart(period, day);
-  if (period === 'day') {
+  if (period === Period.Day) {
     return addDays(start, 1);
   }
-  if (period === 'week') {
+  if (period === Period.Week) {
     return addDays(start, 7);
   }
   const [year, month] = start.split('-').map(Number);
@@ -131,13 +146,13 @@ export function weekdayInitial(day: string): string {
 export function periodLabel(period: Period, start: string, from: string = today()): string {
   const current = periodStart(period, from);
   if (start === current) {
-    return period === 'day' ? 'Today' : `This ${period}`;
+    return THIS_PERIOD[period];
   }
   const previous = periodBefore(period, from).start;
   if (start === previous) {
-    return period === 'day' ? 'Yesterday' : `Last ${period}`;
+    return LAST_PERIOD[period];
   }
-  if (period === 'month') {
+  if (period === Period.Month) {
     return MONTH_FORMAT.format(new Date(toUtc(start)));
   }
   return formatDay(start);

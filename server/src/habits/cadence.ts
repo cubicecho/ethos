@@ -1,7 +1,7 @@
-import type { Period } from '@ethos/db/schema';
 import * as dbSchema from '@ethos/db/schema';
+import { Period } from '@ethos/db/schema';
 import { eq } from 'drizzle-orm';
-import { GraphQLError } from 'graphql';
+import { badInput } from '../core/errors.ts';
 import { periodLength } from './periods.ts';
 
 // A period cannot ask for more days than it has.
@@ -14,6 +14,13 @@ import { periodLength } from './periods.ts';
 // biome-ignore lint/suspicious/noExplicitAny: drizzle-orm 1.0 table/column type compat
 type AnyDb = any;
 
+const MAX_TARGET = {
+  [Period.Day]: 1,
+  [Period.Week]: 7,
+  // 2026-02-01 is a February, and February is the shortest month there is.
+  [Period.Month]: periodLength(Period.Month, '2026-02-01'),
+} satisfies Record<Period, number>;
+
 /**
  * The most days a period can offer.
  *
@@ -22,18 +29,11 @@ type AnyDb = any;
  * February is a habit that fails once a year for reasons nobody wrote down.
  */
 export function maxTargetFor(period: Period): number {
-  if (period === 'day') {
-    return 1;
-  }
-  if (period === 'week') {
-    return 7;
-  }
-  // 2026-02-01 is a February, and February is the shortest month there is.
-  return periodLength('month', '2026-02-01');
+  return MAX_TARGET[period];
 }
 
 export function describeCadenceLimit(period: Period): string {
-  if (period === 'day') {
+  if (period === Period.Day) {
     return 'A daily habit is kept once a day.';
   }
   return `A ${period} has at most ${maxTargetFor(period)} days, so it cannot ask for more.`;
@@ -54,8 +54,7 @@ export async function assertTargetsFitPeriods(db: AnyDb, userId: string): Promis
   if (!impossible) {
     return;
   }
-  throw new GraphQLError(
+  throw badInput(
     `“${impossible.name}” asks for ${impossible.targetCount} days a ${impossible.period}. ${describeCadenceLimit(impossible.period)}`,
-    { extensions: { code: 'BAD_USER_INPUT' } },
   );
 }

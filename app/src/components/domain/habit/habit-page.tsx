@@ -14,7 +14,7 @@ import { placeHabit, removeHabit } from '@/lib/cache';
 import { describeCadence } from '@/lib/cadence';
 import { describeError } from '@/lib/errors';
 import { DeleteHabitDocument, UpdateHabitDocument } from '@/lib/graphql';
-import type { Period } from '@/lib/periods';
+import { type Period, THIS_PERIOD } from '@/lib/periods';
 import type { SlotNode } from '@/lib/utils';
 import { HabitFormDialog } from './habit-form-dialog';
 import type { HabitSummary } from './types';
@@ -124,7 +124,7 @@ export function HabitPage({
               <StatTile className="min-w-32 flex-1" label="Best" value={habit.longestStreak} />
               <StatTile
                 className="min-w-32 flex-1"
-                label={period === 'day' ? 'Today' : `This ${period}`}
+                label={THIS_PERIOD[period]}
                 value={`${habit.current.done}/${habit.current.effectiveTarget}`}
                 hint={
                   habit.current.skipped > 0

@@ -11,13 +11,13 @@ import { describeError } from '@/lib/errors';
 import { CreateHabitDocument, UpdateHabitDocument } from '@/lib/graphql';
 import { newId } from '@/lib/ids';
 import { PALETTE } from '@/lib/palette';
-import { type Period, periodOf } from '@/lib/periods';
+import { Period, periodOf } from '@/lib/periods';
 import type { HabitSummary } from './types';
 
 const CADENCES: readonly RadioOption[] = [
-  { value: 'day', label: 'Daily' },
-  { value: 'week', label: 'Weekly' },
-  { value: 'month', label: 'Monthly' },
+  { value: Period.Day, label: 'Daily' },
+  { value: Period.Week, label: 'Weekly' },
+  { value: Period.Month, label: 'Monthly' },
 ];
 
 type HabitValues = {
@@ -33,7 +33,7 @@ const valuesOf = (habit: HabitSummary | undefined): HabitValues => ({
   name: habit?.name ?? '',
   notes: habit?.notes ?? '',
   color: habit?.color ?? PALETTE[0],
-  period: (habit?.period as Period) ?? 'day',
+  period: (habit?.period as Period) ?? Period.Day,
   targetCount: habit?.targetCount ?? 1,
 });
 
@@ -159,7 +159,7 @@ export function HabitFormDialog({
                 const current = form.getFieldValue('targetCount') ?? 1;
                 form.setFieldValue(
                   'targetCount',
-                  next === 'day' ? 1 : Math.min(Math.max(current, 1), maxTargetFor(next)),
+                  next === Period.Day ? 1 : Math.min(Math.max(current, 1), maxTargetFor(next)),
                 );
               },
             }}
@@ -167,7 +167,7 @@ export function HabitFormDialog({
 
           <form.Subscribe selector={(state) => state.values.period}>
             {(period) =>
-              period === 'day' ? null : (
+              period === Period.Day ? null : (
                 <form.AppField
                   name="targetCount"
                   validators={{

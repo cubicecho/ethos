@@ -2,7 +2,20 @@ import { Pressable } from 'react-native';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatDayLong } from '@/lib/periods';
 import { cn } from '@/lib/utils';
-import { type DayStatus, nextStatus } from './types';
+import { type DayStatus, ENTRY_DONE, ENTRY_SKIPPED, type EntryStatus, nextStatus } from './types';
+
+const STATE_OF = {
+  [ENTRY_DONE]: 'kept',
+  [ENTRY_SKIPPED]: 'skipped',
+} satisfies Record<EntryStatus, string>;
+
+/** The square's state in words, for the label a screen reader and the tooltip share. */
+function describeState(status: DayStatus, isFuture: boolean): string {
+  if (isFuture) {
+    return 'to come';
+  }
+  return status === null ? 'not kept' : STATE_OF[status];
+}
 
 /**
  * One day of one habit.
@@ -32,8 +45,7 @@ export function DaySquare({
   /** Called with what the day should become — the cycle is this component's. */
   onSet: (day: string, status: DayStatus) => void;
 }) {
-  const state = isFuture ? 'to come' : status === 'done' ? 'kept' : status === 'skipped' ? 'skipped' : 'not kept';
-  const label = `${formatDayLong(day)} — ${state}`;
+  const label = `${formatDayLong(day)} — ${describeState(status, isFuture)}`;
 
   return (
     <Tooltip>
@@ -50,13 +62,13 @@ export function DaySquare({
             'focus-visible:outline-2 focus-visible:outline-active focus-visible:outline-offset-2',
             isFuture ? 'cursor-default border-border/50 border-dashed bg-transparent' : 'hover:border-ring',
             isFuture === false && disabled && 'opacity-60',
-            status === 'skipped' && 'border-2 border-foreground/60 border-dashed bg-transparent',
+            status === ENTRY_SKIPPED && 'border-2 border-foreground/60 border-dashed bg-transparent',
             status === null && isFuture === false && 'border-border bg-muted/50',
             // Today is outlined rather than filled: the outline survives whatever
             // the square's own state is, so "today" and "kept" are readable at once.
             isToday && 'outline-2 outline-ring outline-offset-1',
           )}
-          style={status === 'done' ? { backgroundColor: color, borderColor: color } : undefined}
+          style={status === ENTRY_DONE ? { backgroundColor: color, borderColor: color } : undefined}
         />
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>

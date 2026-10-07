@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { describeCadence, describeProgress, isPeriod, maxTargetFor, PERIODS } from '../cadence';
+import { describeCadence, describeProgress, isPeriod, maxTargetFor } from '../cadence';
+import { Period } from '../periods';
 
 // The ceiling here is a copy of `server/src/habits/cadence.ts`, and the server's is the
 // one that decides. This one exists so the form refuses an impossible target
 // while it is still being typed — so the numbers have to agree.
 
-describe('PERIODS', () => {
+describe('Period', () => {
   it('is the three the database allows, in the order the form shows them', () => {
-    expect(PERIODS).toEqual(['day', 'week', 'month']);
+    expect(Object.values(Period)).toEqual(['day', 'week', 'month']);
   });
 
   it('recognises a period and nothing else', () => {

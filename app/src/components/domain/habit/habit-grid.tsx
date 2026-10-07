@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 import { Check } from '@/components/ui/icons';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { HISTORY_PERIODS } from '@/lib/graphql';
-import { daysOf, type Period, periodLabel, recentPeriods, weekdayInitial } from '@/lib/periods';
+import { daysOf, Period, periodLabel, recentPeriods, weekdayInitial } from '@/lib/periods';
 import { cn } from '@/lib/utils';
 import { DaySquare } from './day-square';
 import { asStatus, type DayStatus, type HabitEntrySummary, type HabitPeriodSummary, type HabitSummary } from './types';
@@ -30,10 +30,10 @@ interface GridRow {
  * the server's, not a re-count of the squares.
  */
 function buildRows(period: Period, history: readonly HabitPeriodSummary[], today: string): GridRow[] {
-  if (period === 'day') {
-    return recentPeriods('week', today, DAILY_WEEKS).map((week) => ({
+  if (period === Period.Day) {
+    return recentPeriods(Period.Week, today, DAILY_WEEKS).map((week) => ({
       key: week.start,
-      label: periodLabel('week', week.start, today),
+      label: periodLabel(Period.Week, week.start, today),
       days: daysOf(week),
       tally: null,
     }));
@@ -67,7 +67,7 @@ export function HabitGrid({
   const status = new Map<string, DayStatus>(entries.map((entry) => [entry.day, asStatus(entry.status)]));
   // Weeks all start on Monday, so the columns are worth naming once at the top.
   // A month's rows start on whatever weekday the first falls on.
-  const weekdays = period === 'month' ? null : rows[0]?.days;
+  const weekdays = period === Period.Month ? null : rows[0]?.days;
 
   return (
     // One provider for every square: a tooltip opened right after another one
