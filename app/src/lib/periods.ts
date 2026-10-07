@@ -24,7 +24,7 @@ export function today(at: Date = new Date()): string {
 }
 
 function toUtc(day: string): number {
-  if (!DAY_PATTERN.test(day)) {
+  if (DAY_PATTERN.test(day) === false) {
     return Number.NaN;
   }
   const [year, month, date] = day.split('-').map(Number);
@@ -37,7 +37,7 @@ function fromUtc(milliseconds: number): string {
 
 export function isDay(value: string): boolean {
   const milliseconds = toUtc(value);
-  return !Number.isNaN(milliseconds) && fromUtc(milliseconds) === value;
+  return Number.isNaN(milliseconds) === false && fromUtc(milliseconds) === value;
 }
 
 export function addDays(day: string, count: number): string {

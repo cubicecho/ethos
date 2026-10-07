@@ -100,7 +100,7 @@ export function HabitPage({
               label={isArchived ? 'Restore habit' : 'Archive habit'}
               variant="ghost"
               size="icon"
-              onPress={() => void setArchived(!isArchived)}
+              onPress={() => void setArchived(isArchived === false)}
               iconSlot={isArchived ? <ArchiveRestore /> : <Archive />}
             />
             <ConfirmButton

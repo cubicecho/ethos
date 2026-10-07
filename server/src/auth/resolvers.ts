@@ -84,7 +84,7 @@ export function verifyMagicToken(token: string): { email: string } | null {
 /** Read the authenticated userId from a request's Bearer token, if any. */
 export function extractUserId(request: { headers: { authorization?: string } }): string | null {
   const auth = request.headers.authorization;
-  if (!auth?.startsWith('Bearer ')) {
+  if (auth === undefined || auth.startsWith('Bearer ') === false) {
     return null;
   }
   return verifyToken(auth.slice(7))?.userId ?? null;
@@ -141,7 +141,7 @@ export function applyAuthExtension(schema: GraphQLSchema): GraphQLSchema {
 
     // No-link mode: the address alone is the credential. Private instances
     // only — see the README's "Before you expose it".
-    if (!isMagicLinkRequired()) {
+    if (isMagicLinkRequired() === false) {
       const userId = await findOrCreateUser(context.db, email);
       console.log(`[auth] Magic links are off; signed ${email} in directly.`);
       return { ok: true, magicLink: null, token: signToken(userId), userId };

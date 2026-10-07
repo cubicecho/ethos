@@ -39,7 +39,7 @@ const authLink = setContext((_operation, { headers }) => {
 const errorLink = onError(({ graphQLErrors }) => {
   if (graphQLErrors?.some((error) => error.extensions?.code === 'UNAUTHENTICATED')) {
     clearToken();
-    if (Platform.OS === 'web' && !window.location.pathname.startsWith('/login')) {
+    if (Platform.OS === 'web' && window.location.pathname.startsWith('/login') === false) {
       window.location.replace('/login');
     }
   }

@@ -19,7 +19,7 @@ import { useEffect, useRef } from 'react';
  * a screen the reader cannot see.
  */
 export function isTyping(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
+  if (target instanceof HTMLElement === false) {
     return false;
   }
   if (target.isContentEditable) {
@@ -48,7 +48,7 @@ export function useHotkey(key: string, handler: (event: KeyboardEvent) => void, 
   latest.current = handler;
 
   useEffect(() => {
-    if (!isEnabled || typeof document === 'undefined') {
+    if (isEnabled === false || typeof document === 'undefined') {
       return;
     }
 

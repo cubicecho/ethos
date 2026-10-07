@@ -51,7 +51,7 @@ export function tallyPeriod(habit: HabitLike, entries: readonly EntryLike[], ran
   let done = 0;
   let skipped = 0;
   for (const entry of entries) {
-    if (!isInRange(entry, range)) {
+    if (isInRange(entry, range) === false) {
       continue;
     }
     if (entry.status === 'done') {
@@ -109,7 +109,7 @@ export function currentStreak(habit: HabitLike, entries: readonly EntryLike[], t
     const tally = tallyPeriod(habit, entries, range);
     if (tally.met) {
       streak += 1;
-    } else if (!isNewestPeriod) {
+    } else if (isNewestPeriod === false) {
       break;
     }
     isNewestPeriod = false;
@@ -143,7 +143,7 @@ export function longestStreak(habit: HabitLike, entries: readonly EntryLike[], t
     if (tally.met) {
       run += 1;
       best = Math.max(best, run);
-    } else if (!isCurrentPeriod) {
+    } else if (isCurrentPeriod === false) {
       run = 0;
     }
     range = periodOf(habit.period, range.end);

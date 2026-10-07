@@ -51,7 +51,7 @@ app.use((request, response) => serveStatic(request, response));
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`[boot] Ethos ready at http://localhost:${PORT}`);
   console.log(`[boot] GraphQL at http://localhost:${PORT}/graphql`);
-  if (!isMagicLinkRequired()) {
+  if (isMagicLinkRequired() === false) {
     console.warn('[auth] AUTH_MAGIC_LINK is off: any email address signs in without a link. Private networks only.');
   } else if (isMagicLinkExposed()) {
     console.warn('[auth] EXPOSE_MAGIC_LINK is on: sign-in links are returned in API responses. Private networks only.');

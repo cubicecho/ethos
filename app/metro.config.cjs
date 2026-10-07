@@ -4,7 +4,8 @@ const Module = require('node:module');
 // npm workspaces hoists most packages to the repo root, but Metro resolves from
 // the project directory. Teach Node and Metro about both.
 const localModules = path.resolve(__dirname, 'node_modules');
-if (!process.env.NODE_PATH?.split(path.delimiter).includes(localModules)) {
+const hasLocalModules = process.env.NODE_PATH?.split(path.delimiter).includes(localModules) ?? false;
+if (hasLocalModules === false) {
   process.env.NODE_PATH = [localModules, process.env.NODE_PATH].filter(Boolean).join(path.delimiter);
   Module._initPaths();
 }

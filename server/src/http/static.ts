@@ -49,13 +49,13 @@ export function createStaticHandler(root: string): StaticHandler {
     const requested = resolve(join(rootDir, normalize(pathname)));
     // normalize() alone does not stop "..%2f" walking out of the root once the
     // path has been decoded — compare the resolved path instead.
-    if (requested !== rootDir && !requested.startsWith(rootDir + sep)) {
+    if (requested !== rootDir && requested.startsWith(rootDir + sep) === false) {
       response.writeHead(403).end();
       return;
     }
-    const isFile = existsSync(requested) && !statSync(requested).isDirectory();
+    const isFile = existsSync(requested) && statSync(requested).isDirectory() === false;
     const filePath = isFile ? requested : join(rootDir, 'index.html');
-    if (!isFile && !existsSync(filePath)) {
+    if (isFile === false && existsSync(filePath) === false) {
       response.writeHead(404).end();
       return;
     }

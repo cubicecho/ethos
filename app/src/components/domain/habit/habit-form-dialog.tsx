@@ -175,7 +175,7 @@ export function HabitFormDialog({
                     // rather than after it.
                     onChange: ({ value }) => {
                       const max = maxTargetFor(period);
-                      if (value == null || !Number.isInteger(value) || value < 1) {
+                      if (value == null || Number.isInteger(value) === false || value < 1) {
                         return 'Enter a whole number.';
                       }
                       return value > max ? `A ${period} has at most ${max} days to keep it on.` : undefined;

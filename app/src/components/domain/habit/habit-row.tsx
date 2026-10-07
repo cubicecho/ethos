@@ -56,7 +56,7 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
             // tick inside it would read as half-done.
             iconSlot={
               <Check
-                className={cn('h-5 w-5', !isDone && 'opacity-0')}
+                className={cn('h-5 w-5', isDone === false && 'opacity-0')}
                 color={isDone ? readableTextColor(habit.color) : undefined}
               />
             }

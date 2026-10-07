@@ -14,7 +14,7 @@ const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /** A `YYYY-MM-DD` as milliseconds at UTC midnight, or a thrown BAD_USER_INPUT. */
 function toUtc(day: string): number {
-  if (!DAY_PATTERN.test(day)) {
+  if (DAY_PATTERN.test(day) === false) {
     throw new GraphQLError(`"${day}" is not a date. Expected YYYY-MM-DD.`, {
       extensions: { code: 'BAD_USER_INPUT' },
     });

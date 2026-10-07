@@ -49,9 +49,9 @@ export function DaySquare({
             // Further out than today's outline and in another colour, so focus on today still shows.
             'focus-visible:outline-2 focus-visible:outline-active focus-visible:outline-offset-2',
             isFuture ? 'cursor-default border-border/50 border-dashed bg-transparent' : 'hover:border-ring',
-            !isFuture && disabled && 'opacity-60',
+            isFuture === false && disabled && 'opacity-60',
             status === 'skipped' && 'border-2 border-foreground/60 border-dashed bg-transparent',
-            status === null && !isFuture && 'border-border bg-muted/50',
+            status === null && isFuture === false && 'border-border bg-muted/50',
             // Today is outlined rather than filled: the outline survives whatever
             // the square's own state is, so "today" and "kept" are readable at once.
             isToday && 'outline-2 outline-ring outline-offset-1',

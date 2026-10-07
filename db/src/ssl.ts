@@ -47,7 +47,7 @@ export function requiresSsl(url: string): boolean {
     return false;
   }
   // A name with no dots is a container or LAN hostname, not a public address.
-  if (!hostname.includes('.') && !hostname.includes(':')) {
+  if (hostname.includes('.') === false && hostname.includes(':') === false) {
     return false;
   }
   // Nor is a name under a private-use suffix: the router or mDNS resolves it,

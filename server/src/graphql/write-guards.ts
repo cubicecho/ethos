@@ -73,7 +73,7 @@ export async function assertForeignKeysOwned(
       .from(foreignKey.parent)
       .where(and(inArray(foreignKey.parent.id, referenced), eq(foreignKey.parent.userId, userId)));
     const ownedIds = new Set(owned.map((row) => row.id));
-    if (referenced.some((id) => !ownedIds.has(id))) {
+    if (referenced.some((id) => ownedIds.has(id) === false)) {
       // NOT_FOUND, not FORBIDDEN: "you may not touch this" would confirm the row
       // exists, which is itself something the caller is not entitled to know.
       throw new GraphQLError(`${foreignKey.entity} not found`, { extensions: { code: 'NOT_FOUND' } });
