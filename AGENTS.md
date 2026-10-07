@@ -160,7 +160,7 @@ double-click, two open tabs and a retried request are all the same tick.
 **A skip is not a miss, and there are two of them.** A day you deliberately
 declined comes off what the period asked for; an untouched day is the miss. That
 is right — an instance you declined was never owed — and is exactly why it is
-capped at `MAX_SKIPS_PER_PERIOD` in `server/src/habits/streaks.ts`: a habit that can be
+capped at `HABIT_DEFAULTS.maxSkipsPerPeriod` in `server/src/core/defaults.ts`: a habit that can be
 skipped without limit has no completion rate left to read, because every period
 can be skipped down to owing nothing and reported as kept. The cap is counted
 over the period's *other* days, so a period at the cap can still change its mind
@@ -382,6 +382,13 @@ a value it failed to read.
 - Comments explain *why*. The code already says what. A doc comment's description is at
   most four sentences and a comment inside a body at most two lines; longer
   rationale and history belong in the commit message.
+- Every module-level function has a doc block: the description, a blank line,
+  then `@param name - …` for each parameter and `@returns …` unless it returns
+  nothing. An optional parameter is `@param [name] - …`, with no type and no
+  default in the tag. A React component is the exception: its summary alone,
+  with each prop documented on its member of the props type.
+- Where another skill or this file disagrees with the `coding-standards` skill,
+  `coding-standards` is the rule, and this file is corrected to match it.
 
 ## Generated output
 
