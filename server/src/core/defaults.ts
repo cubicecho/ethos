@@ -36,11 +36,14 @@ export interface AuthSettings {
   sessionTtlDays: number;
   /** How long a sign-in link is good for. Short: it travels by mail. */
   magicLinkTtlMinutes: number;
+  /** The shortest `JWT_SECRET` production accepts. `openssl rand -hex 32` gives twice this. */
+  minSecretLength: number;
 }
 
 export const AUTH_DEFAULTS: Readonly<AuthSettings> = Object.freeze({
   sessionTtlDays: 30,
   magicLinkTtlMinutes: 15,
+  minSecretLength: 32,
 });
 
 export interface HabitSettings {

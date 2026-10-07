@@ -1,12 +1,34 @@
 import { createRequire } from 'node:module';
 import { DATABASE_DEFAULTS } from '@ethos/db/defaults';
-import { HTTP_DEFAULTS } from './defaults.ts';
+import { AUTH_DEFAULTS, HTTP_DEFAULTS } from './defaults.ts';
 
 /** What `version()` answers when the root package.json cannot be read. */
 const UNKNOWN_VERSION = 'unknown';
 
 /** What signs tokens when `JWT_SECRET` is unset. Preflight refuses it in production. */
 export const DEV_SECRET = 'dev-secret-change-in-production';
+
+/** The value `.env.example` ships. Public, so as good as no secret at all. */
+export const PLACEHOLDER_SECRET = 'change-me-to-a-long-random-string';
+
+/**
+ * Why `secret` must not sign production tokens, or undefined when it may.
+ *
+ * Session tokens are signed with this and nothing else, so a secret that is
+ * published or short enough to guess lets anyone mint a token for any account.
+ */
+export function describeWeakSecret(secret: string | undefined): string | undefined {
+  if (secret === undefined || secret === '') {
+    return 'is not set';
+  }
+  if (secret === DEV_SECRET || secret === PLACEHOLDER_SECRET) {
+    return 'is a published default';
+  }
+  if (secret.length < AUTH_DEFAULTS.minSecretLength) {
+    return `is shorter than ${AUTH_DEFAULTS.minSecretLength} characters`;
+  }
+  return undefined;
+}
 
 /** Whether this is a production instance, where the checks are strict and nothing is exposed. */
 export function isProduction(): boolean {
@@ -62,6 +84,17 @@ export function port(): number {
  */
 export function appUrl(): string {
   return process.env.APP_URL ?? `http://localhost:${port()}`;
+}
+
+/**
+ * The origins a browser may call the API from, or `true` for any.
+ *
+ * Production serves the web client itself, so the only origin with business
+ * here is `APP_URL`. Development allows any: the Expo dev server is a second
+ * origin, and it is opened by whatever hostname the laptop has on the network.
+ */
+export function allowedOrigins(): string[] | true {
+  return isProduction() ? [appUrl()] : true;
 }
 
 /** Truthy env-var values: "1", "true", "yes" (case-insensitive). */

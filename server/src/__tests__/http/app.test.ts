@@ -17,6 +17,8 @@ import { createTestDb, createUser, portOf } from '../helpers.ts';
 const INDEX = '<!doctype html><title>Ethos</title>';
 const HABITS = '{ habits { id } }';
 const EMAIL = 'alice@example.com';
+const APP_ORIGIN = 'http://ethos.test';
+const OTHER_ORIGIN = 'http://elsewhere.test';
 
 let staticDir: string;
 let server: Server;
@@ -28,7 +30,7 @@ beforeAll(async () => {
   writeFileSync(join(staticDir, 'index.html'), INDEX);
   const db = await createTestDb();
   aliceId = await createUser(db, EMAIL);
-  const app = await createApp({ db, staticDir });
+  const app = await createApp({ db, staticDir, allowedOrigins: [APP_ORIGIN] });
   server = app.listen(0);
   await new Promise<void>((resolve) => server.once('listening', resolve));
   base = `http://127.0.0.1:${portOf(server)}`;
@@ -74,6 +76,16 @@ describe('app', () => {
     const body = await ask(HABITS, `Bearer ${signToken(aliceId)}`);
     expect(body.errors).toBeUndefined();
     expect(body.data.habits).toEqual([]);
+  });
+
+  it('lets the app origin read a response', async () => {
+    const response = await fetch(`${base}/healthz`, { headers: { origin: APP_ORIGIN } });
+    expect(response.headers.get('access-control-allow-origin')).toBe(APP_ORIGIN);
+  });
+
+  it('gives any other origin no permission to read one', async () => {
+    const response = await fetch(`${base}/healthz`, { headers: { origin: OTHER_ORIGIN } });
+    expect(response.headers.get('access-control-allow-origin')).toBeNull();
   });
 
   it('serves the web client for a path it does not know', async () => {

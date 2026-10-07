@@ -102,7 +102,7 @@ domain.
 | --- | --- | --- |
 | `DATABASE_URL` | — | **Required.** Postgres connection string. There is no embedded fallback. |
 | `JWT_SECRET` | — | **Required in production.** Signs session and magic-link tokens. `openssl rand -hex 32`. |
-| `APP_URL` | `http://localhost:3006` | Public URL; magic-link URLs are built from it. |
+| `APP_URL` | `http://localhost:3006` | Public URL; magic-link URLs are built from it, and in production it is the only origin allowed to call the API. |
 | `PORT` | `3006` | Port the server listens on. |
 | `DB_CONNECT_TIMEOUT_MS` | `60000` | How long boot waits for Postgres to start answering. |
 | `AUTH_MAGIC_LINK` | `true` | Set to `false` to sign in with an address alone, no link. |
@@ -129,7 +129,7 @@ for an instance on the public internet. Before putting Ethos on a domain:
   sign-in token to whoever asked for it, which is the same thing by another route.
 - **Set a real `JWT_SECRET`** and keep it. Changing it signs everyone out; leaking
   it lets anyone mint a session. The server refuses to boot in production while
-  it is unset or still the default.
+  it is unset, a published default, or shorter than 32 characters.
 
 ## Development
 

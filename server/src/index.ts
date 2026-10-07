@@ -5,7 +5,14 @@ import { fileURLToPath } from 'node:url';
 import { closeDatabase, db } from '@ethos/db';
 import { errorCode, RETRYABLE_CODES, waitForDatabase } from '@ethos/db/wait';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { databaseUrl, dbConnectTimeoutMs, isMagicLinkExposed, isMagicLinkRequired, port } from './core/config.ts';
+import {
+  allowedOrigins,
+  databaseUrl,
+  dbConnectTimeoutMs,
+  isMagicLinkExposed,
+  isMagicLinkRequired,
+  port,
+} from './core/config.ts';
 import { createApp } from './http/app.ts';
 import { stopOnSignals } from './http/shutdown.ts';
 
@@ -44,7 +51,11 @@ try {
 // install. They are idempotent; a container restart is a no-op.
 await migrate(db, { migrationsFolder: join(__dirname, '../../db/drizzle') });
 
-const app = await createApp({ db, staticDir: join(__dirname, '../../app/dist') });
+const app = await createApp({
+  db,
+  allowedOrigins: allowedOrigins(),
+  staticDir: join(__dirname, '../../app/dist'),
+});
 
 const server = app.listen(port(), LISTEN_HOST, () => {
   console.log(`[boot] Ethos ready at http://localhost:${port()}`);
