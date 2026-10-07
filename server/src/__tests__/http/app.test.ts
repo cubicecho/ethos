@@ -3,6 +3,7 @@ import type { Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { createRateLimiter } from '../../auth/rate-limit.ts';
 import { signToken } from '../../auth/resolvers.ts';
 import { version } from '../../core/config.ts';
 import { ErrorCode } from '../../core/errors.ts';
@@ -106,6 +107,53 @@ describe('app whose database does not answer', () => {
     await new Promise<void>((resolve) => sick.close(() => resolve()));
     expect(response.status).toBe(HttpStatus.ServiceUnavailable);
     expect(await response.json()).toEqual({ ok: false, version: version(), error: 'connection refused' });
+  });
+});
+
+describe('app behind a proxy', () => {
+  const REQUEST = 'mutation ($email: String!) { requestMagicLink(email: $email) { ok } }';
+  let addresses = 0;
+
+  /** Asks for a sign-in link for a fresh address, as the proxy would forward it for `client`. */
+  async function requestLinkFrom(origin: string, client: string): Promise<AnyBody> {
+    const response = await fetch(`${origin}/graphql`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': client },
+      body: JSON.stringify({ query: REQUEST, variables: { email: `proxied${++addresses}@example.com` } }),
+    });
+    return response.json();
+  }
+
+  async function served(trustProxy: number | false): Promise<{ origin: string; close: () => Promise<void> }> {
+    const limiter = createRateLimiter({ maxAttempts: 1 });
+    const app = await createApp({ db: await createTestDb(), limiter, trustProxy });
+    const proxied = app.listen(0);
+    await new Promise<void>((resolve) => proxied.once('listening', resolve));
+    return {
+      origin: `http://127.0.0.1:${portOf(proxied)}`,
+      close: () => new Promise<void>((resolve) => proxied.close(() => resolve())),
+    };
+  }
+
+  it('counts each forwarded client separately when it trusts the proxy', async () => {
+    const { origin, close } = await served(1);
+    const first = await requestLinkFrom(origin, '203.0.113.1');
+    const second = await requestLinkFrom(origin, '203.0.113.2');
+    const again = await requestLinkFrom(origin, '203.0.113.1');
+    await close();
+    expect(first.errors).toBeUndefined();
+    expect(second.errors).toBeUndefined();
+    expect(again.errors[0].extensions.code).toBe(ErrorCode.TooManyRequests);
+  });
+
+  it('ignores a forwarded address it was not told to trust', async () => {
+    const { origin, close } = await served(false);
+    const first = await requestLinkFrom(origin, '203.0.113.1');
+    // A different claimed client, the same socket: one budget, already spent.
+    const second = await requestLinkFrom(origin, '203.0.113.2');
+    await close();
+    expect(first.errors).toBeUndefined();
+    expect(second.errors[0].extensions.code).toBe(ErrorCode.TooManyRequests);
   });
 });
 

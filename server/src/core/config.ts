@@ -97,6 +97,28 @@ export function allowedOrigins(): string[] | true {
   return isProduction() ? [appUrl()] : true;
 }
 
+/**
+ * How far to believe `X-Forwarded-For`, from `TRUST_PROXY`.
+ *
+ * Unset or `false` believes only the socket, which is right with no proxy in
+ * front and wrong behind one: every client then shares the proxy's address and
+ * one sign-in budget. A number is how many proxies sit in front; anything else
+ * is passed to Express as written (`loopback`, a subnet).
+ */
+export function trustProxy(): boolean | number | string {
+  const value = (process.env.TRUST_PROXY ?? '').trim();
+  if (value === '') {
+    return HTTP_DEFAULTS.trustProxy;
+  }
+  if (/^\d+$/.test(value)) {
+    return Number(value);
+  }
+  if (envDisabled(value)) {
+    return false;
+  }
+  return isFlagOn(value) ? true : value;
+}
+
 /** Truthy env-var values: "1", "true", "yes" (case-insensitive). */
 export function isFlagOn(value: string | undefined): boolean {
   return ['1', 'true', 'yes'].includes((value ?? '').trim().toLowerCase());

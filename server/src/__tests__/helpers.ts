@@ -38,21 +38,29 @@ export interface TestClient {
   // biome-ignore lint/suspicious/noExplicitAny: caller shapes the response
   expectOk: (query: string, variables?: Record<string, unknown>) => Promise<any>;
   /** Runs an operation, expects exactly one error, and returns it. */
-  expectError: (query: string, variables?: Record<string, unknown>) => Promise<{ message: string; code: unknown }>;
+  expectError: (
+    query: string,
+    variables?: Record<string, unknown>,
+  ) => Promise<{ message: string; code: unknown; extensions?: Record<string, unknown> }>;
 }
 
 /** Collaborators a test shares between clients, or swaps for its own. */
 export interface ClientDeps {
   /** Pass a small one to reach the budget. The default is `createRateLimiter()`. */
   limiter?: RateLimiter;
+  /** The address the request is taken to come from. The default is `TEST_IP`. */
+  ip?: string;
 }
 
+/** Where a test client's requests come from unless it says otherwise. */
+export const TEST_IP = '127.0.0.1';
+
 export function createClient(db: TestDb, userId: string | null, deps: ClientDeps = {}): TestClient {
-  const { limiter = createRateLimiter() } = deps;
+  const { limiter = createRateLimiter(), ip = TEST_IP } = deps;
   const { schema } = createSchema(db);
 
   const run = async (query: string, variables?: Record<string, unknown>) => {
-    const contextValue: Context = { db, userId, limiter, loaders: createLoaders(db) };
+    const contextValue: Context = { db, userId, ip, limiter, loaders: createLoaders(db) };
     return graphql({ schema, source: query, contextValue, variableValues: variables });
   };
 
@@ -74,7 +82,7 @@ export function createClient(db: TestDb, userId: string | null, deps: ClientDeps
       if (!error) {
         throw new Error('expected an error, got a successful result');
       }
-      return { message: error.message, code: error.extensions?.code };
+      return { message: error.message, code: error.extensions?.code, extensions: error.extensions };
     },
   };
 }

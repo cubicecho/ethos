@@ -2,6 +2,7 @@ import type { DB } from '@ethos/db';
 import cors from 'cors';
 import express, { type Express } from 'express';
 import { createRateLimiter, type RateLimiter } from '../auth/rate-limit.ts';
+import { HTTP_DEFAULTS, type HttpSettings } from '../core/defaults.ts';
 import { HttpStatus } from '../core/wire.ts';
 import { createGraphQLHandler } from '../graphql/handler.ts';
 import { checkHealth } from './health.ts';
@@ -14,6 +15,8 @@ export interface AppDeps {
   limiter?: RateLimiter;
   /** Origins a browser may call from, or `true` for any. The default is none but the app's own. */
   allowedOrigins?: string[] | true;
+  /** Express's `trust proxy`: whether, and how far, to believe `X-Forwarded-For`. */
+  trustProxy?: HttpSettings['trustProxy'];
   /** The built web client's directory. Left out in tests that do not serve it. */
   staticDir?: string;
 }
@@ -28,10 +31,13 @@ export async function createApp({
   db,
   limiter = createRateLimiter(),
   allowedOrigins = [],
+  trustProxy = HTTP_DEFAULTS.trustProxy,
   staticDir,
 }: AppDeps): Promise<Express> {
   const app = express();
 
+  // Decides what `request.ip` is, and the sign-in throttle is keyed by it.
+  app.set('trust proxy', trustProxy);
   app.use(cors({ origin: allowedOrigins }));
   app.use('/graphql', express.json(), await createGraphQLHandler({ db, limiter }));
   app.get('/healthz', async (_request, response) => {

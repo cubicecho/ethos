@@ -20,8 +20,10 @@ export const badInput = withCode(ErrorCode.BadUserInput);
 export const notFound = withCode(ErrorCode.NotFound);
 /** Nobody is signed in, or the session has run out. */
 export const unauthenticated = withCode(ErrorCode.Unauthenticated);
-/** Too many attempts for now. */
-export const rateLimited = withCode(ErrorCode.TooManyRequests);
+/** Too many attempts for now. `retryAfter` is the seconds until the next one would be let through. */
+export function rateLimited(message: string, retryAfter: number): GraphQLError {
+  return new GraphQLError(message, { extensions: { code: ErrorCode.TooManyRequests, retryAfter } });
+}
 
 /** What went wrong, as a sentence: an `Error`'s message, or the thrown value as text. */
 export function errorMessage(error: unknown): string {

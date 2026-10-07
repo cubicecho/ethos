@@ -104,6 +104,7 @@ domain.
 | `JWT_SECRET` | — | **Required in production.** Signs session and magic-link tokens. `openssl rand -hex 32`. |
 | `APP_URL` | `http://localhost:3006` | Public URL; magic-link URLs are built from it, and in production it is the only origin allowed to call the API. |
 | `PORT` | `3006` | Port the server listens on. |
+| `TRUST_PROXY` | `false` | How many reverse proxies are in front (`1` behind one). Decides whose address sign-in is throttled by. |
 | `DB_CONNECT_TIMEOUT_MS` | `60000` | How long boot waits for Postgres to start answering. |
 | `AUTH_MAGIC_LINK` | `true` | Set to `false` to sign in with an address alone, no link. |
 | `EXPOSE_MAGIC_LINK` | dev only | Return the magic link in the API response so the login page can show it. |
@@ -120,8 +121,9 @@ for an instance on the public internet. Before putting Ethos on a domain:
 
 - **Put it behind something.** A reverse proxy with TLS, and — if the instance is
   yours alone — an allowlist, VPN, or auth in front of it. Ethos rate-limits
-  sign-in requests per address in process; per-IP limiting is the proxy's job,
-  because the proxy is the only thing that reliably knows the client's address.
+  sign-in per email address and per client IP, in process. Behind a proxy, set
+  `TRUST_PROXY=1` so the client's address is the visitor's and not the proxy's;
+  without it every visitor shares one sign-in budget.
 - **Never set `AUTH_MAGIC_LINK=false` on a reachable instance.** It makes an email
   address the entire credential: anyone who can load the login page can sign in
   as anyone.

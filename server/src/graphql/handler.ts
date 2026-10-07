@@ -4,7 +4,7 @@ import type { DB } from '@ethos/db';
 import type { RequestHandler } from 'express';
 import type { RateLimiter } from '../auth/rate-limit.ts';
 import { extractUserId } from '../auth/resolvers.ts';
-import type { Context } from '../core/context.ts';
+import { type Context, UNKNOWN_IP } from '../core/context.ts';
 import { createSchema } from './build-schema.ts';
 import { createLoaders } from './loaders.ts';
 
@@ -28,6 +28,12 @@ export async function createGraphQLHandler({ db, limiter }: GraphQLHandlerDeps):
   return expressMiddleware(apolloServer, {
     // Loaders are built per request: their batching is only ever valid within
     // one request, and their cache must not outlive it.
-    context: async ({ req }) => ({ db, limiter, userId: extractUserId(req), loaders: createLoaders(db) }),
+    context: async ({ req }) => ({
+      db,
+      limiter,
+      userId: extractUserId(req),
+      ip: req.ip ?? UNKNOWN_IP,
+      loaders: createLoaders(db),
+    }),
   });
 }

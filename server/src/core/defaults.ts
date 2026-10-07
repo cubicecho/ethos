@@ -10,6 +10,11 @@ export interface HttpSettings {
   drainSeconds: number;
   /** How long shutdown may take in all before the process exits anyway. */
   shutdownDeadlineSeconds: number;
+  /**
+   * Whether `X-Forwarded-For` names the client: false, a hop count, or what
+   * Express's `trust proxy` accepts. False believes only the socket.
+   */
+  trustProxy: boolean | number | string;
 }
 
 export const HTTP_DEFAULTS: Readonly<HttpSettings> = Object.freeze({
@@ -17,6 +22,7 @@ export const HTTP_DEFAULTS: Readonly<HttpSettings> = Object.freeze({
   immutableCacheSeconds: 31_536_000,
   drainSeconds: 5,
   shutdownDeadlineSeconds: 8,
+  trustProxy: false,
 });
 
 export interface RateLimitSettings {
@@ -24,11 +30,14 @@ export interface RateLimitSettings {
   maxAttempts: number;
   /** How long a window lasts. */
   windowMinutes: number;
+  /** How many keys the limiter holds before it drops the ones that have gone quiet. */
+  sweepAtKeys: number;
 }
 
 export const RATE_LIMIT_DEFAULTS: Readonly<RateLimitSettings> = Object.freeze({
   maxAttempts: 5,
   windowMinutes: 15,
+  sweepAtKeys: 10_000,
 });
 
 export interface AuthSettings {

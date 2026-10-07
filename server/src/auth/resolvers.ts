@@ -5,7 +5,8 @@ import jwt from 'jsonwebtoken';
 import { appUrl, isMagicLinkExposed, isMagicLinkRequired, jwtSecret } from '../core/config.ts';
 import type { Context } from '../core/context.ts';
 import { AUTH_DEFAULTS } from '../core/defaults.ts';
-import { badInput, rateLimited, unauthenticated } from '../core/errors.ts';
+import { badInput, unauthenticated } from '../core/errors.ts';
+import { AuthFlow, throttle } from './throttle.ts';
 
 /** What an `Authorization` header starts with when it carries a session token. */
 const BEARER_PREFIX = 'Bearer ';
@@ -117,9 +118,7 @@ export function applyAuthExtension(schema: GraphQLSchema): GraphQLSchema {
     const email = normalizeEmail(args.email);
     // Unauthenticated, so without the limiter anyone who can reach the port can
     // mint magic tokens at will.
-    if (context.limiter.allow(email) === false) {
-      throw rateLimited('Too many sign-in attempts. Try again in a few minutes.');
-    }
+    throttle(context, AuthFlow.RequestMagicLink, email);
 
     // No-link mode: the address alone is the credential. Private instances
     // only — see the README's "Before you expose it".
@@ -136,6 +135,8 @@ export function applyAuthExtension(schema: GraphQLSchema): GraphQLSchema {
   };
 
   fields.verifyMagicLink.resolve = async (_parent: unknown, args: { token: string }, context: Context) => {
+    // By IP alone: until the token verifies there is no address to count against.
+    throttle(context, AuthFlow.VerifyMagicLink);
     const payload = verifyMagicToken(args.token);
     if (!payload) {
       throw badInput('Invalid or expired magic link');

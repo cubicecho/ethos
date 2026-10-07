@@ -12,6 +12,7 @@ import {
   isMagicLinkExposed,
   isMagicLinkRequired,
   port,
+  trustProxy,
 } from './core/config.ts';
 import { createApp } from './http/app.ts';
 import { stopOnSignals } from './http/shutdown.ts';
@@ -54,6 +55,7 @@ await migrate(db, { migrationsFolder: join(__dirname, '../../db/drizzle') });
 const app = await createApp({
   db,
   allowedOrigins: allowedOrigins(),
+  trustProxy: trustProxy(),
   staticDir: join(__dirname, '../../app/dist'),
 });
 

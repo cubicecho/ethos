@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { allowedOrigins, DEV_SECRET, describeWeakSecret, PLACEHOLDER_SECRET } from '../../core/config.ts';
+import { allowedOrigins, DEV_SECRET, describeWeakSecret, PLACEHOLDER_SECRET, trustProxy } from '../../core/config.ts';
 import { AUTH_DEFAULTS } from '../../core/defaults.ts';
 
 afterEach(() => {
@@ -34,5 +34,19 @@ describe('allowedOrigins', () => {
   it('is any origin in development, where the Expo dev server is a second one', () => {
     vi.stubEnv('NODE_ENV', 'development');
     expect(allowedOrigins()).toBe(true);
+  });
+});
+
+describe('trustProxy', () => {
+  it.each([
+    ['', false],
+    ['false', false],
+    ['true', true],
+    ['1', 1],
+    ['2', 2],
+    ['loopback', 'loopback'],
+  ])('reads TRUST_PROXY=%j as %j', (value, expected) => {
+    vi.stubEnv('TRUST_PROXY', value);
+    expect(trustProxy()).toBe(expected);
   });
 });
