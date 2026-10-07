@@ -78,17 +78,6 @@ function fromUtc(milliseconds: number): string {
 }
 
 /**
- * Whether a string is a real calendar day.
- *
- * @param value - The string to test.
- * @returns false for the wrong shape, and for a date like `2026-02-31`.
- */
-export function isDay(value: string): boolean {
-  const milliseconds = toUtc(value);
-  return Number.isNaN(milliseconds) === false && fromUtc(milliseconds) === value;
-}
-
-/**
  * The day `count` days after `day`.
  *
  * @param day - A `YYYY-MM-DD` day.
