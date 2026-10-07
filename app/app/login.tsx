@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useAppForm } from '@/components/app-form';
 import { CardLayout } from '@/components/card-layout';
+import { Alert } from '@/components/ui/alert';
 import { Code } from '@/components/ui/code';
 import { Form } from '@/components/ui/form';
 import { CircleCheck } from '@/components/ui/icons';
@@ -67,7 +68,7 @@ export default function LoginScreen() {
           </Form>
         </form.AppForm>
 
-        {error ? <Text className="mt-4 text-destructive text-sm">{describeError(error)}</Text> : null}
+        {error ? <Alert variant="destructive" className="mt-4" description={describeError(error)} /> : null}
 
         {hasSentLink ? (
           <CardLayout

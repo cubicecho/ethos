@@ -92,17 +92,28 @@ export function Sidebar() {
         }
         footerSlot={
           <>
-            <Link href="/archive" asChild>
-              <SidebarNavItem href="/archive" label="Archive" iconSlot={<Archive />} active={pathname === '/archive'} />
-            </Link>
-            <Link href="/settings" asChild>
-              <SidebarNavItem
-                href="/settings"
-                label="Settings"
-                iconSlot={<Settings />}
-                active={pathname === '/settings'}
-              />
-            </Link>
+            <SidebarSection
+              as="nav"
+              label="More"
+              contentSlot={[
+                <Link key="archive" href="/archive" asChild>
+                  <SidebarNavItem
+                    href="/archive"
+                    label="Archive"
+                    iconSlot={<Archive />}
+                    active={pathname === '/archive'}
+                  />
+                </Link>,
+                <Link key="settings" href="/settings" asChild>
+                  <SidebarNavItem
+                    href="/settings"
+                    label="Settings"
+                    iconSlot={<Settings />}
+                    active={pathname === '/settings'}
+                  />
+                </Link>,
+              ]}
+            />
             {/* A button, not a link: it does something rather than going somewhere. */}
             <SidebarNavItem label="Sign out" iconSlot={<LogOut />} onPress={signOut} />
           </>
