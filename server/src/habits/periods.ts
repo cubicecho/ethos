@@ -3,16 +3,11 @@ import { GraphQLError } from 'graphql';
 
 // Where the period boundaries are drawn, as pure functions over `YYYY-MM-DD`.
 //
-// Nothing here ever constructs a local `Date`. A day in this app is a label the
-// keeper wrote, not an instant — `2026-09-17` is the seventeenth wherever it is
-// read from — and the moment one is parsed with `new Date('2026-09-17')` it
-// becomes UTC midnight, which is the sixteenth for most of the Americas. All the
-// arithmetic below goes through `Date.UTC`, where the offset is zero by
-// construction and a day can neither gain nor lose one.
-//
-// `app/src/lib/periods.ts` is the client's copy of this file, kept deliberately
-// identical: the grid draws the periods the streak is counted over, so if the
-// two disagree the app shows a streak nobody can reproduce by counting squares.
+// Nothing here constructs a local `Date`: a day is a label, not an instant, and
+// `new Date('2026-09-17')` is UTC midnight — the sixteenth for most of the
+// Americas. All arithmetic goes through `Date.UTC`, where the offset is zero.
+// `app/src/lib/periods.ts` is the client's copy, kept identical so the grid
+// draws the periods the streak is counted over.
 
 const DAY_MS = 86_400_000;
 const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -27,8 +22,7 @@ function toUtc(day: string): number {
   const [year, month, date] = day.split('-').map(Number);
   const milliseconds = Date.UTC(year, month - 1, date);
   // Round-tripped rather than range-checked: `2026-02-31` parses happily and
-  // comes back as the third of March, which is a different day than the one the
-  // caller named. Anything that does not survive the trip was never a date.
+  // comes back as the third of March.
   if (Number.isNaN(milliseconds) || fromUtc(milliseconds) !== day) {
     throw new GraphQLError(`"${day}" is not a date. Expected YYYY-MM-DD.`, {
       extensions: { code: 'BAD_USER_INPUT' },

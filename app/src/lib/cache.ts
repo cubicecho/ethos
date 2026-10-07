@@ -68,9 +68,8 @@ export function removeHabit(cache: ApolloCache<unknown>, today: string, id: stri
       existing ? { ...existing, habits: without(existing.habits, id) } : existing,
     );
   }
-  // The lists are the only place that referenced it; the normalized entity would
-  // otherwise sit in the cache forever, and a screen still holding its id would
-  // read a habit the server no longer has.
+  // The lists were the only references. Left in the cache, a screen still
+  // holding the id would read a habit the server no longer has.
   cache.evict({ id: cache.identify({ __typename: 'Habit', id }) });
   cache.gc();
 }

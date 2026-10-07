@@ -45,9 +45,8 @@ describe('extractUserId', () => {
   });
 
   it('refuses a sign-in token where a session token belongs', () => {
-    // A magic-link token carries an email and no userId, and is minted from an
-    // unauthenticated endpoint. Both are signed with the same secret, so the
-    // only thing keeping them apart is that this reads `userId`.
+    // A magic-link token is signed with the same secret but carries no userId:
+    // reading `userId` is the only thing keeping the two kinds apart.
     expect(extractUserId(request(`Bearer ${signMagicToken('someone@example.com')}`))).toBeNull();
   });
 });

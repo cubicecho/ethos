@@ -28,10 +28,8 @@ export default function HabitScreen() {
         width="prose"
         title="Habit"
         contentSlot={
-          // The failure is ahead of the not-found message, which is a claim about
-          // the caller's own data: with the API unreachable the app has no idea
-          // whose the habit is, and telling someone their habit is gone when it
-          // is not is worse than telling them nothing.
+          // The failure goes ahead of not-found: with the API unreachable, telling
+          // someone their habit is gone when it is not is worse than telling nothing.
           <LoadState
             query={habitQuery}
             what="this habit"

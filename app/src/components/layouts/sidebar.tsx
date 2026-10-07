@@ -36,10 +36,8 @@ export function Sidebar() {
             <Link href="/" className="px-1 font-semibold text-foreground text-lg tracking-tight no-underline">
               Ethos
             </Link>
-            {/* The one action the sidebar offers, so it says what it does rather
-                than leaving a bare `+` for the reader to interpret, and it is
-                the only filled thing here. The colour is the whole hierarchy:
-                spend it on the action and the habit rows stay quiet. */}
+            {/* The one action here, so it is labelled and the only filled thing:
+                spend the colour on the action and the habit rows stay quiet. */}
             <Button
               size="sm"
               className="w-full gap-2 rounded-lg"
@@ -81,9 +79,8 @@ export function Sidebar() {
                   <SidebarNavItem
                     href={`/habits/${habit.id}`}
                     label={habit.name}
-                    // The habit's colour is how it is recognised on every other
-                    // screen, so the rail carries it too — a dot rather than a
-                    // filled row, which would make the sidebar a colour chart.
+                    // The habit's colour is how it is recognised everywhere else.
+                    // A dot, because filled rows would make the sidebar a colour chart.
                     iconSlot={<ColorDot color={habit.color} size="sm" />}
                     count={habit.streak > 0 ? habit.streak : undefined}
                     active={pathname === `/habits/${habit.id}`}

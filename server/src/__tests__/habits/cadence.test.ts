@@ -23,9 +23,8 @@ describe('maxTargetFor', () => {
   });
 
   it('measures a month by February, not by the month we happen to be in', () => {
-    // 28, never 30 or 31: a cadence that is satisfiable in August and
-    // impossible in February is a habit that fails once a year for reasons
-    // nobody wrote down.
+    // 28, never 30 or 31: a cadence satisfiable in August and impossible in
+    // February fails once a year for reasons nobody wrote down.
     expect(maxTargetFor('month')).toBe(28);
   });
 });

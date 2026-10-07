@@ -45,10 +45,8 @@ describe('writes reserved to a hand-written mutation', () => {
 });
 
 describe('foreign keys a caller states', () => {
-  // The generated writes onto habit_entries are off, so the hook that checks
-  // this has nothing to run against through the API. It is still what would
-  // stand between a caller and someone else's habit the day they are turned
-  // back on, so it is tested where it lives.
+  // The generated writes onto habit_entries are off, so nothing reaches this
+  // hook through the API. Tested here for the day they are turned back on.
   it('accepts an id the caller owns', async () => {
     const habitId = (await mine.expectOk(CREATE, { values: { name: 'Mine' } })).createHabit.id;
     await expect(

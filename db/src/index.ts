@@ -19,9 +19,8 @@ const { drizzle } = await import('drizzle-orm/postgres-js');
 const connection: any = {
   url: DATABASE_URL,
   ...(isProduction && requiresSsl(DATABASE_URL) ? { ssl: 'require' } : {}),
-  // Every boot runs `CREATE SCHEMA IF NOT EXISTS "drizzle"`, and Postgres answers
-  // with a NOTICE when it already does. Printing it makes a healthy restart look
-  // like a failure, so notices are dropped; real errors still throw.
+  // Every boot's `CREATE SCHEMA IF NOT EXISTS` draws a NOTICE, and printing it
+  // makes a healthy restart look like a failure. Real errors still throw.
   onnotice: () => {},
 };
 

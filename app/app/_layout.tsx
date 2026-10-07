@@ -9,11 +9,8 @@ import { describeError } from '@/lib/errors';
 import '../global.css';
 
 export default function RootLayout() {
-  // `public/index.html` has already painted the right theme; this keeps it that
-  // way on every screen, not only Settings, and repaints a `system` user when
-  // the OS switches between light and dark. On the web it applies the palette
-  // too; `PaletteProvider` is how a device gets it, and renders nothing more
-  // on the web.
+  // `public/index.html` has already painted the right theme; this keeps it on
+  // every screen and repaints a `system` user when the OS switches.
   useThemePreference();
 
   return (
@@ -28,15 +25,10 @@ export default function RootLayout() {
 /**
  * The last thing between a thrown render and a white page.
  *
- * Expo Router looks for this named export on a route file and wraps the route
- * in it, so exporting it from the root layout covers every screen. It sits
- * *outside* the provider above — the throw may well have come from inside it —
- * so it can use nothing that needs Apollo.
- *
- * Worded through `describeError`, so a thrown query failure reads the same here
- * as everywhere else. The raw message is shown too — whoever ends up reading
- * this is the one who has to file it — and a reload is the escape hatch for a
- * throw that `retry` does not clear.
+ * Expo Router wraps a route in this named export, so exporting it from the root
+ * layout covers every screen. It sits *outside* the provider above, where the
+ * throw may have come from, so it can use nothing that needs Apollo. The raw
+ * message is shown beside `describeError`'s wording, for whoever has to file it.
  */
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   return (

@@ -61,12 +61,8 @@ function call(url: string, method = 'GET'): Promise<{ status: number; headers: I
 }
 
 describe('createStaticHandler staying inside the root', () => {
-  // Every one of these is clamped before `static.ts`'s own guard is consulted:
-  // `new URL()` resolves `..` segments away, and `normalize()` drops any that
-  // survive percent-decoding, because a pathname always starts at `/` and there
-  // is nothing above it. The guard is the second line, kept for the day one of
-  // those two stops being true. What is asserted here is the property that
-  // matters either way — nothing outside the built client is ever served.
+  // `new URL()` and `normalize()` clamp all of these before the handler's own
+  // guard runs. Either way, nothing outside the built client may be served.
   const escapes = [
     '/../secret.env',
     '/web/../../secret.env',

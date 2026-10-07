@@ -45,17 +45,10 @@ const errorLink = onError(({ graphQLErrors }) => {
 
 // A relation list is replaced, never merged.
 //
-// Apollo's default for a list field is to overwrite it and warn that data may be
-// lost, because it cannot know whether the incoming array is the whole list or a
-// page of it. Here it is always the whole list: `history` is recomputed by the
-// server from the rows it owns, and `entries` is the days of one habit in the
-// range the screen asked for. A shorter array is the answer rather than a
-// partial view of it — clearing today's entry really does leave one fewer day,
-// and merging that into what was there would keep a tick the habit no longer
-// has.
-//
-// `merge: false` says exactly that, and silences the warning it was right to
-// raise about a cache that had not decided.
+// Apollo cannot know whether an incoming array is the whole list or a page of
+// it, and warns. Here it is always the whole list: clearing today's entry
+// really does leave one fewer day, and merging would keep a tick the habit no
+// longer has.
 const REPLACE_INCOMING = { merge: false } as const;
 
 const cache = new InMemoryCache({

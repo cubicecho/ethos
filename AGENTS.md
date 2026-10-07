@@ -380,7 +380,9 @@ a value it failed to read.
 - `import './core/preflight.ts';` stays first in `server/src/index.ts`, separated by a
   blank line so Biome's import sorting leaves it there. It has to run before
   `@ethos/db` is imported.
-- Comments explain *why*. The code already says what.
+- Comments explain *why*. The code already says what. A doc comment's description is at
+  most four sentences and a comment inside a body at most two lines; longer
+  rationale and history belong in the commit message.
 
 ## Generated output
 

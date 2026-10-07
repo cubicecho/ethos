@@ -1,23 +1,12 @@
 /**
  * Days and periods, as the client counts them.
  *
- * This is the client's copy of `server/src/habits/periods.ts`, and the copy is
- * deliberate: the grid draws the periods the server counts streaks over, so if
- * the two disagree the app shows a streak nobody can reproduce by counting
- * squares. They are separate packages — the app is bundled by Metro and must not
- * pull the server's Drizzle imports into a browser — so the rule is kept by the
- * files being identical rather than by an import. Change one, change both;
- * `periods.test.ts` is the same suite on either side.
- *
- * Nothing here constructs a `Date` from a day string. A day is a label, not an
- * instant: `new Date('2026-09-17')` is UTC midnight, which is the sixteenth for
- * most of the Americas. Arithmetic goes through `Date.UTC`, where the offset is
- * zero by construction.
- *
- * `today()` is the exception, and the only place the local clock is read: which
- * day it *is* for the person holding the device is exactly what a habit tracker
- * needs to know, and it is what the client sends the server with everything that
- * depends on the current period.
+ * The client's copy of `server/src/habits/periods.ts`, kept identical by hand
+ * because Metro must not bundle the server's imports: the grid draws the
+ * periods the server counts streaks over. Nothing here constructs a `Date` from
+ * a day string, since `new Date('2026-09-17')` is UTC midnight — the sixteenth
+ * for most of the Americas. `today()` is the one read of the local clock: which
+ * day it is for the person holding the device is what the server needs told.
  */
 
 export type Period = 'day' | 'week' | 'month';

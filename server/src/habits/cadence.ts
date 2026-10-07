@@ -6,18 +6,10 @@ import { periodLength } from './periods.ts';
 
 // A period cannot ask for more days than it has.
 //
-// The database already refuses `target_count <= 0` and a daily habit asking for
-// more than one, because those are true of every row that will ever exist. The
-// ceiling is not: February holds 28 days and August 31, so "20× a month" is a
-// real cadence and "40× a month" is one no month could satisfy. A habit like
-// that is not merely never kept — it drags every rate and every streak in the
-// app to zero and gives the reader no way to see why.
-//
-// Checked over the caller's rows after the write, for the reason telos checks
-// its own invariants that way: an update may name the rows it affects by
-// anything at all, and a write that changes only `period` — month to week, with
-// the target left where it was — is exactly the one a `before` hook reading the
-// arguments would wave through.
+// The database cannot say this itself: the ceiling depends on the month, and a
+// habit over it drags every rate and streak to zero with nothing to show why.
+// Checked after the write, because a write that changes only `period` would
+// pass a check that reads the arguments.
 
 // biome-ignore lint/suspicious/noExplicitAny: drizzle-orm 1.0 table/column type compat
 type AnyDb = any;

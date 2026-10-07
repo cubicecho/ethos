@@ -7,15 +7,11 @@ import { type DayStatus, nextStatus } from './types';
 /**
  * One day of one habit.
  *
- * The three states are told apart by shape as well as by colour — filled, dashed
- * outline, plain outline — because the fill is the habit's own colour and a
- * reader who cannot tell two of them apart would have no way back. Every square
- * also carries the day and its state in its label, which is what a screen reader
- * reads and what the pointer shows on hover.
- *
- * A `Pressable` of its own rather than cubeui's `Button`: a square is 20px and
- * wears the habit's colour, and neither is a size or a variant a button has. The
- * tooltip is cubeui's, under the one provider `HabitGrid` draws.
+ * The three states differ by shape as well as colour — filled, dashed outline,
+ * plain outline — because the fill is the habit's own colour and a reader may
+ * not tell two of them apart. A `Pressable` of its own rather than cubeui's
+ * `Button`: a square is 20px and wears the habit's colour, and a button has
+ * neither as a size or a variant.
  */
 export function DaySquare({
   day,

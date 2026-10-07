@@ -1,21 +1,13 @@
 import type { EntryStatus, Period } from '@ethos/db/schema';
 import { type PeriodRange, periodBefore, periodOf, periodStart, recentPeriods } from './periods.ts';
 
-// What a run of kept days is worth, in one place.
+// What a run of kept days is worth, in one place. Three rules:
 //
-// Three rules, and everything the app reports is one of them applied:
-//
-//   1. **A skip is not a miss.** A day you deliberately declined comes off what
-//      the period asked for; it never counts as a day you kept. A week of "3×"
-//      with one skip asks for two. Missing is what an untouched day is.
-//   2. **A streak counts periods, not days.** "3× a week" is kept or not kept by
-//      the week. Counting consecutive *days* would break that habit's streak
-//      every Tuesday, which is the app calling a success a failure.
-//   3. **The period you are in cannot break a streak.** A week with one of three
-//      done is not a failed week; it is Tuesday. It joins the streak once it is
-//      met and is otherwise skipped over — but only for the period that contains
-//      today. Any earlier one is finished, and a finished period that fell short
-//      is where the streak ends.
+//   - A skip is not a miss: it comes off what the period asked for, and never
+//     counts as a day kept.
+//   - A streak counts periods, not days: "3× a week" is kept or not by the week.
+//   - The period containing today cannot break a streak: it joins once it is
+//     met, and is otherwise passed over.
 
 /**
  * How many days of one period may be declined.

@@ -218,9 +218,8 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
       assertSkipAllowed(habit, await entriesOf(habit, context), day);
     }
 
-    // Upsert onto the day key rather than read-then-write: two tabs, a
-    // double-click and a retried request all mean the same tick, and the unique
-    // index is what makes that true without a transaction around the check.
+    // Upsert onto the day key: two tabs, a double-click and a retried request
+    // are the same tick, and the unique index makes that true with no transaction.
     await (context.db as AnyRow)
       .insert(dbSchema.habitEntries)
       .values({ userId, habitId: habit.id, day, status, note: args.note ?? null })
@@ -229,9 +228,8 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
         set: { status, note: args.note ?? null, updatedAt: new Date() },
       });
 
-    // The loader answered `assertSkipAllowed` from before this write. Its cache
-    // is per request, and the request is not over — the habit returned here is
-    // about to be asked for its streak.
+    // The loader's answer predates this write, and the request is not over: the
+    // habit returned here is about to be asked for its streak.
     context.loaders.entries.clear(habit.id);
     return habit;
   };

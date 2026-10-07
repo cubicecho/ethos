@@ -7,9 +7,8 @@ import { users } from './users.ts';
  * How often a habit is meant to happen. `day` means every day; `week` and
  * `month` mean `targetCount` days inside the period, whichever days those are.
  *
- * Deliberately three, and deliberately calendar-aligned: "3× a week" is what
- * people say, and a rolling seven-day window would make the same habit's streak
- * depend on when you asked. See periods.ts for where the boundaries are drawn.
+ * Calendar-aligned on purpose: a rolling seven-day window would make the same
+ * habit's streak depend on when you asked. See periods.ts for the boundaries.
  */
 export const PERIODS = ['day', 'week', 'month'] as const;
 export type Period = (typeof PERIODS)[number];
@@ -22,9 +21,8 @@ export const habits = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
-    // Why the habit is worth keeping, when a name cannot hold it. Nullable
-    // rather than defaulted to '': "no note" and "an empty note" are the same
-    // thing, and only one of them should be storable.
+    // Why the habit is worth keeping. Nullable rather than defaulted to '', so
+    // "no note" and "an empty note" cannot both be stored.
     notes: text('notes'),
     // The habit's colour on the grid, chosen by the user, so no theme token can
     // be trusted to read on it — see readable-text-color.ts.
@@ -45,10 +43,8 @@ export const habits = pgTable(
   (table) => [
     index('idx_habits_user_id').on(table.userId),
     index('idx_habits_archived_at').on(table.archivedAt),
-    // An entry is one day, and a day is either kept or it is not — so a daily
-    // habit can only ever ask for one. Structural rather than a rule someone
-    // has to remember: with `target_count = 3, period = 'day'` stored, every
-    // rate in the app would divide by a number no day could reach.
+    // An entry is one day, so a daily habit can only ask for one. A stored
+    // `target_count = 3, period = 'day'` would be a rate no day could reach.
     check('ck_habits_daily_target', sql`${table.period} <> 'day' or ${table.targetCount} = 1`),
     check('ck_habits_target_positive', sql`${table.targetCount} > 0`),
     check('ck_habits_period', sql`${table.period} in ('day', 'week', 'month')`),

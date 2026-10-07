@@ -83,9 +83,8 @@ export function HabitFormDialog({
         const range = periodOf(period, today);
         await createHabit({
           variables: { values: { id, ...values, position: nextPosition }, today },
-          // Every derived field is known for a habit with no days yet: no
-          // streak, nothing kept, nothing skipped. Stating them is what lets the
-          // row appear complete rather than flickering through a half-drawn one.
+          // Every derived field is known for a habit with no days yet. Stating
+          // them lets the row appear complete rather than half-drawn.
           optimisticResponse: {
             createHabit: {
               __typename: 'Habit',
@@ -115,10 +114,8 @@ export function HabitFormDialog({
         });
       }
     } catch {
-      // The mutation rejects as well as setting `error`, so an uncaught await
-      // here is both an unhandled rejection and a dialog that stays open with
-      // no explanation of why. Stay open — deliberately — but say so: what was
-      // typed is still in the fields, ready to send again.
+      // The mutation rejects as well as setting `error`. Stay open: the footer
+      // says why, and what was typed is still in the fields.
       return;
     }
     onOpenChange(false);
@@ -149,9 +146,8 @@ export function HabitFormDialog({
             variant="segmented"
             options={CADENCES}
             listeners={{
-              // A day cannot be kept twice, so the daily cadence has no number to
-              // pick and the field is not shown. Forcing the value here rather
-              // than at submit keeps the form honest about what it will send.
+              // A day cannot be kept twice, so daily has no number to pick. Forced
+              // here, not at submit, so the form holds what it will send.
               onChange: ({ value }) => {
                 const next = value as Period;
                 const current = form.getFieldValue('targetCount') ?? 1;

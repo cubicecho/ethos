@@ -25,10 +25,8 @@ describe('today', () => {
   afterEach(() => vi.useRealTimers());
 
   it('reads the device’s own day, not UTC', () => {
-    // The only local-clock read in the app, and the reason it exists: at 23:00
-    // in Berlin on the 17th it is still the 17th, and UTC agrees — but at 23:00
-    // on the 17th in Auckland, `toISOString()` says the 17th while the person
-    // holding the phone is on the 18th. What matters is their day.
+    // The only local-clock read in the app. At 23:00 on the 17th UTC it is
+    // already the 18th in Auckland, and what matters is the holder's day.
     const local = new Date(2026, 8, 18, 23, 0, 0);
     expect(today(local)).toBe('2026-09-18');
   });
@@ -142,9 +140,8 @@ describe('daysOf', () => {
 });
 
 describe('formatting', () => {
-  // Pinned to UTC in the module, which is what keeps a label from naming the day
-  // before the one it was given. The assertions below avoid locale-specific
-  // wording and check the part that would actually shift.
+  // Pinned to UTC in the module, so a label cannot name the day before the one
+  // it was given. The assertions avoid locale-specific wording.
   it('renders the day it was given, not the one its midnight lands on', () => {
     expect(formatDay('2026-09-17')).toContain('17');
     expect(formatDayLong('2026-09-17')).toContain('17');

@@ -40,9 +40,8 @@ export function describeError(error: unknown): string {
 
   const like = error as ErrorLike;
 
-  // A GraphQL error first, always: the server got the request, understood it
-  // and refused it, so it knows more about why than anything downstream does.
-  // "Cannot delete the last lane" beats "Response not successful: 400".
+  // A GraphQL error first: the server understood the request and refused it,
+  // so it knows more about why than anything downstream does.
   const fromServer = like.graphQLErrors?.map((entry) => text(entry.message)).find(Boolean);
   if (fromServer) return fromServer;
 

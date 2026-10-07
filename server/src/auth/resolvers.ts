@@ -132,9 +132,8 @@ export function applyAuthExtension(schema: GraphQLSchema): GraphQLSchema {
       });
     }
 
-    // No-link mode: the address alone is the credential. Only ever appropriate
-    // on a private instance — see config.ts and the README's "Before you expose
-    // it".
+    // No-link mode: the address alone is the credential. Private instances
+    // only — see the README's "Before you expose it".
     if (!isMagicLinkRequired()) {
       const userId = await findOrCreateUser(context.db, email);
       console.log(`[auth] Magic links are off; signed ${email} in directly.`);

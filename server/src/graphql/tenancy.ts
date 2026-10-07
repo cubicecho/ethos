@@ -5,17 +5,13 @@ import type { Context } from '../core/context.ts';
 
 // Multi-tenancy, expressed as drizzle-graphql configuration rather than as
 // resolver wrappers. `scope` is ANDed into the SQL of every read, update and
-// delete the library generates — list and single queries, aggregates, groupBy,
-// relation fields, cursor pages — after the client's own `where`, so a client
-// filter can only ever narrow it. `contextValues` is the write-side half: it
-// takes `userId` out of every create and update input and stamps it from the
-// request, so ownership is never something a caller states.
+// delete the library generates, after the client's own `where`, so a client
+// filter can only narrow it. `contextValues` takes `userId` out of every create
+// and update input and stamps it from the request; what a `scope` cannot reach —
+// plain inserts and the rows a foreign key points at — is graphql/write-guards.ts.
 //
-// A `scope` cannot reach a plain insert, and it says nothing about the rows a
-// foreign key *points at* — graphql/write-guards.ts closes that half.
-//
-// The rule for anyone adding a table: it needs an entry here, or its rows are
-// visible across tenants. __tests__/graphql/tenancy.test.ts fails when one is missing.
+// A new table needs an entry here, or its rows are visible across tenants;
+// __tests__/graphql/tenancy.test.ts fails when one is missing.
 
 // biome-ignore lint/suspicious/noExplicitAny: drizzle-orm 1.0 table/column type compat
 type AnyTable = any;

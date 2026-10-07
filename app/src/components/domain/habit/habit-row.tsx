@@ -83,9 +83,8 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
         }
       />
 
-      {/* Beside the control that caused it. A skip refused because the period
-          has had its two is worth reading, and a toast in a corner is not where
-          the click was. */}
+      {/* Beside the control that caused it: a refused skip is worth reading,
+          and a toast in a corner is not where the click was. */}
       {error ? (
         <Text className="pb-2.5 pl-16 text-negative text-xs" aria-live="polite">
           {error}

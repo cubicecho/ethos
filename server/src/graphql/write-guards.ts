@@ -6,17 +6,11 @@ import { requireAuth } from '../auth/resolvers.ts';
 import type { Context } from '../core/context.ts';
 import { assertTargetsFitPeriods } from '../habits/cadence.ts';
 
-// A row scope confines reads, updates and deletes, but it cannot reach a plain
-// insert, and it says nothing about the rows a foreign key *points at*. These
-// hooks close the two holes that leaves:
-//
-//   1. Ownership on insert — every id a caller can state must be theirs.
-//   2. Cadence on write — a habit that asks for more days than its period holds
-//      is refused however the write arrives, so the generated `updateHabit`
-//      cannot route around the rule that `createHabit` obeys.
-//
-// They run inside the mutation's own transaction, so a throw rolls the write
-// back and there is no window between the check and the write.
+// A row scope cannot reach a plain insert, and says nothing about the rows a
+// foreign key *points at*. These hooks close both holes: every id a caller can
+// state must be theirs, and a habit asking for more days than its period holds
+// is refused however the write arrives. They run inside the mutation's own
+// transaction, so a throw rolls the write back.
 
 // biome-ignore lint/suspicious/noExplicitAny: drizzle-orm 1.0 table/column type compat
 type AnyTable = any;
@@ -101,11 +95,8 @@ export const onWrite: NonNullable<BuildSchemaConfig['onWrite']> = {
     },
   },
   habits: {
-    // After the statement rather than before it: an update may name the rows it
-    // affects by anything at all, and a write that moves a habit from monthly to
-    // weekly without restating its target is exactly the one a check reading the
-    // arguments would wave through. The throw rolls the transaction back,
-    // statement included.
+    // After the statement, not before: a write that changes only `period` would
+    // pass a check that reads the arguments. The throw rolls it back.
     after: async ({ context, operation, tx }: WriteHookPayload) => {
       if (operation === 'delete' || operation === 'restore') return;
       await assertTargetsFitPeriods(tx, requireAuth(context as Context));

@@ -14,14 +14,11 @@ import { useEffect, useRef } from 'react';
 /**
  * Whether the event came from somewhere a keystroke means a character.
  *
- * Exported because a local handler needs the same test: a shortcut scoped to a
- * row should be as quiet inside a field as a global one is.
- *
- * Typing "n" in the composer must type an "n". `isContentEditable` covers rich
- * text; the `role` check covers the widgets that behave like a field without
- * being one. Radix's dialogs and popovers are the reason for the `[role=dialog]`
- * test: a shortcut that fires behind an open modal acts on a screen the reader
- * cannot see.
+ * Exported because a shortcut scoped to a row should be as quiet inside a field
+ * as a global one is. `isContentEditable` covers rich text, and the `role`
+ * check covers widgets that behave like a field without being one. The
+ * `[role=dialog]` test is for modals: a shortcut that fires behind one acts on
+ * a screen the reader cannot see.
  */
 export function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;

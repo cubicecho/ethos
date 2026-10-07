@@ -51,9 +51,8 @@ export default function TodayScreen() {
         }
         contentSlot={
           <View className="gap-2 py-6">
-            {/* Only when there is nothing to show. A refetch that fails while the
-                list is on screen leaves it there — the marks already made are
-                still true, and replacing them with an apology helps nobody. */}
+            {/* Only when there is nothing to show: a refetch that fails with the
+                list on screen leaves it there, because the marks are still true. */}
             <LoadState
               query={habitsQuery}
               what="your habits"

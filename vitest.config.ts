@@ -3,9 +3,8 @@ import { defineConfig } from 'vitest/config';
 
 const alias = [
   { find: '@', replacement: path.resolve(import.meta.dirname, './app/src') },
-  // graphql ships no exports map: Vite follows `module` to index.mjs while
-  // Node follows `main` to index.js, so a schema built on one copy fails the
-  // instanceof checks of the other. Pin the bare specifier to Node's copy.
+  // graphql ships no exports map, so Vite and Node load different copies and a
+  // schema built on one fails the other's instanceof checks. Pin Node's copy.
   { find: /^graphql$/, replacement: path.resolve(import.meta.dirname, './node_modules/graphql/index.js') },
 ];
 
@@ -37,15 +36,12 @@ export default defineConfig({
         resolve: {
           alias: [
             ...alias,
-            // `lib/apollo.ts` imports `Platform` from react-native, which the
-            // web build already resolves this way — Expo's metro config does it
-            // for the bundle, and nothing here reads the metro config.
+            // `lib/apollo.ts` imports `Platform` from react-native. Expo's metro
+            // config resolves it this way for the bundle; nothing here reads it.
             { find: /^react-native$/, replacement: 'react-native-web' },
           ],
-          // cubeui's split components ship `x.tsx` for device and `x.web.tsx`
-          // for the browser, and Metro picks the web half by extension. Vite
-          // has to be told the same preference, or the tests render the native
-          // half against react-native-web.
+          // cubeui ships `x.tsx` for device and `x.web.tsx` for the browser. Vite
+          // has to prefer the web half the way Metro does.
           extensions: ['.web.tsx', '.web.ts', '.tsx', '.ts', '.web.js', '.js', '.mjs', '.json'],
         },
         test: {

@@ -65,10 +65,8 @@ export function HabitGrid({
   const period = habit.period as Period;
   const rows = buildRows(period, history, today);
   const status = new Map<string, DayStatus>(entries.map((entry) => [entry.day, asStatus(entry.status)]));
-  // Weeks are seven days wide and start on Monday, so the columns line up down
-  // the grid and are worth naming once at the top. A month's rows are ragged —
-  // they start on whatever weekday the first falls on — so there is nothing
-  // there for a header to label.
+  // Weeks all start on Monday, so the columns are worth naming once at the top.
+  // A month's rows start on whatever weekday the first falls on.
   const weekdays = period === 'month' ? null : rows[0]?.days;
 
   return (
@@ -110,9 +108,8 @@ export function HabitGrid({
                 <Text className={cn('text-xs tabular-nums', row.tally.met ? 'text-foreground' : 'text-foreground/60')}>
                   {row.tally.done}/{row.tally.effectiveTarget}
                 </Text>
-                {/* The tick marks a period kept, including one skipped down to
-                    nothing owed — which is why it follows `met` rather than
-                    comparing the two numbers beside it. */}
+                {/* Follows `met` rather than comparing the two numbers: a period
+                    skipped down to nothing owed is kept as well. */}
                 {row.tally.met ? <Check className="h-3 w-3 text-foreground" /> : null}
               </View>
             ) : null}

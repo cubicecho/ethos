@@ -18,9 +18,8 @@ describe('tenancy configuration', () => {
   });
 
   it('lists every table it knows about', () => {
-    // ALL_TABLES is what build-schema.ts generates fields for, so a table left
-    // out of it has no API at all — the opposite failure to a missing scope,
-    // and just as silent.
+    // A table left out of ALL_TABLES has no API at all — the opposite failure
+    // to a missing scope, and just as silent.
     expect([...ALL_TABLES].sort()).toEqual(tableKeys.sort());
   });
 

@@ -27,14 +27,10 @@ function hostnameOf(url: string): string | null {
  * Whether to insist on TLS for a connection string.
  *
  * Read from the parsed hostname, never the raw string: a URL carrying
- * credentials (`postgres://user:pass@postgres:5432/db`) puts the userinfo where
- * a naive prefix match looks for the host.
- *
- * "Local" is wider than loopback here, because self-hosting is. A bare
- * `postgres` is a service on a compose network; `10.0.0.5` is a box on the
- * LAN — neither speaks TLS by default, and demanding it just breaks the
- * connection. Only an address that could route off a private network gets TLS
- * forced on it.
+ * credentials puts the userinfo where a prefix match looks for the host.
+ * "Local" is wider than loopback, because self-hosting is: a compose service or
+ * a box on the LAN speaks no TLS by default, and demanding it breaks the
+ * connection. Only an address that could route off a private network gets it.
  */
 export function requiresSsl(url: string): boolean {
   // An explicit sslmode is the operator's decision; postgres-js reads it itself.
@@ -46,27 +42,27 @@ export function requiresSsl(url: string): boolean {
   if (hostname === 'localhost' || hostname.endsWith('.localhost')) return false;
   // A name with no dots is a container or LAN hostname, not a public address.
   if (!hostname.includes('.') && !hostname.includes(':')) return false;
-  // Nor is a name under a private-use suffix. `docker.lan`, `nas.local` and
-  // `db.internal` are resolved by the router or by mDNS and cannot route off the
-  // network you are standing on — the dot in them says nothing about reach, and
-  // the Postgres behind one is as plaintext as the container next door.
+  // Nor is a name under a private-use suffix: the router or mDNS resolves it,
+  // and the dot in it says nothing about reach.
   if (PRIVATE_SUFFIXES.some((suffix) => hostname.endsWith(suffix))) return false;
 
   const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
   if (ipv4) {
     const [firstOctet, secondOctet] = ipv4.slice(1).map(Number);
-    if (firstOctet === 127) return false; // loopback
-    if (firstOctet === 10) return false; // 10/8
-    if (firstOctet === 172 && secondOctet >= 16 && secondOctet <= 31) return false; // 172.16/12
-    if (firstOctet === 192 && secondOctet === 168) return false; // 192.168/16
-    if (firstOctet === 169 && secondOctet === 254) return false; // link-local
+    // Loopback, the three RFC 1918 ranges, then link-local.
+    if (firstOctet === 127) return false;
+    if (firstOctet === 10) return false;
+    if (firstOctet === 172 && secondOctet >= 16 && secondOctet <= 31) return false;
+    if (firstOctet === 192 && secondOctet === 168) return false;
+    if (firstOctet === 169 && secondOctet === 254) return false;
     return true;
   }
 
   if (hostname.includes(':')) {
-    if (hostname === '::1') return false; // loopback
-    if (/^f[cd]/.test(hostname)) return false; // unique-local fc00::/7
-    if (/^fe[89ab]/.test(hostname)) return false; // link-local fe80::/10
+    // Loopback, unique-local fc00::/7, then link-local fe80::/10.
+    if (hostname === '::1') return false;
+    if (/^f[cd]/.test(hostname)) return false;
+    if (/^fe[89ab]/.test(hostname)) return false;
     return true;
   }
 

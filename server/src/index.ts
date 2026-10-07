@@ -22,9 +22,8 @@ const staticDir = join(__dirname, '../../app/dist');
 try {
   await migrate(db, { migrationsFolder: join(__dirname, '../../db/drizzle') });
 } catch (error) {
-  // The first thing the server does is talk to Postgres, so a misconfigured
-  // DATABASE_URL surfaces here as a driver stack trace about `CREATE SCHEMA`.
-  // Name the actual problem instead: nothing is listening where we were told.
+  // A misconfigured DATABASE_URL surfaces here as a driver stack trace about
+  // `CREATE SCHEMA`. Name the actual problem instead.
   const cause = (error as { cause?: NodeJS.ErrnoException })?.cause;
   if (cause && (cause.code === 'ECONNREFUSED' || cause.code === 'ENOTFOUND' || cause.code === 'ETIMEDOUT')) {
     const { hostname, port } = new URL(process.env.DATABASE_URL ?? '');

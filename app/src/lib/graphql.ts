@@ -1,27 +1,11 @@
 import { graphql } from '@/__generated__';
 
-// Every document the app sends, in one place. The generated CRUD is wide — most
-// of it is filters and pagination this app has no use for — so these are the
-// deliberate slice of it Ethos actually reads and writes.
+// Every document the app sends: the slice of the generated CRUD Ethos uses.
 //
-// The fragments below are load-bearing rather than tidy: a mutation writes its
-// result straight into the query's cache entry, so the two selections have to
-// agree exactly — down to a field's arguments, which are part of the key Apollo
-// stores a field under. Sharing one fragment is what makes that true by
-// construction: a field added to a list is a field the mutation starts
-// returning, instead of a half-written entity the next read has to go and fetch.
-//
-// That is also why `markHabit` and `clearHabit` return the whole habit rather
-// than the entry row they wrote. A day changes the streak, this period's tally
-// and the grid at once, all of them derived by the server from rows the client
-// does not hold — so the entry alone would leave the screen showing a tick with
-// yesterday's numbers beside it.
-//
-// `$today` runs through nearly every document for the same reason it is an
-// argument at all: which day it is is the client's to say, and a field's
-// arguments are part of its cache key, so a mutation that passed a different
-// `today` than the query would write a second entry beside the one on screen
-// instead of updating it.
+// The fragments are load-bearing: a mutation writes its result straight into
+// the query's cache entry, so the two selections must agree down to a field's
+// arguments. That is why `markHabit` and `clearHabit` return the whole habit
+// rather than the entry row, and why every document passes the same `$today`.
 
 export const HabitPeriodFieldsFragment = graphql(`
   fragment HabitPeriodFields on HabitPeriod {
@@ -51,11 +35,8 @@ export const HabitFieldsFragment = graphql(`
     current(today: $today) {
       ...HabitPeriodFields
     }
-    # Today's own entry, or nothing — an array of at most one, because the
-    # unique index on (habit, day) is what makes it at most one. The tick on a
-    # list screen has to know whether today is already done, already skipped or
-    # untouched, and this period's tally cannot say: "1 of 3 this week" is the
-    # same number whether the one was today or Monday.
+    # An array of at most one, by the unique index on (habit, day). The tally
+    # cannot say whether today is done: "1 of 3" may have been Monday.
     todayEntry: entries(where: { day: { eq: $today } }) {
       ...HabitEntryFields
     }

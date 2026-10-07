@@ -82,9 +82,8 @@ describe('rule 1: a skip is not a miss', () => {
   });
 
   it('floors the effective target at zero rather than going negative', () => {
-    // The cap on skips is the resolver's (see habits/resolvers.ts) — this module
-    // counts whatever rows it is handed, and must not produce a negative target
-    // or a rate above 1 if one ever gets past it.
+    // The cap is the resolver's. This module counts whatever rows it is handed,
+    // and must not go negative or above a rate of 1 if one gets past the cap.
     expect(MAX_SKIPS_PER_PERIOD).toBe(2);
     const tally = tallyPeriod(daily, skipped('2026-09-14', '2026-09-15', '2026-09-16'), periodOf('week', TODAY));
     expect(tally.effectiveTarget).toBe(0);

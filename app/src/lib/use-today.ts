@@ -5,15 +5,9 @@ import { today } from './periods';
  * The day it is, kept current while the app is open.
  *
  * One hook rather than a `today()` call per component, because the day is a
- * cache key: every query and every mutation passes it, and two components that
- * disagreed — one mounted before midnight, one after — would read and write two
- * different entries for the same habit. Reading it in one place means the whole
- * screen rolls over at once.
- *
- * Polled rather than scheduled for the exact moment: a timer set for midnight
- * does not fire while a laptop is asleep, and the wake-up is precisely when the
- * answer has changed. A minute of staleness costs nothing; being wrong until the
- * next reload costs a day.
+ * cache key: two components that disagreed across midnight would read and write
+ * different entries for the same habit. Polled rather than scheduled, because a
+ * timer set for midnight does not fire while a laptop is asleep.
  */
 export function useToday(): string {
   const [day, setDay] = useState(today);
