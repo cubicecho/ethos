@@ -46,6 +46,8 @@ export function DaySquare({
           onPress={() => onSet(day, nextStatus(status))}
           className={cn(
             'h-5 w-5 shrink-0 rounded-[3px] border transition-colors',
+            // Further out than today's outline and in another colour, so focus on today still shows.
+            'focus-visible:outline-2 focus-visible:outline-active focus-visible:outline-offset-2',
             isFuture ? 'cursor-default border-border/50 border-dashed bg-transparent' : 'hover:border-ring',
             !isFuture && disabled && 'opacity-60',
             status === 'skipped' && 'border-2 border-foreground/60 border-dashed bg-transparent',
