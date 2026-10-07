@@ -390,6 +390,27 @@ a value it failed to read.
 - Where another skill or this file disagrees with the `coding-standards` skill,
   `coding-standards` is the rule, and this file is corrected to match it.
 
+## Deliberate differences
+
+Where Ethos departs from the cubicecho defaults on purpose. An audit that finds
+one of these has found a decision, not a mistake.
+
+- **Expo Router, not Vite.** The UI is cubeui's native registry, which is React
+  Native primitives and NativeWind; Metro is what bundles those for the web.
+- **`window` and `document` are used unguarded.** The app ships for the web
+  only, so `use-today.ts`, `hotkeys.ts`, the sign-out in `app-sidebar.tsx` and
+  the root `ErrorBoundary` reach for them directly. `auth.ts` and `apollo.ts`
+  check `Platform.OS` because they run at import time.
+- **Magic links go to the server's log.** There is no mail provider: the link
+  is printed by `auth/resolvers.ts`, and returned in the response when
+  `isMagicLinkExposed()` says so. A self-hosted instance has nowhere else to
+  send it.
+- **`archivedAt` is the soft delete.** A habit has no `deletedAt`: archiving is
+  the reversible removal, and a delete really deletes.
+- **`DaySquare` is hand-built.** No registry control cycles through three
+  states at the size of a grid cell, so `domain/habit/day-square.tsx` is a
+  `Pressable` of the app's own.
+
 ## Generated output
 
 `server/__generated__/`, `app/src/__generated__/` and `.env` are never committed.
