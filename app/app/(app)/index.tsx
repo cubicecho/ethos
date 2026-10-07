@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Plus } from '@/components/ui/icons';
 import { LoadState } from '@/components/ui/load-failure';
 import { HabitsDocument } from '@/lib/graphql';
+import { nextPosition } from '@/lib/habits';
 import { useHotkey } from '@/lib/hotkeys';
 import { formatDayLong } from '@/lib/periods';
 import { useToday } from '@/lib/use-today';
@@ -28,7 +29,6 @@ export default function TodayScreen() {
   // Read during render rather than through state: the list is the source, and a
   // position kept in state would go stale the moment a habit was added.
   const habits = habitsQuery.data?.habits ?? [];
-  const nextPosition = habits.reduce((max, habit) => Math.max(max, habit.position), -1) + 1;
 
   useHotkey('n', (event) => {
     event.preventDefault();
@@ -76,7 +76,12 @@ export default function TodayScreen() {
           </View>
         }
       />
-      <HabitFormDialog open={isCreating} onOpenChange={setIsCreating} today={today} nextPosition={nextPosition} />
+      <HabitFormDialog
+        open={isCreating}
+        onOpenChange={setIsCreating}
+        today={today}
+        nextPosition={nextPosition(habits)}
+      />
     </>
   );
 }

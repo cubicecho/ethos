@@ -6,6 +6,7 @@ import { ListItem } from '@/components/list-item';
 import { Badge } from '@/components/ui/badge';
 import { Check } from '@/components/ui/icons';
 import { describeCadence, describeProgress } from '@/lib/cadence';
+import { habitPath } from '@/lib/habits';
 import type { Period } from '@/lib/periods';
 import { readableTextColor } from '@/lib/readable-text-color';
 import { cn } from '@/lib/utils';
@@ -39,7 +40,7 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
         description={`${describeCadence(period, habit.targetCount)} · ${
           isSkipped ? 'Skipped today' : describeProgress(habit.current.done, habit.current.effectiveTarget, period)
         }`}
-        onPress={() => router.push(`/habits/${habit.id}`)}
+        onPress={() => router.push(habitPath(habit.id))}
         leadingSlot={
           <ActionButton
             label={isDone ? `Undo ${habit.name} for today` : `Mark ${habit.name} kept today`}

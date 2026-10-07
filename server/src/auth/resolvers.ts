@@ -2,11 +2,9 @@ import * as dbSchema from '@ethos/db/schema';
 import { eq } from 'drizzle-orm';
 import { extendSchema, GraphQLError, type GraphQLObjectType, type GraphQLSchema, parse } from 'graphql';
 import jwt from 'jsonwebtoken';
-import { isMagicLinkExposed, isMagicLinkRequired } from '../core/config.ts';
+import { DEV_SECRET, isMagicLinkExposed, isMagicLinkRequired } from '../core/config.ts';
 import type { Context } from '../core/context.ts';
 import { createRateLimiter } from './rate-limit.ts';
-
-const DEV_SECRET = 'dev-secret-change-in-production';
 
 /** Read at call time so a test — or a reload — sees the current environment. */
 function jwtSecret(): string {

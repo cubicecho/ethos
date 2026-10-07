@@ -11,6 +11,7 @@ import { Plus, Settings } from '@/components/ui/icons';
 import { LoadState } from '@/components/ui/load-failure';
 import { clearToken } from '@/lib/auth';
 import { HabitsDocument } from '@/lib/graphql';
+import { habitPath, nextPosition } from '@/lib/habits';
 import { useToday } from '@/lib/use-today';
 
 /** The persistent shell: today, and every habit, always one click away. */
@@ -20,7 +21,6 @@ export function Sidebar() {
   const habitsQuery = useQuery(HabitsDocument, { variables: { today } });
   const [isCreating, setIsCreating] = useState(false);
   const habits = habitsQuery.data?.habits ?? [];
-  const nextPosition = habits.reduce((max, habit) => Math.max(max, habit.position), -1) + 1;
 
   function signOut() {
     clearToken();
@@ -75,15 +75,15 @@ export function Sidebar() {
                 />
               }
               contentSlot={habits.map((habit) => (
-                <Link key={habit.id} href={`/habits/${habit.id}`} asChild>
+                <Link key={habit.id} href={habitPath(habit.id)} asChild>
                   <SidebarNavItem
-                    href={`/habits/${habit.id}`}
+                    href={habitPath(habit.id)}
                     label={habit.name}
                     // The habit's colour is how it is recognised everywhere else.
                     // A dot, because filled rows would make the sidebar a colour chart.
                     iconSlot={<ColorDot color={habit.color} size="sm" />}
                     count={habit.streak > 0 ? habit.streak : undefined}
-                    active={pathname === `/habits/${habit.id}`}
+                    active={pathname === habitPath(habit.id)}
                   />
                 </Link>
               ))}
@@ -119,7 +119,12 @@ export function Sidebar() {
           </>
         }
       />
-      <HabitFormDialog open={isCreating} onOpenChange={setIsCreating} today={today} nextPosition={nextPosition} />
+      <HabitFormDialog
+        open={isCreating}
+        onOpenChange={setIsCreating}
+        today={today}
+        nextPosition={nextPosition(habits)}
+      />
     </>
   );
 }

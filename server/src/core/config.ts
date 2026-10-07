@@ -1,3 +1,6 @@
+/** What signs tokens when `JWT_SECRET` is unset. Preflight refuses it in production. */
+export const DEV_SECRET = 'dev-secret-change-in-production';
+
 /** Truthy env-var values: "1", "true", "yes" (case-insensitive). */
 export function isFlagOn(value: string | undefined): boolean {
   return ['1', 'true', 'yes'].includes((value ?? '').trim().toLowerCase());

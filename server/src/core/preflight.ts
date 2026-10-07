@@ -2,7 +2,7 @@
 // token. Imported for its side effects as the very first import of index.ts, so
 // a misconfigured instance fails with a sentence rather than a stack trace.
 
-const DEV_SECRET = 'dev-secret-change-in-production';
+import { DEV_SECRET } from './config.ts';
 
 function fatal(message: string): never {
   console.error(`[preflight] ${message}`);

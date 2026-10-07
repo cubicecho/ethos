@@ -1,4 +1,4 @@
-import { useMutation } from '@apollo/client';
+import { type TypedDocumentNode, useMutation } from '@apollo/client';
 import { useState } from 'react';
 import { describeError } from '@/lib/errors';
 import { ClearHabitDayDocument, ClearHabitDocument, MarkHabitDayDocument, MarkHabitDocument } from '@/lib/graphql';
@@ -41,10 +41,17 @@ function useAction() {
   return { isPending, error, run };
 }
 
-/** For screens that show a habit but no history: the list. */
-export function useMarkHabit(today: string): Marker {
-  const [mark] = useMutation(MarkHabitDocument);
-  const [clear] = useMutation(ClearHabitDocument);
+type DayVariables = { habitId: string; day: string; today: string };
+
+/** The two mutations a screen records a day with. Their results differ; what they are sent does not. */
+interface MarkDocuments {
+  mark: TypedDocumentNode<unknown, DayVariables & { status?: string | null }>;
+  clear: TypedDocumentNode<unknown, DayVariables>;
+}
+
+function useMarker(documents: MarkDocuments, today: string): Marker {
+  const [mark] = useMutation(documents.mark);
+  const [clear] = useMutation(documents.clear);
   const { isPending, error, run } = useAction();
 
   return {
@@ -59,24 +66,16 @@ export function useMarkHabit(today: string): Marker {
   };
 }
 
+/** For screens that show a habit but no history: the list. */
+export function useMarkHabit(today: string): Marker {
+  return useMarker({ mark: MarkHabitDocument, clear: ClearHabitDocument }, today);
+}
+
 /**
  * For the detail screen. Same two mutations, selecting the grid as well — the
  * duplication is in the documents and explained there: a screen asks back for
  * exactly what it is showing.
  */
 export function useMarkHabitDay(today: string): Marker {
-  const [mark] = useMutation(MarkHabitDayDocument);
-  const [clear] = useMutation(ClearHabitDayDocument);
-  const { isPending, error, run } = useAction();
-
-  return {
-    isPending,
-    error,
-    setDay: (habitId, day, status) =>
-      run(() =>
-        status === null
-          ? clear({ variables: { habitId, day, today } })
-          : mark({ variables: { habitId, day, status, today } }),
-      ),
-  };
+  return useMarker({ mark: MarkHabitDayDocument, clear: ClearHabitDayDocument }, today);
 }

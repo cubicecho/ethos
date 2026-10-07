@@ -1,7 +1,8 @@
 import { useQuery } from '@apollo/client';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 import { Archive } from '@/components/app-icons';
+import { BackToTodayLink } from '@/components/domain/habit/back-to-today-link';
 import { ListItem } from '@/components/list-item';
 import { EmptyState } from '@/components/page';
 import { PageLayout } from '@/components/page-layout';
@@ -9,6 +10,7 @@ import { ColorDot } from '@/components/ui/color-dot';
 import { LoadState } from '@/components/ui/load-failure';
 import { describeCadence } from '@/lib/cadence';
 import { ArchivedHabitsDocument } from '@/lib/graphql';
+import { habitPath } from '@/lib/habits';
 import type { Period } from '@/lib/periods';
 import { useToday } from '@/lib/use-today';
 
@@ -36,17 +38,7 @@ export default function ArchiveScreen() {
             query={archivedQuery}
             what="the archive"
             count={habits.length}
-            emptySlot={
-              <EmptyState
-                icon={Archive}
-                title="Nothing archived"
-                actionSlot={
-                  <Link href="/" className="text-primary text-sm underline">
-                    Back to today
-                  </Link>
-                }
-              />
-            }
+            emptySlot={<EmptyState icon={Archive} title="Nothing archived" actionSlot={<BackToTodayLink />} />}
           />
           {habits.length > 0 ? (
             <View role="list" className="gap-0.5">
@@ -56,7 +48,7 @@ export default function ArchiveScreen() {
                     title={habit.name}
                     description={describeCadence(habit.period as Period, habit.targetCount)}
                     leadingSlot={<ColorDot color={habit.color} />}
-                    onPress={() => router.push(`/habits/${habit.id}`)}
+                    onPress={() => router.push(habitPath(habit.id))}
                   />
                 </View>
               ))}

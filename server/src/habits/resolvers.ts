@@ -77,6 +77,9 @@ function serverToday(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** One answer for a habit that is missing and a habit that is someone else's. */
+const habitNotFound = () => new GraphQLError('Habit not found', { extensions: { code: 'NOT_FOUND' } });
+
 /**
  * A habit the caller owns, or NOT_FOUND. The hand-written mutations sit outside
  * the generated resolvers, so they do not inherit the `scope` from tenancy.ts
@@ -90,7 +93,7 @@ async function loadOwnedHabit(context: Context, id: string): Promise<AnyRow> {
     .where(and(eq(dbSchema.habits.id, id), eq(dbSchema.habits.userId, userId)))
     .limit(1);
   if (rows.length === 0) {
-    throw new GraphQLError('Habit not found', { extensions: { code: 'NOT_FOUND' } });
+    throw habitNotFound();
   }
   return rows[0];
 }
@@ -159,7 +162,7 @@ function entriesOf(parent: AnyRow, context: Context): Promise<EntryLike[]> {
 async function cadenceOf(parent: AnyRow, context: Context): Promise<HabitLike> {
   const cadence = await context.loaders.cadence.load(String(parent.id));
   if (!cadence) {
-    throw new GraphQLError('Habit not found', { extensions: { code: 'NOT_FOUND' } });
+    throw habitNotFound();
   }
   return cadence;
 }

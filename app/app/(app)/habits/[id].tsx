@@ -1,6 +1,7 @@
 import { useQuery } from '@apollo/client';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Text } from 'react-native';
+import { BackToTodayLink } from '@/components/domain/habit/back-to-today-link';
 import { HabitGrid } from '@/components/domain/habit/habit-grid';
 import { HabitPage } from '@/components/domain/habit/habit-page';
 import { useMarkHabitDay } from '@/components/domain/habit/use-mark-habit';
@@ -38,11 +39,7 @@ export default function HabitScreen() {
               <EmptyState
                 icon={Search}
                 title="That habit doesn't exist, or isn't yours."
-                actionSlot={
-                  <Link href="/" className="text-primary text-sm underline">
-                    Back to today
-                  </Link>
-                }
+                actionSlot={<BackToTodayLink />}
               />
             }
           />
