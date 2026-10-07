@@ -2,24 +2,13 @@ import * as dbSchema from '@ethos/db/schema';
 import { eq } from 'drizzle-orm';
 import { assertObjectType, extendSchema, type GraphQLSchema, parse } from 'graphql';
 import jwt from 'jsonwebtoken';
-import { appUrl, DEV_SECRET, isMagicLinkExposed, isMagicLinkRequired } from '../core/config.ts';
+import { appUrl, isMagicLinkExposed, isMagicLinkRequired, jwtSecret } from '../core/config.ts';
 import type { Context } from '../core/context.ts';
 import { AUTH_DEFAULTS } from '../core/defaults.ts';
 import { badInput, rateLimited, unauthenticated } from '../core/errors.ts';
-import { createRateLimiter } from './rate-limit.ts';
-
-/** Read at call time so a test — or a reload — sees the current environment. */
-function jwtSecret(): string {
-  return process.env.JWT_SECRET ?? DEV_SECRET;
-}
 
 /** What an `Authorization` header starts with when it carries a session token. */
 const BEARER_PREFIX = 'Bearer ';
-
-// requestMagicLink is unauthenticated, so without this anyone who can reach the
-// port can mint magic tokens at will. Per-IP limiting belongs in the reverse
-// proxy, which is the only thing that reliably knows the client's address.
-const signInLimiter = createRateLimiter();
 
 const AUTH_SDL = parse(`
   """
@@ -126,7 +115,9 @@ export function applyAuthExtension(schema: GraphQLSchema): GraphQLSchema {
 
   fields.requestMagicLink.resolve = async (_parent: unknown, args: { email: string }, context: Context) => {
     const email = normalizeEmail(args.email);
-    if (!signInLimiter.allow(email)) {
+    // Unauthenticated, so without the limiter anyone who can reach the port can
+    // mint magic tokens at will.
+    if (context.limiter.allow(email) === false) {
       throw rateLimited('Too many sign-in attempts. Try again in a few minutes.');
     }
 

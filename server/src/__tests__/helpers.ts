@@ -4,6 +4,7 @@ import * as dbSchema from '@ethos/db/schema';
 import { pushSchema } from 'drizzle-kit/api-postgres';
 import { drizzle } from 'drizzle-orm/pglite';
 import { type ExecutionResult, graphql } from 'graphql';
+import { createRateLimiter, type RateLimiter } from '../auth/rate-limit.ts';
 import type { Context } from '../core/context.ts';
 import { createSchema } from '../graphql/build-schema.ts';
 import { createLoaders } from '../graphql/loaders.ts';
@@ -39,11 +40,18 @@ export interface TestClient {
   expectError: (query: string, variables?: Record<string, unknown>) => Promise<{ message: string; code: unknown }>;
 }
 
-export function createClient(db: TestDb, userId: string | null): TestClient {
+/** Collaborators a test shares between clients, or swaps for its own. */
+export interface ClientDeps {
+  /** Pass a small one to reach the budget. The default is `createRateLimiter()`. */
+  limiter?: RateLimiter;
+}
+
+export function createClient(db: TestDb, userId: string | null, deps: ClientDeps = {}): TestClient {
+  const { limiter = createRateLimiter() } = deps;
   const { schema } = createSchema(db);
 
   const run = async (query: string, variables?: Record<string, unknown>) => {
-    const contextValue: Context = { db, userId, loaders: createLoaders(db) };
+    const contextValue: Context = { db, userId, limiter, loaders: createLoaders(db) };
     return graphql({ schema, source: query, contextValue, variableValues: variables });
   };
 

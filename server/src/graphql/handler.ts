@@ -1,34 +1,28 @@
-import type { Server } from 'node:http';
 import { ApolloServer } from '@apollo/server';
-import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import { expressMiddleware } from '@as-integrations/express5';
-import { db } from '@ethos/db';
-import express, { Router } from 'express';
+import type { DB } from '@ethos/db';
+import type { RequestHandler } from 'express';
+import type { RateLimiter } from '../auth/rate-limit.ts';
 import { extractUserId } from '../auth/resolvers.ts';
 import type { Context } from '../core/context.ts';
+import { createSchema } from './build-schema.ts';
 import { createLoaders } from './loaders.ts';
-import { schema } from './schema.ts';
 
-export type { Context };
+/** What the handler passes on to resolvers. */
+interface GraphQLHandlerDeps {
+  db: DB;
+  limiter: RateLimiter;
+}
 
-export async function createGraphQLRouter(httpServer: Server): Promise<Router> {
-  const apolloServer = new ApolloServer<Context>({
-    schema,
-    plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
-  });
-
+/** Builds and starts Apollo Server over `db`, as Express middleware for /graphql. */
+export async function createGraphQLHandler({ db, limiter }: GraphQLHandlerDeps): Promise<RequestHandler> {
+  const { schema } = createSchema(db);
+  const apolloServer = new ApolloServer<Context>({ schema });
   await apolloServer.start();
 
-  const router = Router();
-
-  router.use(
-    express.json(),
-    expressMiddleware(apolloServer, {
-      // Loaders are built per request: their batching is only ever valid within
-      // one request, and their cache must not outlive it.
-      context: async ({ req }) => ({ db, userId: extractUserId(req), loaders: createLoaders(db) }),
-    }),
-  );
-
-  return router;
+  return expressMiddleware(apolloServer, {
+    // Loaders are built per request: their batching is only ever valid within
+    // one request, and their cache must not outlive it.
+    context: async ({ req }) => ({ db, limiter, userId: extractUserId(req), loaders: createLoaders(db) }),
+  });
 }

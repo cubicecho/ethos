@@ -1,20 +1,18 @@
 import './core/preflight.ts';
 
-import { createServer } from 'node:http';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db } from '@ethos/db';
-import cors from 'cors';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import express from 'express';
-import { isMagicLinkExposed, isMagicLinkRequired, port } from './core/config.ts';
-import { createGraphQLRouter } from './graphql/handler.ts';
-import { createStaticHandler } from './http/static.ts';
+import { databaseUrl, isMagicLinkExposed, isMagicLinkRequired, port } from './core/config.ts';
+import { createApp } from './http/app.ts';
 
 export type { Context } from './core/context.ts';
 
 /** Where Postgres listens when a connection string names no port. */
 const DEFAULT_POSTGRES_PORT = 5432;
+/** Every interface. The container's port mapping decides who can reach it. */
+const LISTEN_HOST = '0.0.0.0';
 
 /** What Node reports when nothing answers at the database's address. */
 const UNREACHABLE_CODES: readonly string[] = ['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT'];
@@ -29,8 +27,6 @@ function errnoCode(error: unknown): string | undefined {
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PORT = port();
-const staticDir = join(__dirname, '../../app/dist');
 
 // Migrations run at boot so `docker compose up` on a fresh volume is the whole
 // install. They are idempotent; a container restart is a no-op.
@@ -41,7 +37,7 @@ try {
   // `CREATE SCHEMA`. Name the actual problem instead.
   const code = errnoCode(error);
   if (code !== undefined && UNREACHABLE_CODES.includes(code)) {
-    const target = new URL(process.env.DATABASE_URL ?? '');
+    const target = new URL(databaseUrl());
     console.error(
       `[boot] Cannot reach Postgres at ${target.hostname}:${target.port || DEFAULT_POSTGRES_PORT} (${code}).`,
     );
@@ -54,20 +50,11 @@ try {
   throw error;
 }
 
-const app = express();
-const httpServer = createServer(app);
-const serveStatic = createStaticHandler(staticDir);
+const app = await createApp({ db, staticDir: join(__dirname, '../../app/dist') });
 
-app.use(cors());
-app.use('/graphql', await createGraphQLRouter(httpServer));
-app.get('/healthz', (_request, response) => {
-  response.json({ ok: true });
-});
-app.use((request, response) => serveStatic(request, response));
-
-httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`[boot] Ethos ready at http://localhost:${PORT}`);
-  console.log(`[boot] GraphQL at http://localhost:${PORT}/graphql`);
+app.listen(port(), LISTEN_HOST, () => {
+  console.log(`[boot] Ethos ready at http://localhost:${port()}`);
+  console.log(`[boot] GraphQL at http://localhost:${port()}/graphql`);
   if (isMagicLinkRequired() === false) {
     console.warn('[auth] AUTH_MAGIC_LINK is off: any email address signs in without a link. Private networks only.');
   } else if (isMagicLinkExposed()) {

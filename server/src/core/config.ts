@@ -3,6 +3,26 @@ import { HTTP_DEFAULTS } from './defaults.ts';
 /** What signs tokens when `JWT_SECRET` is unset. Preflight refuses it in production. */
 export const DEV_SECRET = 'dev-secret-change-in-production';
 
+/** Whether this is a production instance, where the checks are strict and nothing is exposed. */
+export function isProduction(): boolean {
+  return process.env.NODE_ENV === 'production';
+}
+
+/** The Postgres connection string, or empty when unset. Preflight refuses empty. */
+export function databaseUrl(): string {
+  return process.env.DATABASE_URL ?? '';
+}
+
+/** `JWT_SECRET` exactly as set, for preflight to judge. */
+export function configuredJwtSecret(): string | undefined {
+  return process.env.JWT_SECRET;
+}
+
+/** What signs tokens. Read at call time so a test — or a reload — sees the current environment. */
+export function jwtSecret(): string {
+  return configuredJwtSecret() ?? DEV_SECRET;
+}
+
 /** The port to listen on: `PORT`, or the default. */
 export function port(): number {
   return Number(process.env.PORT ?? HTTP_DEFAULTS.port);
@@ -51,5 +71,5 @@ export function isMagicLinkRequired(): boolean {
  * knows an address sign in as its owner.
  */
 export function isMagicLinkExposed(): boolean {
-  return process.env.NODE_ENV !== 'production' || isFlagOn(process.env.EXPOSE_MAGIC_LINK);
+  return isProduction() === false || isFlagOn(process.env.EXPOSE_MAGIC_LINK);
 }

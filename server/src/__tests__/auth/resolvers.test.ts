@@ -10,8 +10,7 @@ const VERIFY = `mutation ($token: String!) { verifyMagicLink(token: $token) { to
 let db: TestDb;
 let anonymous: TestClient;
 
-// Each test uses a fresh address: the sign-in limiter is per process and
-// per address, and would otherwise carry counts between tests.
+// Each test uses a fresh address, so no two of them can be read as one caller.
 let addresses = 0;
 const nextEmail = () => `user${++addresses}@example.com`;
 

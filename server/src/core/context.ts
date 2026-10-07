@@ -1,4 +1,5 @@
 import type { DB } from '@ethos/db';
+import type { RateLimiter } from '../auth/rate-limit.ts';
 import type { Loaders } from '../graphql/loaders.ts';
 
 /**
@@ -9,5 +10,7 @@ import type { Loaders } from '../graphql/loaders.ts';
 export interface Context {
   db: DB;
   userId: string | null;
+  /** Sign-in throttle; the auth mutations call it. */
+  limiter: RateLimiter;
   loaders: Loaders;
 }
