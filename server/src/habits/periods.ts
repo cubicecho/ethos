@@ -25,20 +25,20 @@ function toUtc(day: string): number {
     });
   }
   const [year, month, date] = day.split('-').map(Number);
-  const ms = Date.UTC(year, month - 1, date);
+  const milliseconds = Date.UTC(year, month - 1, date);
   // Round-tripped rather than range-checked: `2026-02-31` parses happily and
   // comes back as the third of March, which is a different day than the one the
   // caller named. Anything that does not survive the trip was never a date.
-  if (Number.isNaN(ms) || fromUtc(ms) !== day) {
+  if (Number.isNaN(milliseconds) || fromUtc(milliseconds) !== day) {
     throw new GraphQLError(`"${day}" is not a date. Expected YYYY-MM-DD.`, {
       extensions: { code: 'BAD_USER_INPUT' },
     });
   }
-  return ms;
+  return milliseconds;
 }
 
-function fromUtc(ms: number): string {
-  return new Date(ms).toISOString().slice(0, 10);
+function fromUtc(milliseconds: number): string {
+  return new Date(milliseconds).toISOString().slice(0, 10);
 }
 
 /** Rejects anything that is not a calendar day, and returns it unchanged. */

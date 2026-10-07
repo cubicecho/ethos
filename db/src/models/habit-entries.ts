@@ -35,15 +35,15 @@ export const habitEntries = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (t) => [
+  (table) => [
     // The day is the key. Ticking the same day twice is the same tick, and the
     // constraint is what makes that true of a double-click, two open tabs and a
     // retried request alike — `markHabit` upserts onto it rather than checking
     // first and inserting after.
-    unique('uq_habit_entries_day').on(t.habitId, t.day),
-    index('idx_habit_entries_user_id').on(t.userId),
-    index('idx_habit_entries_habit_id').on(t.habitId),
-    index('idx_habit_entries_day').on(t.day),
+    unique('uq_habit_entries_day').on(table.habitId, table.day),
+    index('idx_habit_entries_user_id').on(table.userId),
+    index('idx_habit_entries_habit_id').on(table.habitId),
+    index('idx_habit_entries_day').on(table.day),
   ],
 );
 

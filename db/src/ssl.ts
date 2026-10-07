@@ -54,12 +54,12 @@ export function requiresSsl(url: string): boolean {
 
   const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
   if (ipv4) {
-    const [a, b] = ipv4.slice(1).map(Number);
-    if (a === 127) return false; // loopback
-    if (a === 10) return false; // 10/8
-    if (a === 172 && b >= 16 && b <= 31) return false; // 172.16/12
-    if (a === 192 && b === 168) return false; // 192.168/16
-    if (a === 169 && b === 254) return false; // link-local
+    const [firstOctet, secondOctet] = ipv4.slice(1).map(Number);
+    if (firstOctet === 127) return false; // loopback
+    if (firstOctet === 10) return false; // 10/8
+    if (firstOctet === 172 && secondOctet >= 16 && secondOctet <= 31) return false; // 172.16/12
+    if (firstOctet === 192 && secondOctet === 168) return false; // 192.168/16
+    if (firstOctet === 169 && secondOctet === 254) return false; // link-local
     return true;
   }
 

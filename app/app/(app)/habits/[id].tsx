@@ -19,7 +19,7 @@ export default function HabitScreen() {
     variables: { id: id as string, today },
     skip: !id,
   });
-  const { setDay, pending, error: markError } = useMarkHabitDay(today);
+  const { setDay, isPending, error: markError } = useMarkHabitDay(today);
 
   const habit = habitQuery.data?.habit;
   if (!habit) {
@@ -68,7 +68,7 @@ export default function HabitScreen() {
                 history={habit.history}
                 entries={habit.entries}
                 today={today}
-                pending={pending}
+                isPending={isPending}
                 onSet={(day, status) => setDay(habit.id, day, status)}
               />
               {markError ? (

@@ -7,7 +7,7 @@ import { db } from '@ethos/db';
 import cors from 'cors';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import express from 'express';
-import { magicLinkExposed, magicLinkRequired } from './core/config.ts';
+import { isMagicLinkExposed, isMagicLinkRequired } from './core/config.ts';
 import { createGraphQLRouter } from './graphql/handler.ts';
 import { createStaticHandler } from './http/static.ts';
 
@@ -44,17 +44,17 @@ const serveStatic = createStaticHandler(staticDir);
 
 app.use(cors());
 app.use('/graphql', await createGraphQLRouter(httpServer));
-app.get('/healthz', (_req, res) => {
-  res.json({ ok: true });
+app.get('/healthz', (_request, response) => {
+  response.json({ ok: true });
 });
-app.use((req, res) => serveStatic(req, res));
+app.use((request, response) => serveStatic(request, response));
 
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`[boot] Ethos ready at http://localhost:${PORT}`);
   console.log(`[boot] GraphQL at http://localhost:${PORT}/graphql`);
-  if (!magicLinkRequired()) {
+  if (!isMagicLinkRequired()) {
     console.warn('[auth] AUTH_MAGIC_LINK is off: any email address signs in without a link. Private networks only.');
-  } else if (magicLinkExposed()) {
+  } else if (isMagicLinkExposed()) {
     console.warn('[auth] EXPOSE_MAGIC_LINK is on: sign-in links are returned in API responses. Private networks only.');
   }
 });

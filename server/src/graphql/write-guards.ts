@@ -31,7 +31,7 @@ interface ForeignKey {
   parent: AnyTable;
 }
 
-const habit: ForeignKey = { key: 'habitId', entity: 'Habit', parent: dbSchema.habits };
+const HABIT_REFERENCE: ForeignKey = { key: 'habitId', entity: 'Habit', parent: dbSchema.habits };
 
 /**
  * Every user-facing foreign key, by the table that carries it.
@@ -43,7 +43,7 @@ const habit: ForeignKey = { key: 'habitId', entity: 'Habit', parent: dbSchema.ha
  * caller can state belongs in this map.
  */
 const FOREIGN_KEYS: Record<string, ForeignKey[]> = {
-  habitEntries: [habit],
+  habitEntries: [HABIT_REFERENCE],
 };
 
 /**
@@ -63,20 +63,20 @@ export async function assertForeignKeysOwned(
   rows: Row[],
   foreignKeys: ForeignKey[],
 ): Promise<void> {
-  for (const fk of foreignKeys) {
+  for (const foreignKey of foreignKeys) {
     const referenced = [
-      ...new Set(rows.map((row) => row[fk.key]).filter((id): id is string => typeof id === 'string')),
+      ...new Set(rows.map((row) => row[foreignKey.key]).filter((id): id is string => typeof id === 'string')),
     ];
     if (referenced.length === 0) continue;
     const owned: Array<{ id: string }> = await tx
-      .select({ id: fk.parent.id })
-      .from(fk.parent)
-      .where(and(inArray(fk.parent.id, referenced), eq(fk.parent.userId, userId)));
+      .select({ id: foreignKey.parent.id })
+      .from(foreignKey.parent)
+      .where(and(inArray(foreignKey.parent.id, referenced), eq(foreignKey.parent.userId, userId)));
     const ownedIds = new Set(owned.map((row) => row.id));
     if (referenced.some((id) => !ownedIds.has(id))) {
       // NOT_FOUND, not FORBIDDEN: "you may not touch this" would confirm the row
       // exists, which is itself something the caller is not entitled to know.
-      throw new GraphQLError(`${fk.entity} not found`, { extensions: { code: 'NOT_FOUND' } });
+      throw new GraphQLError(`${foreignKey.entity} not found`, { extensions: { code: 'NOT_FOUND' } });
     }
   }
 }

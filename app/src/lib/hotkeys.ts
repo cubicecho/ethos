@@ -40,12 +40,12 @@ export function isTyping(target: EventTarget | null): boolean {
  * a ref rather than named in the dependency list so a caller need not memoize
  * it; the listener is attached once per key for the life of the component.
  */
-export function useHotkey(key: string, handler: (event: KeyboardEvent) => void, enabled = true): void {
+export function useHotkey(key: string, handler: (event: KeyboardEvent) => void, isEnabled = true): void {
   const latest = useRef(handler);
   latest.current = handler;
 
   useEffect(() => {
-    if (!enabled || typeof document === 'undefined') return;
+    if (!isEnabled || typeof document === 'undefined') return;
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
@@ -58,7 +58,7 @@ export function useHotkey(key: string, handler: (event: KeyboardEvent) => void, 
 
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [key, enabled]);
+  }, [key, isEnabled]);
 }
 
 /** Focus an element and, when it is a field, select what is in it — so typing replaces. */

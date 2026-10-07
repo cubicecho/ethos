@@ -21,22 +21,22 @@ export function DaySquare({
   day,
   status,
   color,
-  today,
-  future,
+  isToday,
+  isFuture,
   disabled,
   onSet,
 }: {
   day: string;
   status: DayStatus;
   color: string;
-  today: boolean;
+  isToday: boolean;
   /** A day that has not happened yet: drawn, so the period keeps its shape, but not pressable. */
-  future: boolean;
+  isFuture: boolean;
   disabled?: boolean;
   /** Called with what the day should become — the cycle is this component's. */
   onSet: (day: string, status: DayStatus) => void;
 }) {
-  const state = future ? 'to come' : status === 'done' ? 'kept' : status === 'skipped' ? 'skipped' : 'not kept';
+  const state = isFuture ? 'to come' : status === 'done' ? 'kept' : status === 'skipped' ? 'skipped' : 'not kept';
   const label = `${formatDayLong(day)} — ${state}`;
 
   return (
@@ -46,17 +46,17 @@ export function DaySquare({
           role="button"
           aria-label={label}
           aria-pressed={status !== null}
-          disabled={future || disabled}
+          disabled={isFuture || disabled}
           onPress={() => onSet(day, nextStatus(status))}
           className={cn(
             'h-5 w-5 shrink-0 rounded-[3px] border transition-colors',
-            future ? 'cursor-default border-border/50 border-dashed bg-transparent' : 'hover:border-ring',
-            !future && disabled && 'opacity-60',
+            isFuture ? 'cursor-default border-border/50 border-dashed bg-transparent' : 'hover:border-ring',
+            !isFuture && disabled && 'opacity-60',
             status === 'skipped' && 'border-2 border-foreground/60 border-dashed bg-transparent',
-            status === null && !future && 'border-border bg-muted/50',
+            status === null && !isFuture && 'border-border bg-muted/50',
             // Today is outlined rather than filled: the outline survives whatever
             // the square's own state is, so "today" and "kept" are readable at once.
-            today && 'outline-2 outline-ring outline-offset-1',
+            isToday && 'outline-2 outline-ring outline-offset-1',
           )}
           style={status === 'done' ? { backgroundColor: color, borderColor: color } : undefined}
         />

@@ -8,13 +8,13 @@ export default function AppLayout() {
   // The token lives in localStorage, which the first render cannot read on the
   // server or during hydration — so decide after mount rather than redirecting
   // a signed-in user to /login for one frame.
-  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null);
   useEffect(() => {
-    setSignedIn(isAuthenticated());
+    setIsSignedIn(isAuthenticated());
   }, []);
 
-  if (signedIn === null) return <View className="flex-1 bg-background" />;
-  if (!signedIn) return <Redirect href="/login" />;
+  if (isSignedIn === null) return <View className="flex-1 bg-background" />;
+  if (!isSignedIn) return <Redirect href="/login" />;
 
   return (
     <View className="h-full flex-1 flex-row bg-background">

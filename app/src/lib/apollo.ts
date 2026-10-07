@@ -56,12 +56,12 @@ const errorLink = onError(({ graphQLErrors }) => {
 //
 // `merge: false` says exactly that, and silences the warning it was right to
 // raise about a cache that had not decided.
-const replace = { merge: false } as const;
+const REPLACE_INCOMING = { merge: false } as const;
 
 const cache = new InMemoryCache({
   typePolicies: {
-    Habit: { fields: { entries: replace, history: replace } },
-    User: { fields: { habits: replace, habitEntries: replace } },
+    Habit: { fields: { entries: REPLACE_INCOMING, history: REPLACE_INCOMING } },
+    User: { fields: { habits: REPLACE_INCOMING, habitEntries: REPLACE_INCOMING } },
   },
 });
 

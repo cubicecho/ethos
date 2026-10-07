@@ -51,8 +51,8 @@ export function HabitFormDialog({
   /** Where a new habit goes in the list. Ignored when editing. */
   nextPosition?: number;
 }) {
-  const [createHabit, { loading: creating, error: createError }] = useMutation(CreateHabitDocument);
-  const [updateHabit, { loading: updating, error: updateError }] = useMutation(UpdateHabitDocument);
+  const [createHabit, { loading: isCreating, error: createError }] = useMutation(CreateHabitDocument);
+  const [updateHabit, { loading: isUpdating, error: updateError }] = useMutation(UpdateHabitDocument);
 
   const form = useAppForm({
     defaultValues: valuesOf(habit),
@@ -65,7 +65,7 @@ export function HabitFormDialog({
   }, [open, habit, form]);
 
   async function save({ name, notes, color, period, targetCount }: HabitValues) {
-    if (creating || updating) return;
+    if (isCreating || isUpdating) return;
     const values = {
       name: name.trim(),
       notes: notes.trim() === '' ? null : notes.trim(),

@@ -42,16 +42,16 @@ export const habits = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (t) => [
-    index('idx_habits_user_id').on(t.userId),
-    index('idx_habits_archived_at').on(t.archivedAt),
+  (table) => [
+    index('idx_habits_user_id').on(table.userId),
+    index('idx_habits_archived_at').on(table.archivedAt),
     // An entry is one day, and a day is either kept or it is not — so a daily
     // habit can only ever ask for one. Structural rather than a rule someone
     // has to remember: with `target_count = 3, period = 'day'` stored, every
     // rate in the app would divide by a number no day could reach.
-    check('ck_habits_daily_target', sql`${t.period} <> 'day' or ${t.targetCount} = 1`),
-    check('ck_habits_target_positive', sql`${t.targetCount} > 0`),
-    check('ck_habits_period', sql`${t.period} in ('day', 'week', 'month')`),
+    check('ck_habits_daily_target', sql`${table.period} <> 'day' or ${table.targetCount} = 1`),
+    check('ck_habits_target_positive', sql`${table.targetCount} > 0`),
+    check('ck_habits_period', sql`${table.period} in ('day', 'week', 'month')`),
   ],
 );
 

@@ -52,14 +52,14 @@ export interface PeriodTally extends PeriodRange {
   rate: number;
 }
 
-const inRange = (entry: EntryLike, range: PeriodRange) => entry.day >= range.start && entry.day < range.end;
+const isInRange = (entry: EntryLike, range: PeriodRange) => entry.day >= range.start && entry.day < range.end;
 
 /** One period, counted. */
 export function tallyPeriod(habit: HabitLike, entries: readonly EntryLike[], range: PeriodRange): PeriodTally {
   let done = 0;
   let skipped = 0;
   for (const entry of entries) {
-    if (!inRange(entry, range)) continue;
+    if (!isInRange(entry, range)) continue;
     if (entry.status === 'done') done += 1;
     else skipped += 1;
   }
@@ -105,12 +105,12 @@ export function currentStreak(habit: HabitLike, entries: readonly EntryLike[], t
 
   let streak = 0;
   let range = periodOf(habit.period, today);
-  let first = true;
+  let isNewestPeriod = true;
   while (range.start >= floor) {
     const tally = tallyPeriod(habit, entries, range);
     if (tally.met) streak += 1;
-    else if (!first) break;
-    first = false;
+    else if (!isNewestPeriod) break;
+    isNewestPeriod = false;
     range = periodBefore(habit.period, range.start);
   }
   return streak;
@@ -134,12 +134,12 @@ export function longestStreak(habit: HabitLike, entries: readonly EntryLike[], t
   let range = periodOf(habit.period, periodStart(habit.period, oldest));
   const stop = periodStart(habit.period, today);
   while (range.start <= stop) {
-    const current = range.start === stop;
+    const isCurrentPeriod = range.start === stop;
     const tally = tallyPeriod(habit, entries, range);
     if (tally.met) {
       run += 1;
       best = Math.max(best, run);
-    } else if (!current) {
+    } else if (!isCurrentPeriod) {
       run = 0;
     }
     range = periodOf(habit.period, range.end);

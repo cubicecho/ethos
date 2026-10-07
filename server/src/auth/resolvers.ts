@@ -2,7 +2,7 @@ import * as dbSchema from '@ethos/db/schema';
 import { eq } from 'drizzle-orm';
 import { extendSchema, GraphQLError, type GraphQLObjectType, type GraphQLSchema, parse } from 'graphql';
 import jwt from 'jsonwebtoken';
-import { magicLinkExposed, magicLinkRequired } from '../core/config.ts';
+import { isMagicLinkExposed, isMagicLinkRequired } from '../core/config.ts';
 import type { Context } from '../core/context.ts';
 import { createRateLimiter } from './rate-limit.ts';
 
@@ -82,19 +82,19 @@ export function verifyMagicToken(token: string): { email: string } | null {
 }
 
 /** Read the authenticated userId from a request's Bearer token, if any. */
-export function extractUserId(req: { headers: { authorization?: string } }): string | null {
-  const auth = req.headers.authorization;
+export function extractUserId(request: { headers: { authorization?: string } }): string | null {
+  const auth = request.headers.authorization;
   if (!auth?.startsWith('Bearer ')) return null;
   return verifyToken(auth.slice(7))?.userId ?? null;
 }
 
-export function requireAuth(ctx: Context): string {
-  if (!ctx.userId) {
+export function requireAuth(context: Context): string {
+  if (!context.userId) {
     throw new GraphQLError('Unauthenticated', {
       extensions: { code: 'UNAUTHENTICATED' },
     });
   }
-  return ctx.userId;
+  return context.userId;
 }
 
 function normalizeEmail(email: string): string {
@@ -135,7 +135,7 @@ export function applyAuthExtension(schema: GraphQLSchema): GraphQLSchema {
     // No-link mode: the address alone is the credential. Only ever appropriate
     // on a private instance — see config.ts and the README's "Before you expose
     // it".
-    if (!magicLinkRequired()) {
+    if (!isMagicLinkRequired()) {
       const userId = await findOrCreateUser(context.db, email);
       console.log(`[auth] Magic links are off; signed ${email} in directly.`);
       return { ok: true, magicLink: null, token: signToken(userId), userId };
@@ -144,7 +144,7 @@ export function applyAuthExtension(schema: GraphQLSchema): GraphQLSchema {
     const magicLink = `${appUrl()}/auth/verify?token=${signMagicToken(email)}`;
     // Ethos ships no mail provider, so the console is the delivery channel.
     console.log(`\n[auth] Magic link for ${email}:\n${magicLink}\n`);
-    return { ok: true, magicLink: magicLinkExposed() ? magicLink : null, token: null, userId: null };
+    return { ok: true, magicLink: isMagicLinkExposed() ? magicLink : null, token: null, userId: null };
   };
 
   fields.verifyMagicLink.resolve = async (_parent: unknown, args: { token: string }, context: Context) => {

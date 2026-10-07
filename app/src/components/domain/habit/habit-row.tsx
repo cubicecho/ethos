@@ -24,11 +24,11 @@ import { useMarkHabit } from './use-mark-habit';
  */
 export function HabitRow({ habit, today }: { habit: HabitSummary; today: string }) {
   const router = useRouter();
-  const { setDay, pending, error } = useMarkHabit(today);
+  const { setDay, isPending, error } = useMarkHabit(today);
   const status = asStatus(habit.todayEntry[0]?.status);
   const period = habit.period as Period;
-  const done = status === 'done';
-  const skipped = status === 'skipped';
+  const isDone = status === 'done';
+  const isSkipped = status === 'skipped';
 
   const toggle = (next: 'done' | 'skipped') => setDay(habit.id, today, status === next ? null : next);
 
@@ -37,27 +37,27 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
       <ListItem
         title={habit.name}
         description={`${describeCadence(period, habit.targetCount)} · ${
-          skipped ? 'Skipped today' : describeProgress(habit.current.done, habit.current.effectiveTarget, period)
+          isSkipped ? 'Skipped today' : describeProgress(habit.current.done, habit.current.effectiveTarget, period)
         }`}
         onPress={() => router.push(`/habits/${habit.id}`)}
         leadingSlot={
           <ActionButton
-            label={done ? `Undo ${habit.name} for today` : `Mark ${habit.name} kept today`}
-            aria-pressed={done}
-            disabled={pending}
+            label={isDone ? `Undo ${habit.name} for today` : `Mark ${habit.name} kept today`}
+            aria-pressed={isDone}
+            disabled={isPending}
             variant="outline"
             size="icon-sm"
             onPress={() => toggle('done')}
-            className={cn('rounded-full border-2', done && 'border-transparent')}
+            className={cn('rounded-full border-2', isDone && 'border-transparent')}
             // The habit's own colour, and whichever of black and white reads on it:
             // a theme token would be the wrong one in one theme or the other.
-            style={done ? { backgroundColor: habit.color } : undefined}
+            style={isDone ? { backgroundColor: habit.color } : undefined}
             // Drawn only once kept: an empty ring is the "not yet", and a grey
             // tick inside it would read as half-done.
             iconSlot={
               <Check
-                className={cn('h-5 w-5', !done && 'opacity-0')}
-                color={done ? readableTextColor(habit.color) : undefined}
+                className={cn('h-5 w-5', !isDone && 'opacity-0')}
+                color={isDone ? readableTextColor(habit.color) : undefined}
               />
             }
           />
@@ -72,10 +72,10 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
         }
         actionSlot={
           <ActionButton
-            label={skipped ? `Un-skip ${habit.name} today` : `Skip ${habit.name} today`}
-            aria-pressed={skipped}
-            disabled={pending}
-            variant={skipped ? 'secondary' : 'ghost'}
+            label={isSkipped ? `Un-skip ${habit.name} today` : `Skip ${habit.name} today`}
+            aria-pressed={isSkipped}
+            disabled={isPending}
+            variant={isSkipped ? 'secondary' : 'ghost'}
             size="icon-sm"
             onPress={() => toggle('skipped')}
             iconSlot={<SkipForward />}

@@ -1,5 +1,5 @@
 /** Truthy env-var values: "1", "true", "yes" (case-insensitive). */
-export function envFlag(value: string | undefined): boolean {
+export function isFlagOn(value: string | undefined): boolean {
   return ['1', 'true', 'yes'].includes((value ?? '').trim().toLowerCase());
 }
 
@@ -17,7 +17,7 @@ function envDisabled(value: string | undefined): boolean {
  * network. Anyone who can reach the port can then sign in as anyone, so it must
  * never be set on an instance exposed to the internet.
  */
-export function magicLinkRequired(): boolean {
+export function isMagicLinkRequired(): boolean {
   return !envDisabled(process.env.AUTH_MAGIC_LINK);
 }
 
@@ -30,6 +30,6 @@ export function magicLinkRequired(): boolean {
  * else to go. Same warning as above: on a public deployment this lets anyone who
  * knows an address sign in as its owner.
  */
-export function magicLinkExposed(): boolean {
-  return process.env.NODE_ENV !== 'production' || envFlag(process.env.EXPOSE_MAGIC_LINK);
+export function isMagicLinkExposed(): boolean {
+  return process.env.NODE_ENV !== 'production' || isFlagOn(process.env.EXPOSE_MAGIC_LINK);
 }

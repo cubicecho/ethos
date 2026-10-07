@@ -24,7 +24,7 @@ import { useToday } from '@/lib/use-today';
 export default function TodayScreen() {
   const today = useToday();
   const habitsQuery = useQuery(HabitsDocument, { variables: { today } });
-  const [creating, setCreating] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   // Read during render rather than through state: the list is the source, and a
   // position kept in state would go stale the moment a habit was added.
   const habits = habitsQuery.data?.habits ?? [];
@@ -32,7 +32,7 @@ export default function TodayScreen() {
 
   useHotkey('n', (event) => {
     event.preventDefault();
-    setCreating(true);
+    setIsCreating(true);
   });
 
   return (
@@ -44,7 +44,7 @@ export default function TodayScreen() {
         actionSlot={
           <Button
             size="sm"
-            onPress={() => setCreating(true)}
+            onPress={() => setIsCreating(true)}
             iconSlot={<Plus className="size-4" />}
             content="New habit"
           />
@@ -63,7 +63,7 @@ export default function TodayScreen() {
                   icon={CalendarCheck}
                   title="Nothing to keep yet"
                   description="A habit is a thing you mean to do, and how often. Start with one."
-                  actionSlot={<Button onPress={() => setCreating(true)} content="Create a habit" />}
+                  actionSlot={<Button onPress={() => setIsCreating(true)} content="Create a habit" />}
                 />
               }
             />
@@ -77,7 +77,7 @@ export default function TodayScreen() {
           </View>
         }
       />
-      <HabitFormDialog open={creating} onOpenChange={setCreating} today={today} nextPosition={nextPosition} />
+      <HabitFormDialog open={isCreating} onOpenChange={setIsCreating} today={today} nextPosition={nextPosition} />
     </>
   );
 }

@@ -40,13 +40,13 @@ function without(habits: readonly CachedHabit[], id: string): CachedHabit[] {
  */
 export function placeHabit(cache: ApolloCache<unknown>, today: string, habit: CachedHabit): void {
   const { active, archived } = listsOf(today);
-  const archivedNow = habit.archivedAt != null;
+  const isArchived = habit.archivedAt != null;
 
   cache.updateQuery(active, (existing) =>
     existing
       ? {
           ...existing,
-          habits: archivedNow ? without(existing.habits, habit.id) : [...without(existing.habits, habit.id), habit],
+          habits: isArchived ? without(existing.habits, habit.id) : [...without(existing.habits, habit.id), habit],
         }
       : existing,
   );
@@ -54,7 +54,7 @@ export function placeHabit(cache: ApolloCache<unknown>, today: string, habit: Ca
     existing
       ? {
           ...existing,
-          habits: archivedNow ? [habit, ...without(existing.habits, habit.id)] : without(existing.habits, habit.id),
+          habits: isArchived ? [habit, ...without(existing.habits, habit.id)] : without(existing.habits, habit.id),
         }
       : existing,
   );

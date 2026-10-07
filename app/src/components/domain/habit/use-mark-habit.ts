@@ -15,18 +15,18 @@ import type { DayStatus } from './types';
  * streak the client invented and the server then corrected is worse than a
  * streak that arrives a moment late.
  *
- * `pending` is the replacement: the control says it is working rather than
+ * `isPending` is the replacement: the control says it is working rather than
  * pretending it is done.
  */
 export interface Marker {
   /** `null` clears the day, leaving it untouched rather than missed. */
   setDay: (habitId: string, day: string, status: DayStatus) => Promise<void>;
-  pending: boolean;
+  isPending: boolean;
   error: string | null;
 }
 
 function useAction() {
-  const [pending, setPending] = useState(false);
+  const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Caught rather than rethrown: every caller is a button, and a rejected click
@@ -34,28 +34,28 @@ function useAction() {
   // real things — a third skip in one week, a day that has not happened — and
   // those refusals are worth reading.
   async function run(action: () => Promise<unknown>): Promise<void> {
-    setPending(true);
+    setIsPending(true);
     setError(null);
     try {
       await action();
     } catch (cause) {
       setError(describeError(cause));
     } finally {
-      setPending(false);
+      setIsPending(false);
     }
   }
 
-  return { pending, error, run };
+  return { isPending, error, run };
 }
 
 /** For screens that show a habit but no history — the list and the sidebar. */
 export function useMarkHabit(today: string): Marker {
   const [mark] = useMutation(MarkHabitDocument);
   const [clear] = useMutation(ClearHabitDocument);
-  const { pending, error, run } = useAction();
+  const { isPending, error, run } = useAction();
 
   return {
-    pending,
+    isPending,
     error,
     setDay: (habitId, day, status) =>
       run(() =>
@@ -74,10 +74,10 @@ export function useMarkHabit(today: string): Marker {
 export function useMarkHabitDay(today: string): Marker {
   const [mark] = useMutation(MarkHabitDayDocument);
   const [clear] = useMutation(ClearHabitDayDocument);
-  const { pending, error, run } = useAction();
+  const { isPending, error, run } = useAction();
 
   return {
-    pending,
+    isPending,
     error,
     setDay: (habitId, day, status) =>
       run(() =>

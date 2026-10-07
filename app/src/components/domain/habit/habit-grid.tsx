@@ -52,14 +52,14 @@ export function HabitGrid({
   history,
   entries,
   today,
-  pending,
+  isPending,
   onSet,
 }: {
   habit: HabitSummary;
   history: readonly HabitPeriodSummary[];
   entries: readonly HabitEntrySummary[];
   today: string;
-  pending: boolean;
+  isPending: boolean;
   onSet: (day: string, status: DayStatus) => void;
 }) {
   const period = habit.period as Period;
@@ -98,9 +98,9 @@ export function HabitGrid({
                   day={day}
                   status={status.get(day) ?? null}
                   color={habit.color}
-                  today={day === today}
-                  future={day > today}
-                  disabled={pending}
+                  isToday={day === today}
+                  isFuture={day > today}
+                  disabled={isPending}
                   onSet={onSet}
                 />
               ))}

@@ -59,7 +59,7 @@ const square = (day: string) => screen.getByRole('button', { name: new RegExp(fo
 function renderGrid(props: Partial<Parameters<typeof HabitGrid>[0]> = {}) {
   const onSet = vi.fn();
   render(
-    <HabitGrid habit={habit()} history={[]} entries={[]} today={TODAY} pending={false} onSet={onSet} {...props} />,
+    <HabitGrid habit={habit()} history={[]} entries={[]} today={TODAY} isPending={false} onSet={onSet} {...props} />,
   );
   return { onSet };
 }
@@ -170,7 +170,7 @@ describe('HabitGrid squares', () => {
     // user-event refuses to click at all. Skip that check so the click lands
     // and the assertion is about the handler, not about the stylesheet.
     const user = userEvent.setup({ pointerEventsCheck: 0 });
-    const { onSet } = renderGrid({ pending: true });
+    const { onSet } = renderGrid({ isPending: true });
     await user.click(square(TODAY));
     expect(onSet).not.toHaveBeenCalled();
   });

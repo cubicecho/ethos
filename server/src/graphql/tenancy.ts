@@ -59,11 +59,11 @@ export const contextValues: NonNullable<BuildSchemaConfig['contextValues']> = Ob
  */
 const WRITES_RESERVED = new Set<string>(['users', 'habitEntries']);
 
-const generatedWritesAllowed = (table: string) => !WRITES_RESERVED.has(table);
+const allowsGeneratedWrites = (table: string) => !WRITES_RESERVED.has(table);
 
 export const features: NonNullable<BuildSchemaConfig['features']> = {
-  insert: generatedWritesAllowed,
-  update: generatedWritesAllowed,
-  updateMany: generatedWritesAllowed,
-  delete: generatedWritesAllowed,
+  insert: allowsGeneratedWrites,
+  update: allowsGeneratedWrites,
+  updateMany: allowsGeneratedWrites,
+  delete: allowsGeneratedWrites,
 };

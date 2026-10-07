@@ -15,11 +15,11 @@ export default function VerifyScreen() {
   const [verifyMagicLink, { error }] = useMutation(VerifyMagicLinkDocument);
   // Strict mode and route re-renders both run effects more than once; a magic
   // token is meant to be spent exactly once.
-  const started = useRef(false);
+  const hasStarted = useRef(false);
 
   useEffect(() => {
-    if (started.current || !token) return;
-    started.current = true;
+    if (hasStarted.current || !token) return;
+    hasStarted.current = true;
     verifyMagicLink({ variables: { token } })
       .then(({ data }) => {
         if (!data?.verifyMagicLink) return;

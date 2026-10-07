@@ -14,7 +14,7 @@ import { RequestMagicLinkDocument } from '@/lib/graphql';
 export default function LoginScreen() {
   const router = useRouter();
   const [magicLink, setMagicLink] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
+  const [hasSentLink, setHasSentLink] = useState(false);
   const [requestMagicLink, { error }] = useMutation(RequestMagicLinkDocument);
 
   const form = useAppForm({
@@ -23,7 +23,7 @@ export default function LoginScreen() {
   });
 
   async function send(email: string) {
-    setSent(false);
+    setHasSentLink(false);
     setMagicLink(null);
     try {
       const { data } = await requestMagicLink({ variables: { email } });
@@ -37,7 +37,7 @@ export default function LoginScreen() {
         return;
       }
       setMagicLink(result.magicLink ?? null);
-      setSent(true);
+      setHasSentLink(true);
     } catch {
       // Rendered from `error` below.
     }
@@ -69,7 +69,7 @@ export default function LoginScreen() {
 
         {error ? <Text className="mt-4 text-destructive text-sm">{describeError(error)}</Text> : null}
 
-        {sent ? (
+        {hasSentLink ? (
           <CardLayout
             className="mt-6"
             iconSlot={<CircleCheck className="size-4 text-primary" />}

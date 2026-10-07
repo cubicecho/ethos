@@ -40,13 +40,13 @@ function toUtc(day: string): number {
   return Date.UTC(year, month - 1, date);
 }
 
-function fromUtc(ms: number): string {
-  return new Date(ms).toISOString().slice(0, 10);
+function fromUtc(milliseconds: number): string {
+  return new Date(milliseconds).toISOString().slice(0, 10);
 }
 
 export function isDay(value: string): boolean {
-  const ms = toUtc(value);
-  return !Number.isNaN(ms) && fromUtc(ms) === value;
+  const milliseconds = toUtc(value);
+  return !Number.isNaN(milliseconds) && fromUtc(milliseconds) === value;
 }
 
 export function addDays(day: string, count: number): string {
@@ -102,10 +102,10 @@ export function daysOf(range: PeriodRange): string[] {
   return Array.from({ length: daysBetween(range.start, range.end) }, (_, index) => addDays(range.start, index));
 }
 
-const MONTH = new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric', timeZone: 'UTC' });
-const SHORT = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
-const FULL = new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeZone: 'UTC' });
-const WEEKDAY = new Intl.DateTimeFormat(undefined, { weekday: 'narrow', timeZone: 'UTC' });
+const MONTH_FORMAT = new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric', timeZone: 'UTC' });
+const SHORT_DAY_FORMAT = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
+const LONG_DAY_FORMAT = new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeZone: 'UTC' });
+const WEEKDAY_INITIAL_FORMAT = new Intl.DateTimeFormat(undefined, { weekday: 'narrow', timeZone: 'UTC' });
 
 /**
  * Every formatter above is pinned to UTC, for the same reason the arithmetic is:
@@ -113,15 +113,15 @@ const WEEKDAY = new Intl.DateTimeFormat(undefined, { weekday: 'narrow', timeZone
  * be if the reader's zone were applied to its midnight.
  */
 export function formatDay(day: string): string {
-  return SHORT.format(new Date(toUtc(day)));
+  return SHORT_DAY_FORMAT.format(new Date(toUtc(day)));
 }
 
 export function formatDayLong(day: string): string {
-  return FULL.format(new Date(toUtc(day)));
+  return LONG_DAY_FORMAT.format(new Date(toUtc(day)));
 }
 
 export function weekdayInitial(day: string): string {
-  return WEEKDAY.format(new Date(toUtc(day)));
+  return WEEKDAY_INITIAL_FORMAT.format(new Date(toUtc(day)));
 }
 
 /**
@@ -134,6 +134,6 @@ export function periodLabel(period: Period, start: string, from: string = today(
   if (start === current) return period === 'day' ? 'Today' : `This ${period}`;
   const previous = periodBefore(period, from).start;
   if (start === previous) return period === 'day' ? 'Yesterday' : `Last ${period}`;
-  if (period === 'month') return MONTH.format(new Date(toUtc(start)));
+  if (period === 'month') return MONTH_FORMAT.format(new Date(toUtc(start)));
   return formatDay(start);
 }

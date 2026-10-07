@@ -33,13 +33,13 @@ export function HabitPage({
   contentSlot: SlotNode;
 }) {
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [updateHabit] = useMutation(UpdateHabitDocument);
   const [deleteHabit] = useMutation(DeleteHabitDocument);
 
   const period = habit.period as Period;
-  const archived = habit.archivedAt != null;
+  const isArchived = habit.archivedAt != null;
 
   /**
    * Archiving is the ordinary way to stop a habit, and it is a plain column
@@ -82,7 +82,7 @@ export function HabitPage({
       <PageLayout
         width="prose"
         title={habit.name}
-        description={`${describeCadence(period, habit.targetCount)}${archived ? ' · Archived' : ''}`}
+        description={`${describeCadence(period, habit.targetCount)}${isArchived ? ' · Archived' : ''}`}
         // The habit's colour is how it is recognised on every other screen.
         iconSlot={<ColorDot color={habit.color} />}
         actionSlot={
@@ -91,15 +91,15 @@ export function HabitPage({
               label="Edit habit"
               variant="ghost"
               size="icon"
-              onPress={() => setEditing(true)}
+              onPress={() => setIsEditing(true)}
               iconSlot={<Pencil />}
             />
             <ActionButton
-              label={archived ? 'Restore habit' : 'Archive habit'}
+              label={isArchived ? 'Restore habit' : 'Archive habit'}
               variant="ghost"
               size="icon"
-              onPress={() => void setArchived(!archived)}
-              iconSlot={archived ? <ArchiveRestore /> : <Archive />}
+              onPress={() => void setArchived(!isArchived)}
+              iconSlot={isArchived ? <ArchiveRestore /> : <Archive />}
             />
             <ConfirmButton
               label="Delete habit"
@@ -142,7 +142,7 @@ export function HabitPage({
           </View>
         }
       />
-      <HabitFormDialog open={editing} onOpenChange={setEditing} today={today} habit={habit} />
+      <HabitFormDialog open={isEditing} onOpenChange={setIsEditing} today={today} habit={habit} />
     </>
   );
 }

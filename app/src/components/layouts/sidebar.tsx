@@ -18,7 +18,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const today = useToday();
   const habitsQuery = useQuery(HabitsDocument, { variables: { today } });
-  const [creating, setCreating] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const habits = habitsQuery.data?.habits ?? [];
   const nextPosition = habits.reduce((max, habit) => Math.max(max, habit.position), -1) + 1;
 
@@ -43,7 +43,7 @@ export function Sidebar() {
             <Button
               size="sm"
               className="w-full gap-2 rounded-lg"
-              onPress={() => setCreating(true)}
+              onPress={() => setIsCreating(true)}
               iconSlot={<Plus className="h-4 w-4" />}
               content="New habit"
             />
@@ -111,7 +111,7 @@ export function Sidebar() {
           </>
         }
       />
-      <HabitFormDialog open={creating} onOpenChange={setCreating} today={today} nextPosition={nextPosition} />
+      <HabitFormDialog open={isCreating} onOpenChange={setIsCreating} today={today} nextPosition={nextPosition} />
     </>
   );
 }

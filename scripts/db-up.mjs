@@ -43,7 +43,7 @@ function configuredHost() {
   if (!existsSync('.env')) return null;
   const line = readFileSync('.env', 'utf8')
     .split('\n')
-    .find((l) => l.trim().startsWith('DATABASE_URL='));
+    .find((line) => line.trim().startsWith('DATABASE_URL='));
   if (!line) return null;
   try {
     return new URL(line.slice(line.indexOf('=') + 1).trim()).hostname;
