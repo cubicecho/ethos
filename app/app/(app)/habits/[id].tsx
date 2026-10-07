@@ -1,0 +1,85 @@
+import { useQuery } from '@apollo/client';
+import { Link, useLocalSearchParams } from 'expo-router';
+import { Text } from 'react-native';
+import { HabitGrid } from '@/components/domain/habit/habit-grid';
+import { HabitPage } from '@/components/domain/habit/habit-page';
+import { useMarkHabitDay } from '@/components/domain/habit/use-mark-habit';
+import { EmptyState } from '@/components/page';
+import { PageLayout } from '@/components/page-layout';
+import { Section } from '@/components/section';
+import { Search } from '@/components/ui/icons';
+import { LoadState } from '@/components/ui/load-failure';
+import { HabitDocument } from '@/lib/graphql';
+import { useToday } from '@/lib/use-today';
+
+export default function HabitScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const today = useToday();
+  const habitQuery = useQuery(HabitDocument, {
+    variables: { id: id as string, today },
+    skip: !id,
+  });
+  const { setDay, pending, error: markError } = useMarkHabitDay(today);
+
+  const habit = habitQuery.data?.habit;
+  if (!habit) {
+    return (
+      <PageLayout
+        width="prose"
+        title="Habit"
+        contentSlot={
+          // The failure is ahead of the not-found message, which is a claim about
+          // the caller's own data: with the API unreachable the app has no idea
+          // whose the habit is, and telling someone their habit is gone when it
+          // is not is worse than telling them nothing.
+          <LoadState
+            query={habitQuery}
+            what="this habit"
+            count={0}
+            emptySlot={
+              <EmptyState
+                icon={Search}
+                title="That habit doesn't exist, or isn't yours."
+                actionSlot={
+                  <Link href="/" className="text-primary text-sm underline">
+                    Back to today
+                  </Link>
+                }
+              />
+            }
+          />
+        }
+      />
+    );
+  }
+
+  return (
+    <HabitPage
+      habit={habit}
+      today={today}
+      contentSlot={
+        <Section
+          title="History"
+          description="Press a day: kept, skipped, then neither."
+          contentSlot={
+            <>
+              <HabitGrid
+                habit={habit}
+                history={habit.history}
+                entries={habit.entries}
+                today={today}
+                pending={pending}
+                onSet={(day, status) => setDay(habit.id, day, status)}
+              />
+              {markError ? (
+                <Text className="mt-3 text-negative text-sm" aria-live="polite">
+                  {markError}
+                </Text>
+              ) : null}
+            </>
+          }
+        />
+      }
+    />
+  );
+}
