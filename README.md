@@ -68,6 +68,9 @@ volumes:
   ethos_pgdata:
 ```
 
+The same image is published to GitHub's registry as `ghcr.io/cubicecho/ethos`,
+with the same tags, if you would rather pull from there.
+
 Generate the two secrets it refuses to start without, then bring it up:
 
 ```bash
