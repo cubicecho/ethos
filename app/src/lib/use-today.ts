@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
+import { TODAY_DEFAULTS } from './defaults';
 import { today } from './periods';
+
+const MS_PER_SECOND = 1000;
 
 /**
  * The day it is, kept current while the app is open.
@@ -14,7 +17,7 @@ export function useToday(): string {
 
   useEffect(() => {
     const check = () => setDay(today());
-    const timer = setInterval(check, 60_000);
+    const timer = setInterval(check, TODAY_DEFAULTS.pollSeconds * MS_PER_SECOND);
     window.addEventListener('focus', check);
     document.addEventListener('visibilitychange', check);
     return () => {

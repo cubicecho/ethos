@@ -1,5 +1,22 @@
+import { HTTP_DEFAULTS } from './defaults.ts';
+
 /** What signs tokens when `JWT_SECRET` is unset. Preflight refuses it in production. */
 export const DEV_SECRET = 'dev-secret-change-in-production';
+
+/** The port to listen on: `PORT`, or the default. */
+export function port(): number {
+  return Number(process.env.PORT ?? HTTP_DEFAULTS.port);
+}
+
+/**
+ * Where magic links point. In production the server serves the client itself,
+ * so its own origin is the right default — but only for someone browsing from
+ * this machine. Set APP_URL to the address users actually type; a link to
+ * `localhost` is useless in an inbox.
+ */
+export function appUrl(): string {
+  return process.env.APP_URL ?? `http://localhost:${port()}`;
+}
 
 /** Truthy env-var values: "1", "true", "yes" (case-insensitive). */
 export function isFlagOn(value: string | undefined): boolean {

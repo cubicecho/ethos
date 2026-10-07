@@ -2,14 +2,11 @@ import { Text, View } from 'react-native';
 import { Check } from '@/components/ui/icons';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { asPeriod } from '@/lib/cadence';
-import { HISTORY_PERIODS } from '@/lib/graphql';
+import { HISTORY_DEFAULTS } from '@/lib/defaults';
 import { daysOf, Period, periodLabel, recentPeriods, weekdayInitial } from '@/lib/periods';
 import { cn } from '@/lib/utils';
 import { DaySquare } from './day-square';
 import { asStatus, type DayStatus, type HabitEntrySummary, type HabitPeriodSummary, type HabitSummary } from './types';
-
-/** How many weeks of squares a daily habit shows. Four rows of seven reads as a month. */
-const DAILY_WEEKS = 4;
 
 interface GridRow {
   key: string;
@@ -32,7 +29,7 @@ interface GridRow {
  */
 function buildRows(period: Period, history: readonly HabitPeriodSummary[], today: string): GridRow[] {
   if (period === Period.Day) {
-    return recentPeriods(Period.Week, today, DAILY_WEEKS).map((week) => ({
+    return recentPeriods(Period.Week, today, HISTORY_DEFAULTS.dailyWeeks).map((week) => ({
       key: week.start,
       label: periodLabel(Period.Week, week.start, today),
       days: daysOf(week),
@@ -40,7 +37,7 @@ function buildRows(period: Period, history: readonly HabitPeriodSummary[], today
     }));
   }
 
-  return history.slice(-HISTORY_PERIODS).map((tally) => ({
+  return history.slice(-HISTORY_DEFAULTS.periods).map((tally) => ({
     key: tally.start,
     label: periodLabel(period, tally.start, today),
     days: daysOf({ start: tally.start, end: tally.end }),

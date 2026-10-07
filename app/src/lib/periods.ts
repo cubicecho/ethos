@@ -27,6 +27,10 @@ const LAST_PERIOD = {
 } satisfies Record<Period, string>;
 
 const DAY_MS = 86_400_000;
+const DAYS_PER_WEEK = 7;
+const DECEMBER = 12;
+/** How much of a `YYYY-MM-DD` names the month. */
+const MONTH_LENGTH = 'YYYY-MM'.length;
 const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function pad(value: number): string {
@@ -71,9 +75,9 @@ export function periodStart(period: Period, day: string): string {
   }
   if (period === Period.Week) {
     const weekday = new Date(toUtc(day)).getUTCDay();
-    return addDays(day, -((weekday + 6) % 7));
+    return addDays(day, -((weekday + DAYS_PER_WEEK - 1) % DAYS_PER_WEEK));
   }
-  return `${day.slice(0, 7)}-01`;
+  return `${day.slice(0, MONTH_LENGTH)}-01`;
 }
 
 /** The day after the period's last — exclusive, so periods tile without overlapping. */
@@ -83,10 +87,10 @@ export function periodEnd(period: Period, day: string): string {
     return addDays(start, 1);
   }
   if (period === Period.Week) {
-    return addDays(start, 7);
+    return addDays(start, DAYS_PER_WEEK);
   }
   const [year, month] = start.split('-').map(Number);
-  return fromUtc(Date.UTC(month === 12 ? year + 1 : year, month === 12 ? 0 : month, 1));
+  return fromUtc(Date.UTC(month === DECEMBER ? year + 1 : year, month === DECEMBER ? 0 : month, 1));
 }
 
 export interface PeriodRange {

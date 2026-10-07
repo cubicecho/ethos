@@ -9,16 +9,6 @@ import { type PeriodRange, periodBefore, periodOf, periodStart, recentPeriods } 
 //   - The period containing today cannot break a streak: it joins once it is
 //     met, and is otherwise passed over.
 
-/**
- * How many days of one period may be declined.
- *
- * A skip comes off what the period asked for, which is right — an instance you
- * deliberately declined was never owed — and is exactly why it has to be capped.
- * A habit that can be skipped without limit has no completion rate left to read:
- * every period can be skipped down to owing nothing and reported as kept.
- */
-export const MAX_SKIPS_PER_PERIOD = 2;
-
 export interface EntryLike {
   day: string;
   status: EntryStatus;

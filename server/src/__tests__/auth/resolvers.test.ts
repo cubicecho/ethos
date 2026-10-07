@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { signMagicToken, signToken, verifyMagicToken, verifyToken } from '../../auth/resolvers.ts';
+import { RATE_LIMIT_DEFAULTS } from '../../core/defaults.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { createClient, createTestDb, createUser, type TestClient, type TestDb } from '../helpers.ts';
 
@@ -78,7 +79,7 @@ describe('requestMagicLink', () => {
   it('rate-limits repeated attempts for one address', async () => {
     process.env.AUTH_MAGIC_LINK = 'true';
     const email = nextEmail();
-    for (let attempt = 0; attempt < 5; attempt++) {
+    for (let attempt = 0; attempt < RATE_LIMIT_DEFAULTS.maxAttempts; attempt++) {
       await anonymous.expectOk(REQUEST, { email });
     }
     const error = await anonymous.expectError(REQUEST, { email });

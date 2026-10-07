@@ -21,6 +21,7 @@
       "style": {
         "useImportType": "error",
         "useConst": "error",
+        "noMagicNumbers": "warn",
         "useBlockStatements": "error",
         "noCommonJs": "error",
         "noEnum": "error",
@@ -43,6 +44,10 @@
       ],
       "linter": { "enabled": false },
       "formatter": { "enabled": false }
+    },
+    {
+      "includes": ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx", "vitest.setup.ts"],
+      "linter": { "rules": { "style": { "noMagicNumbers": "off" } } }
     }
   ]
 }

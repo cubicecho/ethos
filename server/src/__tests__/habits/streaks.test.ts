@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { HABIT_DEFAULTS } from '../../core/defaults.ts';
 import { periodOf } from '../../habits/periods.ts';
 import {
   currentStreak,
   type EntryLike,
   type HabitLike,
   longestStreak,
-  MAX_SKIPS_PER_PERIOD,
   tallyPeriod,
   tallyRecent,
 } from '../../habits/streaks.ts';
@@ -84,7 +84,7 @@ describe('rule 1: a skip is not a miss', () => {
   it('floors the effective target at zero rather than going negative', () => {
     // The cap is the resolver's. This module counts whatever rows it is handed,
     // and must not go negative or above a rate of 1 if one gets past the cap.
-    expect(MAX_SKIPS_PER_PERIOD).toBe(2);
+    expect(HABIT_DEFAULTS.maxSkipsPerPeriod).toBe(2);
     const tally = tallyPeriod(daily, skipped('2026-09-14', '2026-09-15', '2026-09-16'), periodOf('week', TODAY));
     expect(tally.effectiveTarget).toBe(0);
     expect(tally.rate).toBe(1);

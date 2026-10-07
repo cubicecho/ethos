@@ -52,19 +52,6 @@ export const HabitEntryFieldsFragment = graphql(`
   }
 `);
 
-/** How many periods the grid draws, and how many `HabitHistoryFields` asks for. */
-export const HISTORY_PERIODS = 12;
-
-/**
- * How many days of entries the detail screen holds.
- *
- * Twelve months is the widest window the grid ever draws — twelve periods of a
- * monthly habit — and 400 days covers it with room for the part-month at either
- * end. Bounded rather than open-ended because a habit kept for years would
- * otherwise send every day of it to draw one screen.
- */
-export const ENTRY_WINDOW = 400;
-
 /**
  * What the detail screen adds: the periods the streak was counted over, and the
  * days inside them.
@@ -73,7 +60,7 @@ export const ENTRY_WINDOW = 400;
  * nothing for a caller to pass consistently and nothing to get wrong: the
  * mutation below selects the same fragment, and a field's arguments are part of
  * its cache key, so identical literals are what makes a mark land in the grid
- * that is already on screen. The constants above are the same two numbers for
+ * that is already on screen. `HISTORY_DEFAULTS` holds the same two numbers for
  * the code that has to reason about the window.
  */
 export const HabitHistoryFieldsFragment = graphql(`

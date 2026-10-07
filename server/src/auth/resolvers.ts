@@ -2,8 +2,9 @@ import * as dbSchema from '@ethos/db/schema';
 import { eq } from 'drizzle-orm';
 import { assertObjectType, extendSchema, type GraphQLSchema, parse } from 'graphql';
 import jwt from 'jsonwebtoken';
-import { DEV_SECRET, isMagicLinkExposed, isMagicLinkRequired } from '../core/config.ts';
+import { appUrl, DEV_SECRET, isMagicLinkExposed, isMagicLinkRequired } from '../core/config.ts';
 import type { Context } from '../core/context.ts';
+import { AUTH_DEFAULTS } from '../core/defaults.ts';
 import { badInput, rateLimited, unauthenticated } from '../core/errors.ts';
 import { createRateLimiter } from './rate-limit.ts';
 
@@ -12,21 +13,13 @@ function jwtSecret(): string {
   return process.env.JWT_SECRET ?? DEV_SECRET;
 }
 
-/**
- * Where magic links point. In production the server serves the client itself,
- * so its own origin is the right default — but only for someone browsing from
- * this machine. Set APP_URL to the address users actually type; a link to
- * `localhost` is useless in an inbox.
- */
-function appUrl(): string {
-  return process.env.APP_URL ?? `http://localhost:${process.env.PORT ?? 3006}`;
-}
+/** What an `Authorization` header starts with when it carries a session token. */
+const BEARER_PREFIX = 'Bearer ';
 
-// Five sign-in attempts per address per quarter hour. requestMagicLink is
-// unauthenticated, so without this anyone who can reach the port can mint magic
-// tokens at will. Per-IP limiting belongs in the reverse proxy, which is the
-// only thing that reliably knows the client's address.
-const signInLimiter = createRateLimiter(5, 15 * 60 * 1000);
+// requestMagicLink is unauthenticated, so without this anyone who can reach the
+// port can mint magic tokens at will. Per-IP limiting belongs in the reverse
+// proxy, which is the only thing that reliably knows the client's address.
+const signInLimiter = createRateLimiter();
 
 const AUTH_SDL = parse(`
   """
@@ -55,12 +48,12 @@ const AUTH_SDL = parse(`
 
 /** A session token. Long-lived: there is no refresh flow and no session table. */
 export function signToken(userId: string): string {
-  return jwt.sign({ userId }, jwtSecret(), { expiresIn: '30d' });
+  return jwt.sign({ userId }, jwtSecret(), { expiresIn: `${AUTH_DEFAULTS.sessionTtlDays}d` });
 }
 
 /** A single-use-in-practice sign-in token, short-lived because it travels by mail. */
 export function signMagicToken(email: string): string {
-  return jwt.sign({ email }, jwtSecret(), { expiresIn: '15m' });
+  return jwt.sign({ email }, jwtSecret(), { expiresIn: `${AUTH_DEFAULTS.magicLinkTtlMinutes}m` });
 }
 
 export function verifyToken(token: string): { userId: string } | null {
@@ -86,10 +79,10 @@ export function verifyMagicToken(token: string): { email: string } | null {
 /** Read the authenticated userId from a request's Bearer token, if any. */
 export function extractUserId(request: { headers: { authorization?: string } }): string | null {
   const auth = request.headers.authorization;
-  if (auth === undefined || auth.startsWith('Bearer ') === false) {
+  if (auth === undefined || auth.startsWith(BEARER_PREFIX) === false) {
     return null;
   }
-  return verifyToken(auth.slice(7))?.userId ?? null;
+  return verifyToken(auth.slice(BEARER_PREFIX.length))?.userId ?? null;
 }
 
 export function requireAuth(context: Context): string {

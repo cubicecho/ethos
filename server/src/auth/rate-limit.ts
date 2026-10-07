@@ -1,3 +1,6 @@
+import { RATE_LIMIT_DEFAULTS, type RateLimitSettings } from '../core/defaults.ts';
+import { MS_PER_SECOND, SECONDS_PER_MINUTE } from '../core/wire.ts';
+
 /**
  * Fixed-window counter, in process.
  *
@@ -12,25 +15,30 @@ export interface RateLimiter {
   allow(key: string): boolean;
 }
 
-export function createRateLimiter(limit: number, windowMs: number): RateLimiter {
+export function createRateLimiter(
+  overrides: Partial<RateLimitSettings> = {},
+  now: () => number = Date.now,
+): RateLimiter {
+  const { maxAttempts, windowMinutes } = { ...RATE_LIMIT_DEFAULTS, ...overrides };
+  const windowMs = windowMinutes * SECONDS_PER_MINUTE * MS_PER_SECOND;
   const windows = new Map<string, { count: number; resetAt: number }>();
   return {
     allow(key: string): boolean {
-      const now = Date.now();
+      const at = now();
       // Sweep on write: the map holds only keys seen within one window, so a
       // long-running server does not accumulate every address ever probed.
       for (const [seen, window] of windows) {
-        if (window.resetAt <= now) {
+        if (window.resetAt <= at) {
           windows.delete(seen);
         }
       }
       const window = windows.get(key);
       if (!window) {
-        windows.set(key, { count: 1, resetAt: now + windowMs });
+        windows.set(key, { count: 1, resetAt: at + windowMs });
         return true;
       }
       window.count += 1;
-      return window.count <= limit;
+      return window.count <= maxAttempts;
     },
   };
 }

@@ -7,11 +7,14 @@ import { db } from '@ethos/db';
 import cors from 'cors';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import express from 'express';
-import { isMagicLinkExposed, isMagicLinkRequired } from './core/config.ts';
+import { isMagicLinkExposed, isMagicLinkRequired, port } from './core/config.ts';
 import { createGraphQLRouter } from './graphql/handler.ts';
 import { createStaticHandler } from './http/static.ts';
 
 export type { Context } from './core/context.ts';
+
+/** Where Postgres listens when a connection string names no port. */
+const DEFAULT_POSTGRES_PORT = 5432;
 
 /** What Node reports when nothing answers at the database's address. */
 const UNREACHABLE_CODES: readonly string[] = ['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT'];
@@ -26,7 +29,7 @@ function errnoCode(error: unknown): string | undefined {
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PORT = Number(process.env.PORT ?? 3006);
+const PORT = port();
 const staticDir = join(__dirname, '../../app/dist');
 
 // Migrations run at boot so `docker compose up` on a fresh volume is the whole
@@ -38,8 +41,10 @@ try {
   // `CREATE SCHEMA`. Name the actual problem instead.
   const code = errnoCode(error);
   if (code !== undefined && UNREACHABLE_CODES.includes(code)) {
-    const { hostname, port } = new URL(process.env.DATABASE_URL ?? '');
-    console.error(`[boot] Cannot reach Postgres at ${hostname}:${port || 5432} (${code}).`);
+    const target = new URL(process.env.DATABASE_URL ?? '');
+    console.error(
+      `[boot] Cannot reach Postgres at ${target.hostname}:${target.port || DEFAULT_POSTGRES_PORT} (${code}).`,
+    );
     console.error('  Check DATABASE_URL in .env, and that the database is up and reachable from here.');
     console.error('  If your Docker daemon is remote (`docker context ls`), a container published on');
     console.error("  127.0.0.1 is bound to the daemon host's loopback. Set POSTGRES_BIND=0.0.0.0 and");

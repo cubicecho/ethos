@@ -19,6 +19,11 @@ const FETCH_FAILURES: readonly string[] = [
   'load failed',
 ];
 
+/** The statuses a server sends when it no longer accepts the session. */
+const HTTP_UNAUTHORIZED = 401;
+const HTTP_FORBIDDEN = 403;
+const SIGNED_OUT_STATUSES: readonly number[] = [HTTP_UNAUTHORIZED, HTTP_FORBIDDEN];
+
 const UNREACHABLE = 'Couldn’t reach the server.';
 const UNKNOWN = 'Something went wrong.';
 
@@ -58,7 +63,7 @@ export function describeError(error: unknown): string {
   const network = like.networkError;
   if (network) {
     const status = typeof network.statusCode === 'number' ? network.statusCode : undefined;
-    if (status === 401 || status === 403) {
+    if (status !== undefined && SIGNED_OUT_STATUSES.includes(status)) {
       return 'Your session has expired. Sign in again.';
     }
     if (status != null) {

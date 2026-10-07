@@ -4,17 +4,10 @@ import { and, eq } from 'drizzle-orm';
 import { assertObjectType, extendSchema, type GraphQLSchema, parse } from 'graphql';
 import { requireAuth } from '../auth/resolvers.ts';
 import type { Context } from '../core/context.ts';
+import { HABIT_DEFAULTS } from '../core/defaults.ts';
 import { badInput, notFound } from '../core/errors.ts';
 import { assertDay, daysBetween, periodOf } from './periods.ts';
-import {
-  currentStreak,
-  type EntryLike,
-  type HabitLike,
-  longestStreak,
-  MAX_SKIPS_PER_PERIOD,
-  tallyPeriod,
-  tallyRecent,
-} from './streaks.ts';
+import { currentStreak, type EntryLike, type HabitLike, longestStreak, tallyPeriod, tallyRecent } from './streaks.ts';
 
 // What generated CRUD cannot express: the derived fields the grid reads, and the
 // one state transition that carries rules — recording a day, which the day key
@@ -135,11 +128,11 @@ function assertSkipAllowed(habit: AnyRow, entries: readonly { day: string; statu
   const skips = entries.filter(
     (entry) => entry.status === ENTRY_SKIPPED && entry.day >= range.start && entry.day < range.end && entry.day !== day,
   );
-  if (skips.length < MAX_SKIPS_PER_PERIOD) {
+  if (skips.length < HABIT_DEFAULTS.maxSkipsPerPeriod) {
     return;
   }
   throw badInput(
-    `Already skipped ${skips.length} days of “${habit.name}” this ${habit.period}. The limit is ${MAX_SKIPS_PER_PERIOD}.`,
+    `Already skipped ${skips.length} days of “${habit.name}” this ${habit.period}. The limit is ${HABIT_DEFAULTS.maxSkipsPerPeriod}.`,
   );
 }
 
@@ -191,8 +184,9 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
     context: Context,
   ) => {
     // Clamped rather than validated: a grid asking for a thousand periods is a
-    // client bug, and answering with 52 of them is more useful than an error.
-    const periods = Math.min(Math.max(args.periods ?? 12, 1), 52);
+    // client bug, and answering with the most allowed is more useful than an error.
+    const asked = args.periods ?? HABIT_DEFAULTS.historyPeriods;
+    const periods = Math.min(Math.max(asked, 1), HABIT_DEFAULTS.maxHistoryPeriods);
     const [habit, entries] = await readingOf(parent, context);
     return tallyRecent(habit, entries, assertDay(args.today ?? serverToday()), periods);
   };

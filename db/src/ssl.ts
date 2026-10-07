@@ -14,6 +14,18 @@ const PRIVATE_SUFFIXES = [
   '.private',
 ];
 
+/**
+ * IPv4 blocks that never route off a private network, by first octet and the
+ * span of second octets: loopback, the three RFC 1918 ranges, then link-local.
+ */
+const PRIVATE_IPV4: readonly { first: number; low: number; high: number }[] = [
+  { first: 127, low: 0, high: 255 },
+  { first: 10, low: 0, high: 255 },
+  { first: 172, low: 16, high: 31 },
+  { first: 192, low: 168, high: 168 },
+  { first: 169, low: 254, high: 254 },
+];
+
 /** The URL's hostname, lowercased and without IPv6 brackets, or null when the URL does not parse. */
 function hostnameOf(url: string): string | null {
   try {
@@ -59,23 +71,11 @@ export function requiresSsl(url: string): boolean {
   const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
   if (ipv4) {
     const [firstOctet, secondOctet] = ipv4.slice(1).map(Number);
-    // Loopback, the three RFC 1918 ranges, then link-local.
-    if (firstOctet === 127) {
-      return false;
-    }
-    if (firstOctet === 10) {
-      return false;
-    }
-    if (firstOctet === 172 && secondOctet >= 16 && secondOctet <= 31) {
-      return false;
-    }
-    if (firstOctet === 192 && secondOctet === 168) {
-      return false;
-    }
-    if (firstOctet === 169 && secondOctet === 254) {
-      return false;
-    }
-    return true;
+    return (
+      PRIVATE_IPV4.some(
+        (range) => range.first === firstOctet && secondOctet >= range.low && secondOctet <= range.high,
+      ) === false
+    );
   }
 
   if (hostname.includes(':')) {
