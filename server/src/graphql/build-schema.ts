@@ -15,6 +15,29 @@ import { onWrite } from './write-guards.ts';
 // biome-ignore lint/suspicious/noExplicitAny: db type varies by driver
 type AnyDb = any;
 
+/**
+ * Timestamps get their *input* scalar declared rather than detected, and
+ * the declaring is the point: an overridden column skips the library's own
+ * input remapper, which runs `new Date(value)` on a timestamp behind a null
+ * guard that only covers `notNull` columns. `new Date(null)` is the epoch,
+ * not NaN, so it passes every validity check the remapper makes — clearing
+ * a nullable timestamp through a generated write would silently store
+ * 1970-01-01 instead of NULL. Un-archiving a habit is exactly that write.
+ *
+ * Input only, via the `{ input }` form, because the same override on the
+ * output side would skip the remapper's `Date -> toISOString()` step and
+ * hand resolvers a `Date` where they have always had a string. Over HTTP
+ * that JSON-serializes identically, but it is a change nothing here needs.
+ *
+ * `GraphQLDateTime` is the scalar detection already picks, so the SDL is
+ * unchanged and no generated client type moves. A rule rather than a
+ * per-column list, so the next nullable timestamp is covered by existing
+ * code instead of by someone remembering this comment.
+ */
+function timestampInput(column: { columnType: string }): { input: typeof GraphQLDateTime } | undefined {
+  return column.columnType === 'PgTimestamp' ? { input: GraphQLDateTime } : undefined;
+}
+
 // The return type is inferred rather than written out: `GeneratedEntities` is
 // keyed by the naming config, so spelling it here would mean restating
 // `typeNameMapper` in a second place that could disagree with the first.
@@ -32,24 +55,7 @@ export function createSchema(db: AnyDb) {
     scope,
     contextValues,
     features,
-    // Timestamps get their *input* scalar declared rather than detected, and
-    // the declaring is the point: an overridden column skips the library's own
-    // input remapper, which runs `new Date(value)` on a timestamp behind a null
-    // guard that only covers `notNull` columns. `new Date(null)` is the epoch,
-    // not NaN, so it passes every validity check the remapper makes — clearing
-    // a nullable timestamp through a generated write would silently store
-    // 1970-01-01 instead of NULL. Un-archiving a habit is exactly that write.
-    //
-    // Input only, via the `{ input }` form, because the same override on the
-    // output side would skip the remapper's `Date -> toISOString()` step and
-    // hand resolvers a `Date` where they have always had a string. Over HTTP
-    // that JSON-serializes identically, but it is a change nothing here needs.
-    //
-    // `GraphQLDateTime` is the scalar detection already picks, so the SDL is
-    // unchanged and no generated client type moves. A rule rather than a
-    // per-column list, so the next nullable timestamp is covered by existing
-    // code instead of by someone remembering this comment.
-    mapColumnType: (column) => (column.columnType === 'PgTimestamp' ? { input: GraphQLDateTime } : undefined),
+    mapColumnType: timestampInput,
     onWrite,
   });
 
