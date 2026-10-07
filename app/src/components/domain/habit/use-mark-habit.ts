@@ -1,4 +1,4 @@
-import { useMutation } from '@apollo/client';
+import { type TypedDocumentNode, useMutation } from '@apollo/client';
 import { useState } from 'react';
 import { describeError } from '@/lib/errors';
 import { ClearHabitDayDocument, ClearHabitDocument, MarkHabitDayDocument, MarkHabitDocument } from '@/lib/graphql';
@@ -7,55 +7,67 @@ import type { DayStatus } from './types';
 /**
  * Recording a day, and what it costs to get wrong.
  *
- * Nothing here answers optimistically. A tick changes the streak, the period's
- * tally and whether it was met — all of them derived by the server from rows the
- * client does not hold — so an optimistic answer would mean reimplementing
- * `server/src/streaks.ts` here and hoping the two agree. Day arithmetic is
- * duplicated deliberately (`src/lib/periods.ts`); the counting is not, because a
- * streak the client invented and the server then corrected is worse than a
- * streak that arrives a moment late.
- *
- * `pending` is the replacement: the control says it is working rather than
- * pretending it is done.
+ * Nothing here answers optimistically. A tick changes the streak, the tally and
+ * whether the period was met, all derived by the server from rows the client
+ * does not hold. A streak the client invented and the server then corrected is
+ * worse than one that arrives a moment late, so `isPending` says the control is
+ * working instead.
  */
 export interface Marker {
   /** `null` clears the day, leaving it untouched rather than missed. */
   setDay: (habitId: string, day: string, status: DayStatus) => Promise<void>;
-  pending: boolean;
+  isPending: boolean;
   error: string | null;
 }
 
+/**
+ * Runs an action, tracking whether it is pending and why the last one failed.
+ *
+ * @returns The pending flag, the last error as a sentence, and `run`.
+ */
 function useAction() {
-  const [pending, setPending] = useState(false);
+  const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Caught rather than rethrown: every caller is a button, and a rejected click
-  // with nothing on screen is the failure mode this replaces. The server refuses
-  // real things — a third skip in one week, a day that has not happened — and
-  // those refusals are worth reading.
+  // Caught rather than rethrown: every caller is a button, and the server's
+  // refusals — a third skip, a day that has not happened — are worth reading.
   async function run(action: () => Promise<unknown>): Promise<void> {
-    setPending(true);
+    setIsPending(true);
     setError(null);
     try {
       await action();
     } catch (cause) {
       setError(describeError(cause));
     } finally {
-      setPending(false);
+      setIsPending(false);
     }
   }
 
-  return { pending, error, run };
+  return { isPending, error, run };
 }
 
-/** For screens that show a habit but no history — the list and the sidebar. */
-export function useMarkHabit(today: string): Marker {
-  const [mark] = useMutation(MarkHabitDocument);
-  const [clear] = useMutation(ClearHabitDocument);
-  const { pending, error, run } = useAction();
+type DayVariables = { habitId: string; day: string; today: string };
+
+/** The two mutations a screen records a day with. Their results differ; what they are sent does not. */
+interface MarkDocuments {
+  mark: TypedDocumentNode<unknown, DayVariables & { status?: string | null }>;
+  clear: TypedDocumentNode<unknown, DayVariables>;
+}
+
+/**
+ * Builds a marker over a pair of mutations.
+ *
+ * @param documents - The mark and clear mutations to send.
+ * @param today - The caller's day.
+ * @returns The marker.
+ */
+function useMarker(documents: MarkDocuments, today: string): Marker {
+  const [mark] = useMutation(documents.mark);
+  const [clear] = useMutation(documents.clear);
+  const { isPending, error, run } = useAction();
 
   return {
-    pending,
+    isPending,
     error,
     setDay: (habitId, day, status) =>
       run(() =>
@@ -67,23 +79,23 @@ export function useMarkHabit(today: string): Marker {
 }
 
 /**
+ * For screens that show a habit but no history: the list.
+ *
+ * @param today - The caller's day.
+ * @returns The marker.
+ */
+export function useMarkHabit(today: string): Marker {
+  return useMarker({ mark: MarkHabitDocument, clear: ClearHabitDocument }, today);
+}
+
+/**
  * For the detail screen. Same two mutations, selecting the grid as well — the
  * duplication is in the documents and explained there: a screen asks back for
  * exactly what it is showing.
+ *
+ * @param today - The caller's day.
+ * @returns The marker.
  */
 export function useMarkHabitDay(today: string): Marker {
-  const [mark] = useMutation(MarkHabitDayDocument);
-  const [clear] = useMutation(ClearHabitDayDocument);
-  const { pending, error, run } = useAction();
-
-  return {
-    pending,
-    error,
-    setDay: (habitId, day, status) =>
-      run(() =>
-        status === null
-          ? clear({ variables: { habitId, day, today } })
-          : mark({ variables: { habitId, day, status, today } }),
-      ),
-  };
+  return useMarker({ mark: MarkHabitDayDocument, clear: ClearHabitDayDocument }, today);
 }

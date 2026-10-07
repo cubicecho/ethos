@@ -19,6 +19,8 @@ const config: CodegenConfig = {
           field: true,
         },
         useTypeImports: true,
+        // A TypeScript enum is not erasable syntax, which Node needs to run a file as is.
+        enumsAsTypes: true,
         defaultScalarType: 'unknown',
         skipTypeNameForRoot: true,
         scalars: {
@@ -26,9 +28,8 @@ const config: CodegenConfig = {
           // object, and parsing them into one would only invite timezone bugs.
           DateTime: 'string',
           UUID: 'string',
-          // A day is a `YYYY-MM-DD` label, not an instant — see
-          // `src/lib/periods.ts`. Typing it as `Date` would invite exactly the
-          // parse that module exists to avoid.
+          // A day is a `YYYY-MM-DD` label, not an instant. Typing it as `Date`
+          // would invite the parse `src/lib/periods.ts` exists to avoid.
           Date: 'string',
         },
       },

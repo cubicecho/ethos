@@ -1,12 +1,14 @@
+import type { Server } from 'node:http';
 import { PGlite } from '@electric-sql/pglite';
 import { relations } from '@ethos/db/relations';
 import * as dbSchema from '@ethos/db/schema';
 import { pushSchema } from 'drizzle-kit/api-postgres';
 import { drizzle } from 'drizzle-orm/pglite';
 import { type ExecutionResult, graphql } from 'graphql';
-import { createSchema } from '../build-schema.ts';
-import type { Context } from '../context.ts';
-import { createLoaders } from '../loaders.ts';
+import { createRateLimiter, type RateLimiter } from '../auth/rate-limit.ts';
+import type { Context } from '../core/context.ts';
+import { createSchema } from '../graphql/build-schema.ts';
+import { createLoaders } from '../graphql/loaders.ts';
 
 // A throwaway in-memory Postgres per suite. `@ethos/db` is deliberately never
 // imported here — it opens a real connection at import time — so the schema is
@@ -18,7 +20,7 @@ export type TestDb = any;
 export async function createTestDb(): Promise<TestDb> {
   const client = new PGlite('memory://');
   const db = drizzle({ client, relations });
-  const { apply } = await pushSchema(dbSchema as never, db as never);
+  const { apply } = await pushSchema(dbSchema, db);
   await apply();
   return db;
 }
@@ -36,14 +38,29 @@ export interface TestClient {
   // biome-ignore lint/suspicious/noExplicitAny: caller shapes the response
   expectOk: (query: string, variables?: Record<string, unknown>) => Promise<any>;
   /** Runs an operation, expects exactly one error, and returns it. */
-  expectError: (query: string, variables?: Record<string, unknown>) => Promise<{ message: string; code: unknown }>;
+  expectError: (
+    query: string,
+    variables?: Record<string, unknown>,
+  ) => Promise<{ message: string; code: unknown; extensions?: Record<string, unknown> }>;
 }
 
-export function createClient(db: TestDb, userId: string | null): TestClient {
+/** Collaborators a test shares between clients, or swaps for its own. */
+export interface ClientDeps {
+  /** Pass a small one to reach the budget. The default is `createRateLimiter()`. */
+  limiter?: RateLimiter;
+  /** The address the request is taken to come from. The default is `TEST_IP`. */
+  ip?: string;
+}
+
+/** Where a test client's requests come from unless it says otherwise. */
+export const TEST_IP = '127.0.0.1';
+
+export function createClient(db: TestDb, userId: string | null, deps: ClientDeps = {}): TestClient {
+  const { limiter = createRateLimiter(), ip = TEST_IP } = deps;
   const { schema } = createSchema(db);
 
   const run = async (query: string, variables?: Record<string, unknown>) => {
-    const contextValue: Context = { db, userId, loaders: createLoaders(db) };
+    const contextValue: Context = { db, userId, ip, limiter, loaders: createLoaders(db) };
     return graphql({ schema, source: query, contextValue, variableValues: variables });
   };
 
@@ -62,8 +79,19 @@ export function createClient(db: TestDb, userId: string | null): TestClient {
     expectError: async (query, variables) => {
       const result = await run(query, variables);
       const error = result.errors?.[0];
-      if (!error) throw new Error('expected an error, got a successful result');
-      return { message: error.message, code: error.extensions?.code };
+      if (!error) {
+        throw new Error('expected an error, got a successful result');
+      }
+      return { message: error.message, code: error.extensions?.code, extensions: error.extensions };
     },
   };
+}
+
+/** The port the OS gave a server that listened on port 0. */
+export function portOf(server: Server): number {
+  const address = server.address();
+  if (address === null || typeof address === 'string') {
+    throw new Error('The test server is not listening on a TCP port.');
+  }
+  return address.port;
 }

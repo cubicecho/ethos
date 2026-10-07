@@ -1,26 +1,25 @@
 import { useEffect, useState } from 'react';
+import { TODAY_DEFAULTS } from './defaults';
 import { today } from './periods';
+
+const MS_PER_SECOND = 1000;
 
 /**
  * The day it is, kept current while the app is open.
  *
  * One hook rather than a `today()` call per component, because the day is a
- * cache key: every query and every mutation passes it, and two components that
- * disagreed — one mounted before midnight, one after — would read and write two
- * different entries for the same habit. Reading it in one place means the whole
- * screen rolls over at once.
+ * cache key: two components that disagreed across midnight would read and write
+ * different entries for the same habit. Polled rather than scheduled, because a
+ * timer set for midnight does not fire while a laptop is asleep.
  *
- * Polled rather than scheduled for the exact moment: a timer set for midnight
- * does not fire while a laptop is asleep, and the wake-up is precisely when the
- * answer has changed. A minute of staleness costs nothing; being wrong until the
- * next reload costs a day.
+ * @returns The day, as `YYYY-MM-DD`.
  */
 export function useToday(): string {
   const [day, setDay] = useState(today);
 
   useEffect(() => {
     const check = () => setDay(today());
-    const timer = setInterval(check, 60_000);
+    const timer = setInterval(check, TODAY_DEFAULTS.pollSeconds * MS_PER_SECOND);
     window.addEventListener('focus', check);
     document.addEventListener('visibilitychange', check);
     return () => {

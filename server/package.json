@@ -5,15 +5,17 @@
   "type": "module",
   "main": "./src/index.ts",
   "scripts": {
-    "dev": "node --experimental-strip-types --env-file-if-exists=../.env --watch src/index.ts",
+    "dev": "node --env-file-if-exists=../.env --watch src/index.ts",
     "build": "echo 'no server build needed — TypeScript runs directly'",
-    "start": "node --experimental-strip-types src/index.ts",
+    "start": "node src/index.ts",
     "clean": "rm -rf __generated__",
-    "codegen": "node --experimental-strip-types --import=./src/preload-env.ts src/write_schema.ts && graphql-codegen-esm"
+    "codegen": "node --import=./src/core/preload-env.ts src/graphql/write-schema.ts && graphql-codegen-esm"
   },
   "dependencies": {
     "@apollo/server": "^5.5.1",
     "@as-integrations/express5": "^1.1.2",
+    "@escape.tech/graphql-armor-max-aliases": "^2.6.2",
+    "@escape.tech/graphql-armor-max-depth": "^2.4.2",
     "@ethos/db": "*",
     "@vantreeseba/drizzle-graphql": "^13.0.0",
     "cors": "^2.8.6",
@@ -22,8 +24,10 @@
     "express": "^5.2.1",
     "graphql": "^16.10.0",
     "graphql-parse-resolve-info": "^4.14.1",
+    "graphql-query-complexity": "^2.0.0",
     "graphql-scalars": "^2.0.0",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

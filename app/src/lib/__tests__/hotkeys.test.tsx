@@ -139,9 +139,8 @@ describe('isTyping', () => {
   });
 
   it('says yes for a widget wearing a field role, element notwithstanding', () => {
-    // Built by hand rather than rendered: these are ARIA roles pinned onto
-    // divs, which is the shape `isTyping` exists to catch and the shape a JSX
-    // linter is right to complain about everywhere else.
+    // Built by hand rather than rendered: ARIA roles pinned onto divs are the
+    // shape `isTyping` exists to catch, and the shape a JSX linter rejects.
     for (const role of ['textbox', 'combobox', 'searchbox']) {
       const widget = document.createElement('div');
       widget.setAttribute('role', role);
@@ -192,7 +191,7 @@ describe('focusAndSelect', () => {
 
     await user.click(screen.getByRole('button', { name: 'Focus' }));
 
-    const field = screen.getByLabelText('Target') as HTMLInputElement;
+    const field = screen.getByLabelText<HTMLInputElement>('Target');
     expect(field).toHaveFocus();
     expect(field.selectionStart).toBe(0);
     expect(field.selectionEnd).toBe('already here'.length);

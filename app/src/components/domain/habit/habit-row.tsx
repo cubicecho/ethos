@@ -1,15 +1,17 @@
 import { useRouter } from 'expo-router';
-import { Text, View } from 'react-native';
 import { ActionButton } from '@/components/action-button';
 import { Flame, SkipForward } from '@/components/app-icons';
 import { ListItem } from '@/components/list-item';
+import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { Check } from '@/components/ui/icons';
-import { describeCadence, describeProgress } from '@/lib/cadence';
-import type { Period } from '@/lib/periods';
+import { asPeriod, describeCadence, describeProgress } from '@/lib/cadence';
+import { joinStats } from '@/lib/format';
+import { habitPath } from '@/lib/habits';
 import { readableTextColor } from '@/lib/readable-text-color';
 import { cn } from '@/lib/utils';
-import { asStatus, type HabitSummary } from './types';
+import { asStatus, ENTRY_DONE, ENTRY_SKIPPED, type EntryStatus, type HabitSummary } from './types';
 import { useMarkHabit } from './use-mark-habit';
 
 /**
@@ -24,40 +26,41 @@ import { useMarkHabit } from './use-mark-habit';
  */
 export function HabitRow({ habit, today }: { habit: HabitSummary; today: string }) {
   const router = useRouter();
-  const { setDay, pending, error } = useMarkHabit(today);
+  const { setDay, isPending, error } = useMarkHabit(today);
   const status = asStatus(habit.todayEntry[0]?.status);
-  const period = habit.period as Period;
-  const done = status === 'done';
-  const skipped = status === 'skipped';
+  const period = asPeriod(habit.period);
+  const isDone = status === ENTRY_DONE;
+  const isSkipped = status === ENTRY_SKIPPED;
 
-  const toggle = (next: 'done' | 'skipped') => setDay(habit.id, today, status === next ? null : next);
+  const toggle = (next: EntryStatus) => setDay(habit.id, today, status === next ? null : next);
 
   return (
-    <View role="listitem" className="gap-1 rounded-lg border border-border bg-card">
+    <Card role="listitem" className="gap-1">
       <ListItem
         title={habit.name}
-        description={`${describeCadence(period, habit.targetCount)} · ${
-          skipped ? 'Skipped today' : describeProgress(habit.current.done, habit.current.effectiveTarget, period)
-        }`}
-        onPress={() => router.push(`/habits/${habit.id}`)}
+        description={joinStats(
+          describeCadence(period, habit.targetCount),
+          isSkipped ? 'Skipped today' : describeProgress(habit.current.done, habit.current.effectiveTarget, period),
+        )}
+        onPress={() => router.push(habitPath(habit.id))}
         leadingSlot={
           <ActionButton
-            label={done ? `Undo ${habit.name} for today` : `Mark ${habit.name} kept today`}
-            aria-pressed={done}
-            disabled={pending}
+            label={isDone ? `Undo ${habit.name} for today` : `Mark ${habit.name} kept today`}
+            aria-pressed={isDone}
+            disabled={isPending}
             variant="outline"
             size="icon-sm"
-            onPress={() => toggle('done')}
-            className={cn('rounded-full border-2', done && 'border-transparent')}
+            onPress={() => toggle(ENTRY_DONE)}
+            className={cn('rounded-full border-2', isDone && 'border-transparent')}
             // The habit's own colour, and whichever of black and white reads on it:
             // a theme token would be the wrong one in one theme or the other.
-            style={done ? { backgroundColor: habit.color } : undefined}
+            style={isDone ? { backgroundColor: habit.color } : undefined}
             // Drawn only once kept: an empty ring is the "not yet", and a grey
             // tick inside it would read as half-done.
             iconSlot={
               <Check
-                className={cn('h-5 w-5', !done && 'opacity-0')}
-                color={done ? readableTextColor(habit.color) : undefined}
+                className={cn('h-5 w-5', isDone === false && 'opacity-0')}
+                color={isDone ? readableTextColor(habit.color) : undefined}
               />
             }
           />
@@ -72,25 +75,20 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
         }
         actionSlot={
           <ActionButton
-            label={skipped ? `Un-skip ${habit.name} today` : `Skip ${habit.name} today`}
-            aria-pressed={skipped}
-            disabled={pending}
-            variant={skipped ? 'secondary' : 'ghost'}
+            label={isSkipped ? `Un-skip ${habit.name} today` : `Skip ${habit.name} today`}
+            aria-pressed={isSkipped}
+            disabled={isPending}
+            variant={isSkipped ? 'secondary' : 'outline'}
             size="icon-sm"
-            onPress={() => toggle('skipped')}
+            onPress={() => toggle(ENTRY_SKIPPED)}
             iconSlot={<SkipForward />}
           />
         }
       />
 
-      {/* Beside the control that caused it. A skip refused because the period
-          has had its two is worth reading, and a toast in a corner is not where
-          the click was. */}
-      {error ? (
-        <Text className="pb-2.5 pl-16 text-negative text-xs" aria-live="polite">
-          {error}
-        </Text>
-      ) : null}
-    </View>
+      {/* Beside the control that caused it: a refused skip is worth reading,
+          and a toast in a corner is not where the click was. */}
+      {error ? <Alert variant="destructive" className="mx-3 mb-3 w-auto" description={error} /> : null}
+    </Card>
   );
 }

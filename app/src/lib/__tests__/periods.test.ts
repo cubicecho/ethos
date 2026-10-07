@@ -16,7 +16,7 @@ import {
   weekdayInitial,
 } from '../periods';
 
-// The other half of `server/src/__tests__/periods.test.ts`. The two modules are
+// The other half of `server/src/__tests__/habits/periods.test.ts`. The two modules are
 // deliberate copies of each other — the grid draws the periods the streak is
 // counted over — so the boundary cases are asserted on both sides, and a change
 // made to one file and not the other fails here.
@@ -25,10 +25,8 @@ describe('today', () => {
   afterEach(() => vi.useRealTimers());
 
   it('reads the device’s own day, not UTC', () => {
-    // The only local-clock read in the app, and the reason it exists: at 23:00
-    // in Berlin on the 17th it is still the 17th, and UTC agrees — but at 23:00
-    // on the 17th in Auckland, `toISOString()` says the 17th while the person
-    // holding the phone is on the 18th. What matters is their day.
+    // The only local-clock read in the app. At 23:00 on the 17th UTC it is
+    // already the 18th in Auckland, and what matters is the holder's day.
     const local = new Date(2026, 8, 18, 23, 0, 0);
     expect(today(local)).toBe('2026-09-18');
   });
@@ -50,17 +48,12 @@ describe('isDay', () => {
     expect(isDay('2024-02-29')).toBe(true);
   });
 
-  it.each([
-    '2026-9-17',
-    '2026-09-17T00:00:00Z',
-    'not-a-day',
-    '',
-    '2026-02-31',
-    '2025-02-29',
-    '2026-13-01',
-  ])('rejects %s', (value) => {
-    expect(isDay(value)).toBe(false);
-  });
+  it.each(['2026-9-17', '2026-09-17T00:00:00Z', 'not-a-day', '', '2026-02-31', '2025-02-29', '2026-13-01'])(
+    'rejects %s',
+    (value) => {
+      expect(isDay(value)).toBe(false);
+    },
+  );
 
   it('answers rather than throwing, unlike the server’s assertDay', () => {
     // The client asks whether a string is a day; the server is told one and has
@@ -147,9 +140,8 @@ describe('daysOf', () => {
 });
 
 describe('formatting', () => {
-  // Pinned to UTC in the module, which is what keeps a label from naming the day
-  // before the one it was given. The assertions below avoid locale-specific
-  // wording and check the part that would actually shift.
+  // Pinned to UTC in the module, so a label cannot name the day before the one
+  // it was given. The assertions avoid locale-specific wording.
   it('renders the day it was given, not the one its midnight lands on', () => {
     expect(formatDay('2026-09-17')).toContain('17');
     expect(formatDayLong('2026-09-17')).toContain('17');

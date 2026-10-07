@@ -1,3 +1,4 @@
+import { DATABASE_DEFAULTS } from './defaults.ts';
 import { relations } from './relations.ts';
 import * as schema from './schema.ts';
 import { requiresSsl } from './ssl.ts';
@@ -19,9 +20,8 @@ const { drizzle } = await import('drizzle-orm/postgres-js');
 const connection: any = {
   url: DATABASE_URL,
   ...(isProduction && requiresSsl(DATABASE_URL) ? { ssl: 'require' } : {}),
-  // Every boot runs `CREATE SCHEMA IF NOT EXISTS "drizzle"`, and Postgres answers
-  // with a NOTICE when it already does. Printing it makes a healthy restart look
-  // like a failure, so notices are dropped; real errors still throw.
+  // Every boot's `CREATE SCHEMA IF NOT EXISTS` draws a NOTICE, and printing it
+  // makes a healthy restart look like a failure. Real errors still throw.
   onnotice: () => {},
 };
 
@@ -29,5 +29,10 @@ const connection: any = {
 export type DB = any;
 export const db: DB = drizzle({ connection, relations });
 
-export { relations, schema };
+/** Closes the pool, giving running queries `closeTimeoutSeconds` to finish. */
+export function closeDatabase(): Promise<void> {
+  return db.$client.end({ timeout: DATABASE_DEFAULTS.closeTimeoutSeconds });
+}
+
 export * from './schema.ts';
+export { relations, schema };

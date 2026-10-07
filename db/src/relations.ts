@@ -3,19 +3,19 @@ import * as schema from './schema.ts';
 
 // This config — not the table list — is what drizzle-graphql reads, so a table
 // with no entry here gets no relation fields in the API.
-export const relations = defineRelations(schema, (r) => ({
+export const relations = defineRelations(schema, (helpers) => ({
   users: {
-    habits: r.many.habits({ from: r.users.id, to: r.habits.userId }),
-    habitEntries: r.many.habitEntries({ from: r.users.id, to: r.habitEntries.userId }),
+    habits: helpers.many.habits({ from: helpers.users.id, to: helpers.habits.userId }),
+    habitEntries: helpers.many.habitEntries({ from: helpers.users.id, to: helpers.habitEntries.userId }),
   },
 
   habits: {
-    user: r.one.users({ from: r.habits.userId, to: r.users.id }),
-    entries: r.many.habitEntries({ from: r.habits.id, to: r.habitEntries.habitId }),
+    user: helpers.one.users({ from: helpers.habits.userId, to: helpers.users.id }),
+    entries: helpers.many.habitEntries({ from: helpers.habits.id, to: helpers.habitEntries.habitId }),
   },
 
   habitEntries: {
-    user: r.one.users({ from: r.habitEntries.userId, to: r.users.id }),
-    habit: r.one.habits({ from: r.habitEntries.habitId, to: r.habits.id }),
+    user: helpers.one.users({ from: helpers.habitEntries.userId, to: helpers.users.id }),
+    habit: helpers.one.habits({ from: helpers.habitEntries.habitId, to: helpers.habits.id }),
   },
 }));

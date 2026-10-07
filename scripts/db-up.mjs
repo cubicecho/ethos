@@ -27,10 +27,14 @@ function daemonHost() {
   });
   // No docker, no context, no opinion — fall through to the local defaults and
   // let `docker compose` itself be the one to complain.
-  if (probe.status !== 0) return null;
+  if (probe.status !== 0) {
+    return null;
+  }
 
   const endpoint = probe.stdout.trim();
-  if (endpoint.startsWith('unix://') || endpoint.startsWith('npipe://')) return null;
+  if (endpoint.startsWith('unix://') || endpoint.startsWith('npipe://')) {
+    return null;
+  }
   try {
     return new URL(endpoint).hostname || null;
   } catch {
@@ -40,11 +44,15 @@ function daemonHost() {
 
 /** The host `.env` tells the app to connect to, if it says anything at all. */
 function configuredHost() {
-  if (!existsSync('.env')) return null;
+  if (!existsSync('.env')) {
+    return null;
+  }
   const line = readFileSync('.env', 'utf8')
     .split('\n')
-    .find((l) => l.trim().startsWith('DATABASE_URL='));
-  if (!line) return null;
+    .find((line) => line.trim().startsWith('DATABASE_URL='));
+  if (!line) {
+    return null;
+  }
   try {
     return new URL(line.slice(line.indexOf('=') + 1).trim()).hostname;
   } catch {
@@ -59,7 +67,9 @@ const bind = process.env.POSTGRES_BIND ?? (remote ? '0.0.0.0' : '127.0.0.1');
 const host = remote ?? '127.0.0.1';
 
 if (remote) {
-  console.log(`Docker daemon is ${remote}, not this machine — publishing Postgres on ${bind}:${port} so you can reach it.`);
+  console.log(
+    `Docker daemon is ${remote}, not this machine — publishing Postgres on ${bind}:${port} so you can reach it.`,
+  );
 }
 
 // `--wait` holds until the healthcheck passes, so `db:up && db:migrate` works as
@@ -68,13 +78,15 @@ const up = spawnSync('docker', ['compose', '-f', COMPOSE_FILE, 'up', '-d', '--wa
   stdio: 'inherit',
   env: { ...process.env, POSTGRES_BIND: bind, POSTGRES_PORT: port },
 });
-if (up.status !== 0) process.exit(up.status ?? 1);
+if (up.status !== 0) {
+  process.exit(up.status ?? 1);
+}
 
 const url = `postgres://ethos:ethos@${host}:${port}/ethos`;
 const configured = configuredHost();
 if (configured && configured !== host) {
   console.log('');
-  console.log(`⚠️  .env points DATABASE_URL at ${configured}, but the database is on ${host}. Set:`);
+  console.log(`[db-up] .env points DATABASE_URL at ${configured}, but the database is on ${host}. Set:`);
   console.log(`      DATABASE_URL=${url}`);
 } else if (!configured) {
   console.log('');

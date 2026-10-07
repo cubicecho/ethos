@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { PALETTE } from '../palette';
 import { INK, readableTextColor } from '../readable-text-color';
-
-/** The palette `LabelFormDialog` offers. Every colour a label can have goes through this. */
-const PALETTE = ['#0f766e', '#0369a1', '#4f46e5', '#7c3aed', '#be185d', '#b91c1c', '#c2410c', '#4d7c0f'];
 
 /** WCAG 2.x contrast, written out again so the test does not trust the module's own maths. */
 function contrast(hex: string, ink: string): number {

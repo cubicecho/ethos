@@ -15,53 +15,88 @@ const PRIVATE_SUFFIXES = [
 ];
 
 /**
+ * IPv4 blocks that never route off a private network, by first octet and the
+ * span of second octets: loopback, the three RFC 1918 ranges, then link-local.
+ */
+const PRIVATE_IPV4: readonly { first: number; low: number; high: number }[] = [
+  { first: 127, low: 0, high: 255 },
+  { first: 10, low: 0, high: 255 },
+  { first: 172, low: 16, high: 31 },
+  { first: 192, low: 168, high: 168 },
+  { first: 169, low: 254, high: 254 },
+];
+
+/**
+ * The URL's hostname, lowercased and without IPv6 brackets, or null when the URL does not parse.
+ *
+ * @param url - The connection string.
+ * @returns The hostname, or null.
+ */
+function hostnameOf(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Whether to insist on TLS for a connection string.
  *
  * Read from the parsed hostname, never the raw string: a URL carrying
- * credentials (`postgres://user:pass@postgres:5432/db`) puts the userinfo where
- * a naive prefix match looks for the host.
+ * credentials puts the userinfo where a prefix match looks for the host.
+ * "Local" is wider than loopback, because self-hosting is: a compose service or
+ * a box on the LAN speaks no TLS by default, and demanding it breaks the
+ * connection. Only an address that could route off a private network gets it.
  *
- * "Local" is wider than loopback here, because self-hosting is. A bare
- * `postgres` is a service on a compose network; `10.0.0.5` is a box on the
- * LAN — neither speaks TLS by default, and demanding it just breaks the
- * connection. Only an address that could route off a private network gets TLS
- * forced on it.
+ * @param url - The connection string.
+ * @returns false for a local host, and when the URL sets its own `sslmode`.
  */
 export function requiresSsl(url: string): boolean {
   // An explicit sslmode is the operator's decision; postgres-js reads it itself.
-  if (/[?&]sslmode=/i.test(url)) return false;
-
-  let hostname: string;
-  try {
-    hostname = new URL(url).hostname.replace(/^\[|\]$/g, '').toLowerCase();
-  } catch {
+  if (/[?&]sslmode=/i.test(url)) {
     return false;
   }
 
-  if (hostname === 'localhost' || hostname.endsWith('.localhost')) return false;
+  const hostname = hostnameOf(url);
+  if (hostname === null) {
+    return false;
+  }
+
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    return false;
+  }
   // A name with no dots is a container or LAN hostname, not a public address.
-  if (!hostname.includes('.') && !hostname.includes(':')) return false;
-  // Nor is a name under a private-use suffix. `docker.lan`, `nas.local` and
-  // `db.internal` are resolved by the router or by mDNS and cannot route off the
-  // network you are standing on — the dot in them says nothing about reach, and
-  // the Postgres behind one is as plaintext as the container next door.
-  if (PRIVATE_SUFFIXES.some((suffix) => hostname.endsWith(suffix))) return false;
+  if (hostname.includes('.') === false && hostname.includes(':') === false) {
+    return false;
+  }
+  // Nor is a name under a private-use suffix: the router or mDNS resolves it,
+  // and the dot in it says nothing about reach.
+  if (PRIVATE_SUFFIXES.some((suffix) => hostname.endsWith(suffix))) {
+    return false;
+  }
 
   const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
   if (ipv4) {
-    const [a, b] = ipv4.slice(1).map(Number);
-    if (a === 127) return false; // loopback
-    if (a === 10) return false; // 10/8
-    if (a === 172 && b >= 16 && b <= 31) return false; // 172.16/12
-    if (a === 192 && b === 168) return false; // 192.168/16
-    if (a === 169 && b === 254) return false; // link-local
-    return true;
+    const [firstOctet, secondOctet] = ipv4.slice(1).map(Number);
+    return (
+      PRIVATE_IPV4.some(
+        (range) => range.first === firstOctet && secondOctet >= range.low && secondOctet <= range.high,
+      ) === false
+    );
   }
 
   if (hostname.includes(':')) {
-    if (hostname === '::1') return false; // loopback
-    if (/^f[cd]/.test(hostname)) return false; // unique-local fc00::/7
-    if (/^fe[89ab]/.test(hostname)) return false; // link-local fe80::/10
+    // Loopback, unique-local fc00::/7, then link-local fe80::/10.
+    if (hostname === '::1') {
+      return false;
+    }
+    if (/^f[cd]/.test(hostname)) {
+      return false;
+    }
+    if (/^fe[89ab]/.test(hostname)) {
+      return false;
+    }
     return true;
   }
 

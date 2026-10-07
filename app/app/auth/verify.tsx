@@ -1,28 +1,32 @@
 import { useMutation } from '@apollo/client';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Text, View } from 'react-native';
-import { EmptyState } from '@/components/page';
+import { CenteredLayout } from '@/components/centered-layout';
 import { CircleAlert } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/spinner';
 import { setToken } from '@/lib/auth';
 import { describeError } from '@/lib/errors';
 import { VerifyMagicLinkDocument } from '@/lib/graphql';
 
+/** Spends the token of a sign-in link and opens the app. */
 export default function VerifyScreen() {
   const router = useRouter();
   const { token } = useLocalSearchParams<{ token?: string }>();
   const [verifyMagicLink, { error }] = useMutation(VerifyMagicLinkDocument);
   // Strict mode and route re-renders both run effects more than once; a magic
   // token is meant to be spent exactly once.
-  const started = useRef(false);
+  const hasStarted = useRef(false);
 
   useEffect(() => {
-    if (started.current || !token) return;
-    started.current = true;
+    if (hasStarted.current || !token) {
+      return;
+    }
+    hasStarted.current = true;
     verifyMagicLink({ variables: { token } })
       .then(({ data }) => {
-        if (!data?.verifyMagicLink) return;
+        if (!data?.verifyMagicLink) {
+          return;
+        }
         setToken(data.verifyMagicLink.token);
         router.replace('/');
       })
@@ -31,27 +35,24 @@ export default function VerifyScreen() {
       });
   }, [token, verifyMagicLink, router]);
 
-  return (
-    <View className="min-h-full flex-1 items-center justify-center bg-background px-4">
-      <View className="w-full max-w-sm items-center">
-        {!token || error ? (
-          <EmptyState
-            icon={CircleAlert}
-            title="That link didn't work"
-            description={`${error ? describeError(error) : 'The link is missing its token.'} Sign-in links expire after 15 minutes.`}
-            actionSlot={
-              <Link href="/login" className="text-primary text-sm underline">
-                Request a new one
-              </Link>
-            }
-          />
-        ) : (
-          <View className="flex-row items-center justify-center gap-2">
-            <Spinner />
-            <Text className="text-muted-foreground text-sm">Signing you in…</Text>
-          </View>
-        )}
-      </View>
-    </View>
-  );
+  const failure = token ? (error ? describeError(error) : null) : 'The link is missing its token.';
+
+  if (failure) {
+    return (
+      <CenteredLayout
+        className="bg-background"
+        level={1}
+        iconSlot={<CircleAlert className="size-4" />}
+        title="That link didn't work"
+        description={`${failure} Sign-in links expire after 15 minutes.`}
+        footerSlot={
+          <Link href="/login" className="text-info text-sm underline">
+            Request a new one
+          </Link>
+        }
+      />
+    );
+  }
+
+  return <CenteredLayout className="bg-background" level={1} iconSlot={<Spinner />} title="Signing you in…" />;
 }

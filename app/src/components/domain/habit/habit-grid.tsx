@@ -1,14 +1,12 @@
 import { Text, View } from 'react-native';
 import { Check } from '@/components/ui/icons';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { HISTORY_PERIODS } from '@/lib/graphql';
-import { daysOf, type Period, periodLabel, recentPeriods, weekdayInitial } from '@/lib/periods';
+import { asPeriod } from '@/lib/cadence';
+import { HISTORY_DEFAULTS } from '@/lib/defaults';
+import { daysOf, Period, periodLabel, recentPeriods, weekdayInitial } from '@/lib/periods';
 import { cn } from '@/lib/utils';
 import { DaySquare } from './day-square';
 import { asStatus, type DayStatus, type HabitEntrySummary, type HabitPeriodSummary, type HabitSummary } from './types';
-
-/** How many weeks of squares a daily habit shows. Four rows of seven reads as a month. */
-const DAILY_WEEKS = 4;
 
 interface GridRow {
   key: string;
@@ -28,18 +26,23 @@ interface GridRow {
  * is only how they are laid out, which is why such a row carries no tally. For
  * weekly and monthly habits the row *is* the period, and the tally beside it is
  * the server's, not a re-count of the squares.
+ *
+ * @param period - The habit's period.
+ * @param history - The server's tallies, one per period.
+ * @param today - The caller's day.
+ * @returns The rows, oldest first.
  */
 function buildRows(period: Period, history: readonly HabitPeriodSummary[], today: string): GridRow[] {
-  if (period === 'day') {
-    return recentPeriods('week', today, DAILY_WEEKS).map((week) => ({
+  if (period === Period.Day) {
+    return recentPeriods(Period.Week, today, HISTORY_DEFAULTS.dailyWeeks).map((week) => ({
       key: week.start,
-      label: periodLabel('week', week.start, today),
+      label: periodLabel(Period.Week, week.start, today),
       days: daysOf(week),
       tally: null,
     }));
   }
 
-  return history.slice(-HISTORY_PERIODS).map((tally) => ({
+  return history.slice(-HISTORY_DEFAULTS.periods).map((tally) => ({
     key: tally.start,
     label: periodLabel(period, tally.start, today),
     days: daysOf({ start: tally.start, end: tally.end }),
@@ -47,29 +50,33 @@ function buildRows(period: Period, history: readonly HabitPeriodSummary[], today
   }));
 }
 
+/** A habit's recent periods as rows of day squares. */
 export function HabitGrid({
   habit,
   history,
   entries,
   today,
-  pending,
-  onSet,
+  disabled,
+  onValueChange,
 }: {
   habit: HabitSummary;
+  /** The server's tallies, one per recent period. */
   history: readonly HabitPeriodSummary[];
+  /** The days that carry a mark. */
   entries: readonly HabitEntrySummary[];
+  /** The caller's day. Days after it are drawn but cannot be pressed. */
   today: string;
-  pending: boolean;
-  onSet: (day: string, status: DayStatus) => void;
+  /** Whether the squares refuse a press: a mark is on its way to the server. */
+  disabled: boolean;
+  /** Called with a day and what it should become. */
+  onValueChange: (day: string, value: DayStatus) => void;
 }) {
-  const period = habit.period as Period;
+  const period = asPeriod(habit.period);
   const rows = buildRows(period, history, today);
   const status = new Map<string, DayStatus>(entries.map((entry) => [entry.day, asStatus(entry.status)]));
-  // Weeks are seven days wide and start on Monday, so the columns line up down
-  // the grid and are worth naming once at the top. A month's rows are ragged —
-  // they start on whatever weekday the first falls on — so there is nothing
-  // there for a header to label.
-  const weekdays = period === 'month' ? null : rows[0]?.days;
+  // Weeks all start on Monday, so the columns are worth naming once at the top.
+  // A month's rows start on whatever weekday the first falls on.
+  const weekdays = period === Period.Month ? null : rows[0]?.days;
 
   return (
     // One provider for every square: a tooltip opened right after another one
@@ -96,12 +103,12 @@ export function HabitGrid({
                 <DaySquare
                   key={day}
                   day={day}
-                  status={status.get(day) ?? null}
+                  value={status.get(day) ?? null}
                   color={habit.color}
-                  today={day === today}
-                  future={day > today}
-                  disabled={pending}
-                  onSet={onSet}
+                  isToday={day === today}
+                  isFuture={day > today}
+                  disabled={disabled}
+                  onValueChange={(value) => onValueChange(day, value)}
                 />
               ))}
             </View>
@@ -110,9 +117,8 @@ export function HabitGrid({
                 <Text className={cn('text-xs tabular-nums', row.tally.met ? 'text-foreground' : 'text-foreground/60')}>
                   {row.tally.done}/{row.tally.effectiveTarget}
                 </Text>
-                {/* The tick marks a period kept, including one skipped down to
-                    nothing owed — which is why it follows `met` rather than
-                    comparing the two numbers beside it. */}
+                {/* Follows `met` rather than comparing the two numbers: a period
+                    skipped down to nothing owed is kept as well. */}
                 {row.tally.met ? <Check className="h-3 w-3 text-foreground" /> : null}
               </View>
             ) : null}

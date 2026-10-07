@@ -6,20 +6,18 @@ import { isHexColor } from '@/components/ui/color-picker';
 import { Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { placeHabit } from '@/lib/cache';
-import { describeCadence, maxTargetFor } from '@/lib/cadence';
+import { asPeriod, describeCadence, isPeriod, maxTargetFor } from '@/lib/cadence';
 import { describeError } from '@/lib/errors';
 import { CreateHabitDocument, UpdateHabitDocument } from '@/lib/graphql';
 import { newId } from '@/lib/ids';
-import { type Period, periodOf } from '@/lib/periods';
+import { PALETTE } from '@/lib/palette';
+import { Period, periodOf } from '@/lib/periods';
 import type { HabitSummary } from './types';
 
-/** A small fixed palette — picking a colour should be one click, not a colour wheel. */
-const PALETTE = ['#0f766e', '#0369a1', '#4f46e5', '#7c3aed', '#be185d', '#b91c1c', '#c2410c', '#4d7c0f'];
-
 const CADENCES: readonly RadioOption[] = [
-  { value: 'day', label: 'Daily' },
-  { value: 'week', label: 'Weekly' },
-  { value: 'month', label: 'Monthly' },
+  { value: Period.Day, label: 'Daily' },
+  { value: Period.Week, label: 'Weekly' },
+  { value: Period.Month, label: 'Monthly' },
 ];
 
 type HabitValues = {
@@ -31,14 +29,21 @@ type HabitValues = {
   targetCount: number | null;
 };
 
+/**
+ * What the form starts with: the habit's values, or a new habit's.
+ *
+ * @param habit - The habit being edited, or undefined for a new one.
+ * @returns The form's values.
+ */
 const valuesOf = (habit: HabitSummary | undefined): HabitValues => ({
   name: habit?.name ?? '',
   notes: habit?.notes ?? '',
   color: habit?.color ?? PALETTE[0],
-  period: (habit?.period as Period) ?? 'day',
+  period: habit ? asPeriod(habit.period) : Period.Day,
   targetCount: habit?.targetCount ?? 1,
 });
 
+/** Creates a habit, or edits the one it is given. */
 export function HabitFormDialog({
   open,
   onOpenChange,
@@ -48,13 +53,15 @@ export function HabitFormDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** The caller's day: the lists a saved habit is written into are keyed by it. */
   today: string;
+  /** The habit to edit. Left out, the dialog creates one. */
   habit?: HabitSummary;
   /** Where a new habit goes in the list. Ignored when editing. */
   nextPosition?: number;
 }) {
-  const [createHabit, { loading: creating, error: createError }] = useMutation(CreateHabitDocument);
-  const [updateHabit, { loading: updating, error: updateError }] = useMutation(UpdateHabitDocument);
+  const [createHabit, { loading: isCreating, error: createError }] = useMutation(CreateHabitDocument);
+  const [updateHabit, { loading: isUpdating, error: updateError }] = useMutation(UpdateHabitDocument);
 
   const form = useAppForm({
     defaultValues: valuesOf(habit),
@@ -62,12 +69,16 @@ export function HabitFormDialog({
   });
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     form.reset(valuesOf(habit));
   }, [open, habit, form]);
 
   async function save({ name, notes, color, period, targetCount }: HabitValues) {
-    if (creating || updating) return;
+    if (isCreating || isUpdating) {
+      return;
+    }
     const values = {
       name: name.trim(),
       notes: notes.trim() === '' ? null : notes.trim(),
@@ -85,9 +96,8 @@ export function HabitFormDialog({
         const range = periodOf(period, today);
         await createHabit({
           variables: { values: { id, ...values, position: nextPosition }, today },
-          // Every derived field is known for a habit with no days yet: no
-          // streak, nothing kept, nothing skipped. Stating them is what lets the
-          // row appear complete rather than flickering through a half-drawn one.
+          // Every derived field is known for a habit with no days yet. Stating
+          // them lets the row appear complete rather than half-drawn.
           optimisticResponse: {
             createHabit: {
               __typename: 'Habit',
@@ -112,15 +122,15 @@ export function HabitFormDialog({
             },
           },
           update(cache, { data }) {
-            if (data?.createHabit) placeHabit(cache, today, data.createHabit);
+            if (data?.createHabit) {
+              placeHabit(cache, today, data.createHabit);
+            }
           },
         });
       }
     } catch {
-      // The mutation rejects as well as setting `error`, so an uncaught await
-      // here is both an unhandled rejection and a dialog that stays open with
-      // no explanation of why. Stay open — deliberately — but say so: what was
-      // typed is still in the fields, ready to send again.
+      // The mutation rejects as well as setting `error`. Stay open: the footer
+      // says why, and what was typed is still in the fields.
       return;
     }
     onOpenChange(false);
@@ -151,15 +161,17 @@ export function HabitFormDialog({
             variant="segmented"
             options={CADENCES}
             listeners={{
-              // A day cannot be kept twice, so the daily cadence has no number to
-              // pick and the field is not shown. Forcing the value here rather
-              // than at submit keeps the form honest about what it will send.
+              // A day cannot be kept twice, so daily has no number to pick. Forced
+              // here, not at submit, so the form holds what it will send.
               onChange: ({ value }) => {
-                const next = value as Period;
+                if (isPeriod(value) === false) {
+                  return;
+                }
+                const next = value;
                 const current = form.getFieldValue('targetCount') ?? 1;
                 form.setFieldValue(
                   'targetCount',
-                  next === 'day' ? 1 : Math.min(Math.max(current, 1), maxTargetFor(next)),
+                  next === Period.Day ? 1 : Math.min(Math.max(current, 1), maxTargetFor(next)),
                 );
               },
             }}
@@ -167,7 +179,7 @@ export function HabitFormDialog({
 
           <form.Subscribe selector={(state) => state.values.period}>
             {(period) =>
-              period === 'day' ? null : (
+              period === Period.Day ? null : (
                 <form.AppField
                   name="targetCount"
                   validators={{
@@ -175,7 +187,9 @@ export function HabitFormDialog({
                     // rather than after it.
                     onChange: ({ value }) => {
                       const max = maxTargetFor(period);
-                      if (value == null || !Number.isInteger(value) || value < 1) return 'Enter a whole number.';
+                      if (value == null || Number.isInteger(value) === false || value < 1) {
+                        return 'Enter a whole number.';
+                      }
                       return value > max ? `A ${period} has at most ${max} days to keep it on.` : undefined;
                     },
                   }}

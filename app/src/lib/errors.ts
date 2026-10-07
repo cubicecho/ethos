@@ -10,7 +10,7 @@
  */
 
 /** What a browser says when the request never reached anything. */
-const FETCH_FAILURES = [
+const FETCH_FAILURES: readonly string[] = [
   // Chrome
   'failed to fetch',
   // Firefox
@@ -18,6 +18,11 @@ const FETCH_FAILURES = [
   // Safari
   'load failed',
 ];
+
+/** The statuses a server sends when it no longer accepts the session. */
+const HTTP_UNAUTHORIZED = 401;
+const HTTP_FORBIDDEN = 403;
+const SIGNED_OUT_STATUSES: readonly number[] = [HTTP_UNAUTHORIZED, HTTP_FORBIDDEN];
 
 const UNREACHABLE = 'Couldn’t reach the server.';
 const UNKNOWN = 'Something went wrong.';
@@ -29,37 +34,64 @@ interface ErrorLike {
   networkError?: { message?: unknown; statusCode?: unknown } | null;
 }
 
+/**
+ * A string worth showing: trimmed, and not blank.
+ *
+ * @param value - Anything.
+ * @returns The trimmed string, or undefined when it is not a string or is blank.
+ */
 function text(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
 }
 
+/**
+ * What went wrong, as a sentence to show the user.
+ *
+ * @param error - Whatever was thrown or returned.
+ * @returns The message, or a generic one when there is nothing to read.
+ */
 export function describeError(error: unknown): string {
-  if (error == null) return UNKNOWN;
-  if (typeof error === 'string') return text(error) ?? UNKNOWN;
-  if (typeof error !== 'object') return UNKNOWN;
+  if (error == null) {
+    return UNKNOWN;
+  }
+  if (typeof error === 'string') {
+    return text(error) ?? UNKNOWN;
+  }
+  if (typeof error !== 'object') {
+    return UNKNOWN;
+  }
 
-  const like = error as ErrorLike;
+  const like: ErrorLike = error;
 
-  // A GraphQL error first, always: the server got the request, understood it
-  // and refused it, so it knows more about why than anything downstream does.
-  // "Cannot delete the last lane" beats "Response not successful: 400".
+  // A GraphQL error first: the server understood the request and refused it,
+  // so it knows more about why than anything downstream does.
   const fromServer = like.graphQLErrors?.map((entry) => text(entry.message)).find(Boolean);
-  if (fromServer) return fromServer;
+  if (fromServer) {
+    return fromServer;
+  }
 
   // A status means the server answered, so quote it — an authentication
   // failure and an unplugged cable want different reactions from the reader.
   const network = like.networkError;
   if (network) {
     const status = typeof network.statusCode === 'number' ? network.statusCode : undefined;
-    if (status === 401 || status === 403) return 'Your session has expired. Sign in again.';
-    if (status != null) return `The server answered ${status}.`;
+    if (status !== undefined && SIGNED_OUT_STATUSES.includes(status)) {
+      return 'Your session has expired. Sign in again.';
+    }
+    if (status != null) {
+      return `The server answered ${status}.`;
+    }
     return UNREACHABLE;
   }
 
   const message = text(like.message);
-  if (!message) return UNKNOWN;
+  if (!message) {
+    return UNKNOWN;
+  }
   // The browser's own wording for a request that went nowhere, replaced rather
   // than shown: it names a function nobody called and no cause.
-  if (FETCH_FAILURES.includes(message.toLowerCase())) return UNREACHABLE;
+  if (FETCH_FAILURES.includes(message.toLowerCase())) {
+    return UNREACHABLE;
+  }
   return message;
 }

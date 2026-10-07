@@ -2,6 +2,7 @@
   "name": "@ethos/app",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "expo-router/entry",
   "scripts": {
     "dev": "EXPO_NO_DEVTOOLS=1 npx expo start --port 3000",
@@ -9,13 +10,12 @@
     "preview": "npx serve dist",
     "clean": "rm -rf src/__generated__ dist .expo",
     "codegen": "graphql-codegen-esm",
-    "typecheck": "tsc --noEmit"
+    "check:types": "tsc --noEmit"
   },
   "dependencies": {
     "@apollo/client": "^3.12.6",
     "@expo/metro-runtime": "~56.0.15",
     "@tanstack/react-form": "^1.33.5",
-    "@types/react-dom": "~19.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "expo": "^56.0.0",
@@ -44,7 +44,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/react": "^19.0.8",
-    "@types/react-dom": "^19.0.3",
+    "@types/react-dom": "~19.2.0",
     "babel-plugin-module-resolver": "^5.0.3",
     "babel-preset-expo": "~56.0.0",
     "postcss": "^8.5.1"

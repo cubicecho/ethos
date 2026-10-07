@@ -1,25 +1,27 @@
 import { useQuery } from '@apollo/client';
-import { Link, useLocalSearchParams } from 'expo-router';
-import { Text } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { BackToTodayLink } from '@/components/domain/habit/back-to-today-link';
 import { HabitGrid } from '@/components/domain/habit/habit-grid';
 import { HabitPage } from '@/components/domain/habit/habit-page';
 import { useMarkHabitDay } from '@/components/domain/habit/use-mark-habit';
+import { LoadState } from '@/components/domain/query/load-state';
 import { EmptyState } from '@/components/page';
 import { PageLayout } from '@/components/page-layout';
 import { Section } from '@/components/section';
+import { Alert } from '@/components/ui/alert';
 import { Search } from '@/components/ui/icons';
-import { LoadState } from '@/components/ui/load-failure';
 import { HabitDocument } from '@/lib/graphql';
 import { useToday } from '@/lib/use-today';
 
+/** One habit: its numbers, and its grid of days to mark. */
 export default function HabitScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const today = useToday();
   const habitQuery = useQuery(HabitDocument, {
-    variables: { id: id as string, today },
+    variables: { id, today },
     skip: !id,
   });
-  const { setDay, pending, error: markError } = useMarkHabitDay(today);
+  const { setDay, isPending, error: markError } = useMarkHabitDay(today);
 
   const habit = habitQuery.data?.habit;
   if (!habit) {
@@ -28,10 +30,8 @@ export default function HabitScreen() {
         width="prose"
         title="Habit"
         contentSlot={
-          // The failure is ahead of the not-found message, which is a claim about
-          // the caller's own data: with the API unreachable the app has no idea
-          // whose the habit is, and telling someone their habit is gone when it
-          // is not is worse than telling them nothing.
+          // The failure goes ahead of not-found: with the API unreachable, telling
+          // someone their habit is gone when it is not is worse than telling nothing.
           <LoadState
             query={habitQuery}
             what="this habit"
@@ -40,11 +40,7 @@ export default function HabitScreen() {
               <EmptyState
                 icon={Search}
                 title="That habit doesn't exist, or isn't yours."
-                actionSlot={
-                  <Link href="/" className="text-primary text-sm underline">
-                    Back to today
-                  </Link>
-                }
+                actionSlot={<BackToTodayLink />}
               />
             }
           />
@@ -68,14 +64,10 @@ export default function HabitScreen() {
                 history={habit.history}
                 entries={habit.entries}
                 today={today}
-                pending={pending}
-                onSet={(day, status) => setDay(habit.id, day, status)}
+                disabled={isPending}
+                onValueChange={(day, value) => setDay(habit.id, day, value)}
               />
-              {markError ? (
-                <Text className="mt-3 text-negative text-sm" aria-live="polite">
-                  {markError}
-                </Text>
-              ) : null}
+              {markError ? <Alert variant="destructive" className="mt-3" description={markError} /> : null}
             </>
           }
         />

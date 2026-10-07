@@ -14,6 +14,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required — generate one with `openssl rand -hex 32`}
       DATABASE_URL: postgres://ethos:${POSTGRES_PASSWORD:-ethos}@postgres:5432/ethos
       APP_URL: ${APP_URL:-http://localhost:3006}
+      # Set to 1 when a reverse proxy is in front, so sign-in is throttled per
+      # visitor and not per proxy.
+      TRUST_PROXY: ${TRUST_PROXY:-false}
       # Leave magic links on unless this instance is private and has no mail
       # relay. See "Before you expose it" in the README.
       AUTH_MAGIC_LINK: ${AUTH_MAGIC_LINK:-true}

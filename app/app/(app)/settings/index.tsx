@@ -1,5 +1,6 @@
 import { useQuery } from '@apollo/client';
-import { Text, View } from 'react-native';
+import { DescriptionList, PropertyRow } from '@/components/description-list';
+import { LoadFailure } from '@/components/domain/query/load-state';
 import { PageLayout } from '@/components/page-layout';
 import { Section } from '@/components/section';
 import { ThemePicker } from '@/components/ui/theme-picker';
@@ -10,16 +11,18 @@ import { MeDocument } from '@/lib/graphql';
 export default function SettingsScreen() {
   // `users` is scoped to the caller, so the list is the one row the token
   // names — there is no "me" query because there is no one else to ask about.
-  const { data } = useQuery(MeDocument);
+  const { data, loading, error, refetch } = useQuery(MeDocument);
   const me = data?.users?.[0];
+  const email = me?.email ?? (loading ? 'Loading…' : '—');
 
   return (
     <PageLayout
       width="prose"
       title="Settings"
       description="Theme and palette are kept on this device; the account is not."
+      contentClassName="gap-6 py-6"
       contentSlot={
-        <View className="gap-6 py-6">
+        <>
           <Section
             surface="card"
             title="Theme"
@@ -30,9 +33,15 @@ export default function SettingsScreen() {
             surface="card"
             title="Account"
             description="Sign in with a link sent to this address."
-            contentSlot={<Text className="text-foreground text-sm">{me?.email ?? '—'}</Text>}
+            contentSlot={
+              error && me === undefined ? (
+                <LoadFailure error={error} onRetry={() => refetch()} what="your account" compact />
+              ) : (
+                <DescriptionList contentSlot={[<PropertyRow key="email" label="Email" value={email} />]} />
+              )
+            }
           />
-        </View>
+        </>
       }
     />
   );

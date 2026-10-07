@@ -13,6 +13,9 @@ export type CachedHabit = HabitsQuery['habits'][number];
  * move between them. Keeping the pair in one place is what stops a habit being
  * archived out of the sidebar and still sitting in the archive's cache as
  * active, or worse, appearing in both.
+ *
+ * @param today - The caller's day, a variable of both queries.
+ * @returns The active and the archived list queries.
  */
 function listsOf(today: string) {
   return {
@@ -21,6 +24,13 @@ function listsOf(today: string) {
   };
 }
 
+/**
+ * A list with one habit taken out.
+ *
+ * @param habits - The list.
+ * @param id - The habit to drop.
+ * @returns A new list.
+ */
 function without(habits: readonly CachedHabit[], id: string): CachedHabit[] {
   return habits.filter((habit) => habit.id !== id);
 }
@@ -37,16 +47,20 @@ function without(habits: readonly CachedHabit[], id: string): CachedHabit[] {
  * A no-op for a list that is not in the cache, which is the case for the
  * archive until someone opens it — `updateQuery` leaves a missing entry alone
  * rather than writing a partial one that the next read would trust.
+ *
+ * @param cache - The Apollo cache.
+ * @param today - The caller's day.
+ * @param habit - The habit as the server returned it.
  */
 export function placeHabit(cache: ApolloCache<unknown>, today: string, habit: CachedHabit): void {
   const { active, archived } = listsOf(today);
-  const archivedNow = habit.archivedAt != null;
+  const isArchived = habit.archivedAt != null;
 
   cache.updateQuery(active, (existing) =>
     existing
       ? {
           ...existing,
-          habits: archivedNow ? without(existing.habits, habit.id) : [...without(existing.habits, habit.id), habit],
+          habits: isArchived ? without(existing.habits, habit.id) : [...without(existing.habits, habit.id), habit],
         }
       : existing,
   );
@@ -54,13 +68,19 @@ export function placeHabit(cache: ApolloCache<unknown>, today: string, habit: Ca
     existing
       ? {
           ...existing,
-          habits: archivedNow ? [habit, ...without(existing.habits, habit.id)] : without(existing.habits, habit.id),
+          habits: isArchived ? [habit, ...without(existing.habits, habit.id)] : without(existing.habits, habit.id),
         }
       : existing,
   );
 }
 
-/** Drop a habit from both lists — what a delete leaves behind is nothing. */
+/**
+ * Drop a habit from both lists — what a delete leaves behind is nothing.
+ *
+ * @param cache - The Apollo cache.
+ * @param today - The caller's day.
+ * @param id - The habit that was deleted.
+ */
 export function removeHabit(cache: ApolloCache<unknown>, today: string, id: string): void {
   const { active, archived } = listsOf(today);
   for (const list of [active, archived]) {
@@ -68,9 +88,8 @@ export function removeHabit(cache: ApolloCache<unknown>, today: string, id: stri
       existing ? { ...existing, habits: without(existing.habits, id) } : existing,
     );
   }
-  // The lists are the only place that referenced it; the normalized entity would
-  // otherwise sit in the cache forever, and a screen still holding its id would
-  // read a habit the server no longer has.
+  // The lists were the only references. Left in the cache, a screen still
+  // holding the id would read a habit the server no longer has.
   cache.evict({ id: cache.identify({ __typename: 'Habit', id }) });
   cache.gc();
 }

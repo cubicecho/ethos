@@ -4,8 +4,9 @@ import { habits } from './habits.ts';
 import { users } from './users.ts';
 
 /** What a day says. A skip is not a miss — see streaks.ts. */
-export const ENTRY_STATUSES = ['done', 'skipped'] as const;
-export type EntryStatus = (typeof ENTRY_STATUSES)[number];
+export const ENTRY_DONE = 'done';
+export const ENTRY_SKIPPED = 'skipped';
+export type EntryStatus = typeof ENTRY_DONE | typeof ENTRY_SKIPPED;
 
 /**
  * One row per habit per day.
@@ -27,7 +28,7 @@ export const habitEntries = pgTable(
       .notNull()
       .references(() => habits.id, { onDelete: 'cascade' }),
     day: date('day', { mode: 'string' }).notNull(),
-    status: text('status').notNull().$type<EntryStatus>().default('done'),
+    status: text('status').notNull().$type<EntryStatus>().default(ENTRY_DONE),
     note: text('note'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
@@ -35,15 +36,13 @@ export const habitEntries = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (t) => [
-    // The day is the key. Ticking the same day twice is the same tick, and the
-    // constraint is what makes that true of a double-click, two open tabs and a
-    // retried request alike — `markHabit` upserts onto it rather than checking
-    // first and inserting after.
-    unique('uq_habit_entries_day').on(t.habitId, t.day),
-    index('idx_habit_entries_user_id').on(t.userId),
-    index('idx_habit_entries_habit_id').on(t.habitId),
-    index('idx_habit_entries_day').on(t.day),
+  (table) => [
+    // The day is the key, so a double-click, two tabs and a retried request are
+    // all the same tick: `markHabit` upserts onto this constraint.
+    unique('uq_habit_entries_day').on(table.habitId, table.day),
+    index('idx_habit_entries_user_id').on(table.userId),
+    index('idx_habit_entries_habit_id').on(table.habitId),
+    index('idx_habit_entries_day').on(table.day),
   ],
 );
 

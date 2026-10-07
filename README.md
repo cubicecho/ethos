@@ -68,6 +68,9 @@ volumes:
   ethos_pgdata:
 ```
 
+The same image is published to GitHub's registry as `ghcr.io/cubicecho/ethos`,
+with the same tags, if you would rather pull from there.
+
 Generate the two secrets it refuses to start without, then bring it up:
 
 ```bash
@@ -99,8 +102,10 @@ domain.
 | --- | --- | --- |
 | `DATABASE_URL` | — | **Required.** Postgres connection string. There is no embedded fallback. |
 | `JWT_SECRET` | — | **Required in production.** Signs session and magic-link tokens. `openssl rand -hex 32`. |
-| `APP_URL` | `http://localhost:3006` | Public URL; magic-link URLs are built from it. |
+| `APP_URL` | `http://localhost:3006` | Public URL; magic-link URLs are built from it, and in production it is the only origin allowed to call the API. |
 | `PORT` | `3006` | Port the server listens on. |
+| `TRUST_PROXY` | `false` | How many reverse proxies are in front (`1` behind one). Decides whose address sign-in is throttled by. |
+| `DB_CONNECT_TIMEOUT_MS` | `60000` | How long boot waits for Postgres to start answering. |
 | `AUTH_MAGIC_LINK` | `true` | Set to `false` to sign in with an address alone, no link. |
 | `EXPOSE_MAGIC_LINK` | dev only | Return the magic link in the API response so the login page can show it. |
 
@@ -116,8 +121,9 @@ for an instance on the public internet. Before putting Ethos on a domain:
 
 - **Put it behind something.** A reverse proxy with TLS, and — if the instance is
   yours alone — an allowlist, VPN, or auth in front of it. Ethos rate-limits
-  sign-in requests per address in process; per-IP limiting is the proxy's job,
-  because the proxy is the only thing that reliably knows the client's address.
+  sign-in per email address and per client IP, in process. Behind a proxy, set
+  `TRUST_PROXY=1` so the client's address is the visitor's and not the proxy's;
+  without it every visitor shares one sign-in budget.
 - **Never set `AUTH_MAGIC_LINK=false` on a reachable instance.** It makes an email
   address the entire credential: anyone who can load the login page can sign in
   as anyone.
@@ -125,7 +131,7 @@ for an instance on the public internet. Before putting Ethos on a domain:
   sign-in token to whoever asked for it, which is the same thing by another route.
 - **Set a real `JWT_SECRET`** and keep it. Changing it signs everyone out; leaking
   it lets anyone mint a session. The server refuses to boot in production while
-  it is unset or still the default.
+  it is unset, a published default, or shorter than 32 characters.
 
 ## Development
 
@@ -157,7 +163,7 @@ put in `.env`:
 
 ```
 Docker daemon is docker.lan, not this machine — publishing Postgres on 0.0.0.0:5438 so you can reach it.
-⚠️  .env points DATABASE_URL at 127.0.0.1, but the database is on docker.lan. Set:
+[db-up] .env points DATABASE_URL at 127.0.0.1, but the database is on docker.lan. Set:
       DATABASE_URL=postgres://ethos:ethos@docker.lan:5438/ethos
 ```
 

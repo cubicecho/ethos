@@ -1,6 +1,7 @@
 # Required repository secrets:
 #   DOCKERHUB_USERNAME — your Docker Hub username
 #   DOCKERHUB_TOKEN    — a Docker Hub access token (not your password)
+# GHCR needs none: the workflow's own token pushes the package.
 
 name: Release
 
@@ -16,6 +17,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      packages: write
 
     steps:
       - uses: actions/checkout@v4
@@ -26,14 +28,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 26
 
       - name: Install semantic-release
         run: npm install -g semantic-release @semantic-release/commit-analyzer @semantic-release/release-notes-generator @semantic-release/changelog @semantic-release/git @semantic-release/github
 
-      # A dry run first, because most pushes to main release nothing — a docs
-      # commit or a refactor analyses to no version bump — and the image steps
-      # below must not run on a version that was never cut.
+      # A dry run first: most pushes to main cut no version, and the image
+      # steps below must not run on a version that was never cut.
       - name: Release
         id: release
         env:
@@ -61,9 +62,17 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # `latest` as well as the version, because that is the tag the README's
-      # Quickstart and docker-compose.yml both pull.
-      - name: Build and push to Docker Hub
+      - name: Log in to GHCR
+        if: steps.release.outputs.released == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Docker Hub stays because existing installs pull from it. `latest` as
+      # well as the version: the README's Quickstart and docker-compose.yml pull it.
+      - name: Build and push to Docker Hub and GHCR
         if: steps.release.outputs.released == 'true'
         uses: docker/build-push-action@v6
         with:
@@ -72,3 +81,5 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/ethos:${{ steps.release.outputs.version }}
             ${{ secrets.DOCKERHUB_USERNAME }}/ethos:latest
+            ghcr.io/${{ github.repository }}:${{ steps.release.outputs.version }}
+            ghcr.io/${{ github.repository }}:latest

@@ -175,7 +175,9 @@ export const paletteFor = (scheme: 'light' | 'dark' | null | undefined, palette:
   if (palette !== 'default') {
     const modes: { light?: Palette; dark?: Palette } = palettes[palette];
     const set = scheme === 'dark' ? (modes.dark ?? modes.light) : (modes.light ?? modes.dark);
-    if (set) return set;
+    if (set) {
+      return set;
+    }
   }
   return scheme === 'dark' ? dark : light;
 };

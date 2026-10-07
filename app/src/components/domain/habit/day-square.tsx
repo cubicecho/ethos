@@ -2,42 +2,57 @@ import { Pressable } from 'react-native';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatDayLong } from '@/lib/periods';
 import { cn } from '@/lib/utils';
-import { type DayStatus, nextStatus } from './types';
+import { type DayStatus, ENTRY_DONE, ENTRY_SKIPPED, type EntryStatus, nextStatus } from './types';
+
+const STATE_OF = {
+  [ENTRY_DONE]: 'kept',
+  [ENTRY_SKIPPED]: 'skipped',
+} satisfies Record<EntryStatus, string>;
+
+/**
+ * The square's state in words, for the label a screen reader and the tooltip share.
+ *
+ * @param status - What the day is.
+ * @param isFuture - Whether the day has not happened yet.
+ * @returns The words.
+ */
+function describeState(status: DayStatus, isFuture: boolean): string {
+  if (isFuture) {
+    return 'to come';
+  }
+  return status === null ? 'not kept' : STATE_OF[status];
+}
 
 /**
  * One day of one habit.
  *
- * The three states are told apart by shape as well as by colour — filled, dashed
- * outline, plain outline — because the fill is the habit's own colour and a
- * reader who cannot tell two of them apart would have no way back. Every square
- * also carries the day and its state in its label, which is what a screen reader
- * reads and what the pointer shows on hover.
- *
- * A `Pressable` of its own rather than cubeui's `Button`: a square is 20px and
- * wears the habit's colour, and neither is a size or a variant a button has. The
- * tooltip is cubeui's, under the one provider `HabitGrid` draws.
+ * The three states differ by shape as well as colour — filled, dashed outline,
+ * plain outline — because the fill is the habit's own colour and a reader may
+ * not tell two of them apart. A `Pressable` of its own rather than cubeui's
+ * `Button`: a square is 20px and wears the habit's colour, and a button has
+ * neither as a size or a variant.
  */
 export function DaySquare({
   day,
-  status,
+  value,
   color,
-  today,
-  future,
+  isToday,
+  isFuture,
   disabled,
-  onSet,
+  onValueChange,
 }: {
   day: string;
-  status: DayStatus;
+  /** What the day is: kept, skipped, or `null` for neither. */
+  value: DayStatus;
   color: string;
-  today: boolean;
+  isToday: boolean;
   /** A day that has not happened yet: drawn, so the period keeps its shape, but not pressable. */
-  future: boolean;
+  isFuture: boolean;
   disabled?: boolean;
   /** Called with what the day should become — the cycle is this component's. */
-  onSet: (day: string, status: DayStatus) => void;
+  onValueChange: (value: DayStatus) => void;
 }) {
-  const state = future ? 'to come' : status === 'done' ? 'kept' : status === 'skipped' ? 'skipped' : 'not kept';
-  const label = `${formatDayLong(day)} — ${state}`;
+  const label = `${formatDayLong(day)} — ${describeState(value, isFuture)}`;
 
   return (
     <Tooltip>
@@ -45,20 +60,24 @@ export function DaySquare({
         <Pressable
           role="button"
           aria-label={label}
-          aria-pressed={status !== null}
-          disabled={future || disabled}
-          onPress={() => onSet(day, nextStatus(status))}
+          aria-pressed={value !== null}
+          disabled={isFuture || disabled}
+          onPress={() => onValueChange(nextStatus(value))}
           className={cn(
             'h-5 w-5 shrink-0 rounded-[3px] border transition-colors',
-            future ? 'cursor-default border-border/50 border-dashed bg-transparent' : 'hover:border-ring',
-            !future && disabled && 'opacity-60',
-            status === 'skipped' && 'border-2 border-foreground/60 border-dashed bg-transparent',
-            status === null && !future && 'border-border bg-muted/50',
+            // Further out than today's outline, so focus on today still shows.
+            'focus-visible:outline-2 focus-visible:outline-active focus-visible:outline-offset-2',
+            isFuture
+              ? 'cursor-default border-foreground/10 border-dashed bg-transparent'
+              : 'hover:border-foreground/60',
+            isFuture === false && disabled && 'opacity-60',
+            value === ENTRY_SKIPPED && 'border-2 border-foreground/60 border-dashed bg-transparent',
+            value === null && isFuture === false && 'border-foreground/10 bg-foreground/10',
             // Today is outlined rather than filled: the outline survives whatever
             // the square's own state is, so "today" and "kept" are readable at once.
-            today && 'outline-2 outline-ring outline-offset-1',
+            isToday && 'outline-2 outline-active outline-offset-1',
           )}
-          style={status === 'done' ? { backgroundColor: color, borderColor: color } : undefined}
+          style={value === ENTRY_DONE ? { backgroundColor: color, borderColor: color } : undefined}
         />
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>
