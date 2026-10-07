@@ -1,7 +1,7 @@
 import * as dbSchema from '@ethos/db/schema';
 import DataLoader from 'dataloader';
 import { asc, inArray } from 'drizzle-orm';
-import type { EntryLike, HabitLike } from './streaks.ts';
+import type { EntryLike, HabitLike } from '../habits/streaks.ts';
 
 // Per-request batching. The grid is a list of habits each asking for its own
 // streak, its longest, and a row of periods — three fields over the same rows.

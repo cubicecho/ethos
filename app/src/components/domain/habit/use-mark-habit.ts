@@ -10,7 +10,7 @@ import type { DayStatus } from './types';
  * Nothing here answers optimistically. A tick changes the streak, the period's
  * tally and whether it was met — all of them derived by the server from rows the
  * client does not hold — so an optimistic answer would mean reimplementing
- * `server/src/streaks.ts` here and hoping the two agree. Day arithmetic is
+ * `server/src/habits/streaks.ts` here and hoping the two agree. Day arithmetic is
  * duplicated deliberately (`src/lib/periods.ts`); the counting is not, because a
  * streak the client invented and the server then corrected is worse than a
  * streak that arrives a moment late.

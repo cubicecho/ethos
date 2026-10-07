@@ -4,7 +4,7 @@ import type { Period } from './periods';
  * How often a habit asks to be kept, in the two forms the app needs it: the
  * ceiling the form enforces, and the sentence the screens print.
  *
- * The ceiling is the client's copy of `server/src/cadence.ts` — the server
+ * The ceiling is the client's copy of `server/src/habits/cadence.ts` — the server
  * refuses a target no period can hold, and the form refuses it first so the
  * refusal arrives while the number is still being typed rather than after the
  * dialog has been submitted. The server's copy is the one that decides; this one

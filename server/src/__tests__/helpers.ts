@@ -4,9 +4,9 @@ import * as dbSchema from '@ethos/db/schema';
 import { pushSchema } from 'drizzle-kit/api-postgres';
 import { drizzle } from 'drizzle-orm/pglite';
 import { type ExecutionResult, graphql } from 'graphql';
-import { createSchema } from '../build-schema.ts';
-import type { Context } from '../context.ts';
-import { createLoaders } from '../loaders.ts';
+import type { Context } from '../core/context.ts';
+import { createSchema } from '../graphql/build-schema.ts';
+import { createLoaders } from '../graphql/loaders.ts';
 
 // A throwaway in-memory Postgres per suite. `@ethos/db` is deliberately never
 // imported here — it opens a real connection at import time — so the schema is

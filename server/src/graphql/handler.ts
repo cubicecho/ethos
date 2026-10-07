@@ -4,10 +4,10 @@ import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHt
 import { expressMiddleware } from '@as-integrations/express5';
 import { db } from '@ethos/db';
 import express, { Router } from 'express';
-import type { Context } from '../context.ts';
-import { createLoaders } from '../loaders.ts';
-import { extractUserId } from '../resolvers/auth.ts';
-import { schema } from '../schema.ts';
+import { extractUserId } from '../auth/resolvers.ts';
+import type { Context } from '../core/context.ts';
+import { createLoaders } from './loaders.ts';
+import { schema } from './schema.ts';
 
 export type { Context };
 

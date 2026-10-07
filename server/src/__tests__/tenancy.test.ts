@@ -1,7 +1,7 @@
 import * as dbSchema from '@ethos/db/schema';
 import { getTableName, is, Table } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { ALL_TABLES, contextValues, scope } from '../tenancy.ts';
+import { ALL_TABLES, contextValues, scope } from '../graphql/tenancy.ts';
 
 // The test that fails when someone adds a table and forgets tenancy. `scope` is
 // what confines every generated read, update and delete to the caller; a table

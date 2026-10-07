@@ -1,7 +1,7 @@
 /**
  * Days and periods, as the client counts them.
  *
- * This is the client's copy of `server/src/periods.ts`, and the copy is
+ * This is the client's copy of `server/src/habits/periods.ts`, and the copy is
  * deliberate: the grid draws the periods the server counts streaks over, so if
  * the two disagree the app shows a streak nobody can reproduce by counting
  * squares. They are separate packages — the app is bundled by Metro and must not

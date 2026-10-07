@@ -1,4 +1,4 @@
-import './preflight.ts';
+import './core/preflight.ts';
 
 import { createServer } from 'node:http';
 import { dirname, join } from 'node:path';
@@ -7,11 +7,11 @@ import { db } from '@ethos/db';
 import cors from 'cors';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import express from 'express';
-import { magicLinkExposed, magicLinkRequired } from './config.ts';
-import { createGraphQLRouter } from './routes/graphql.ts';
-import { createStaticHandler } from './static.ts';
+import { magicLinkExposed, magicLinkRequired } from './core/config.ts';
+import { createGraphQLRouter } from './graphql/handler.ts';
+import { createStaticHandler } from './http/static.ts';
 
-export type { Context } from './context.ts';
+export type { Context } from './core/context.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3006);

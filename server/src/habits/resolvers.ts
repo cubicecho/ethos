@@ -2,8 +2,9 @@ import type { EntryStatus } from '@ethos/db/schema';
 import * as dbSchema from '@ethos/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { extendSchema, GraphQLError, type GraphQLObjectType, type GraphQLSchema, parse } from 'graphql';
-import type { Context } from '../context.ts';
-import { assertDay, daysBetween, periodOf } from '../periods.ts';
+import { requireAuth } from '../auth/resolvers.ts';
+import type { Context } from '../core/context.ts';
+import { assertDay, daysBetween, periodOf } from './periods.ts';
 import {
   currentStreak,
   type EntryLike,
@@ -12,8 +13,7 @@ import {
   MAX_SKIPS_PER_PERIOD,
   tallyPeriod,
   tallyRecent,
-} from '../streaks.ts';
-import { requireAuth } from './auth.ts';
+} from './streaks.ts';
 
 // What generated CRUD cannot express: the derived fields the grid reads, and the
 // one state transition that carries rules — recording a day, which the day key

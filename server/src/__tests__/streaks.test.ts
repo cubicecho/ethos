@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { periodOf } from '../periods.ts';
+import { periodOf } from '../habits/periods.ts';
 import {
   currentStreak,
   type EntryLike,
@@ -8,7 +8,7 @@ import {
   MAX_SKIPS_PER_PERIOD,
   tallyPeriod,
   tallyRecent,
-} from '../streaks.ts';
+} from '../habits/streaks.ts';
 
 // The three rules from streaks.ts, one describe block each. Everything the app
 // reports about a habit is one of them applied, so a change that quietly
@@ -82,7 +82,7 @@ describe('rule 1: a skip is not a miss', () => {
   });
 
   it('floors the effective target at zero rather than going negative', () => {
-    // The cap on skips is the resolver's (see resolvers/habits.ts) — this module
+    // The cap on skips is the resolver's (see habits/resolvers.ts) — this module
     // counts whatever rows it is handed, and must not produce a negative target
     // or a rate above 1 if one ever gets past it.
     expect(MAX_SKIPS_PER_PERIOD).toBe(2);

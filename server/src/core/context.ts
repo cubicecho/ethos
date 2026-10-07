@@ -1,5 +1,5 @@
 import type { DB } from '@ethos/db';
-import type { Loaders } from './loaders.ts';
+import type { Loaders } from '../graphql/loaders.ts';
 
 /**
  * What every resolver — generated or hand-written — is handed. `userId` is the

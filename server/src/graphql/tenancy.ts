@@ -1,7 +1,7 @@
 import type { BuildSchemaConfig, RowScope } from '@vantreeseba/drizzle-graphql';
 import { eq } from 'drizzle-orm';
-import type { Context } from './context.ts';
-import { requireAuth } from './resolvers/auth.ts';
+import { requireAuth } from '../auth/resolvers.ts';
+import type { Context } from '../core/context.ts';
 
 // Multi-tenancy, expressed as drizzle-graphql configuration rather than as
 // resolver wrappers. `scope` is ANDed into the SQL of every read, update and
@@ -12,7 +12,7 @@ import { requireAuth } from './resolvers/auth.ts';
 // request, so ownership is never something a caller states.
 //
 // A `scope` cannot reach a plain insert, and it says nothing about the rows a
-// foreign key *points at* — resolvers/write-guards.ts closes that half.
+// foreign key *points at* — graphql/write-guards.ts closes that half.
 //
 // The rule for anyone adding a table: it needs an entry here, or its rows are
 // visible across tenants. __tests__/tenancy.test.ts fails when one is missing.
@@ -51,7 +51,7 @@ export const contextValues: NonNullable<BuildSchemaConfig['contextValues']> = Ob
 /**
  * Tables whose writes belong to a hand-written mutation instead of generated CRUD.
  *
- * `users` is the auth flow's (resolvers/auth.ts): an account exists because a
+ * `users` is the auth flow's (auth/resolvers.ts): an account exists because a
  * sign-in created it. `habitEntries` is `markHabit`'s — a generated insert would
  * let a client write a second row for a day that already has one, or a
  * fifty-first skip in a week, and every rate and streak in the app is counted

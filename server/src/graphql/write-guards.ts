@@ -2,9 +2,9 @@ import * as dbSchema from '@ethos/db/schema';
 import type { BuildSchemaConfig, WriteHookPayload } from '@vantreeseba/drizzle-graphql';
 import { and, eq, inArray } from 'drizzle-orm';
 import { GraphQLError } from 'graphql';
-import { assertTargetsFitPeriods } from '../cadence.ts';
-import type { Context } from '../context.ts';
-import { requireAuth } from './auth.ts';
+import { requireAuth } from '../auth/resolvers.ts';
+import type { Context } from '../core/context.ts';
+import { assertTargetsFitPeriods } from '../habits/cadence.ts';
 
 // A row scope confines reads, updates and deletes, but it cannot reach a plain
 // insert, and it says nothing about the rows a foreign key *points at*. These

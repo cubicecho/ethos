@@ -1,7 +1,7 @@
 import * as dbSchema from '@ethos/db/schema';
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { assertForeignKeysOwned, writtenRows } from '../resolvers/write-guards.ts';
+import { assertForeignKeysOwned, writtenRows } from '../graphql/write-guards.ts';
 import { createClient, createTestDb, createUser, type TestClient, type TestDb } from './helpers.ts';
 
 // `scope` confines reads, updates and deletes, but it cannot reach a plain

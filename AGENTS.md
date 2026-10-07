@@ -55,15 +55,29 @@ ethos/
 │   ├── __generated__/       # Generated SDL + resolver types (not committed)
 │   └── src/
 │       ├── index.ts         # Entry point: migrate, mount /graphql, serve the SPA
-│       ├── preflight.ts     # Boot guards — imported first, on purpose
-│       ├── build-schema.ts  # createSchema(db) — buildSchema + extensions
-│       ├── schema.ts        # Binds createSchema to the real database
-│       ├── tenancy.ts       # Row scope + server-owned columns, as buildSchema config
-│       ├── periods.ts       # Where the period boundaries are drawn
-│       ├── streaks.ts       # What a run of kept days is worth
-│       ├── cadence.ts       # What a period can be asked for
-│       ├── loaders.ts       # Per-request DataLoaders
-│       ├── resolvers/       # SDL extensions for what CRUD cannot express
+│       ├── core/            # What every other folder may import: env, config, the request context
+│       │   ├── preflight.ts     # Boot guards — imported first, on purpose
+│       │   ├── preload-env.ts   # Loads .env for codegen, which runs outside `--env-file`
+│       │   ├── config.ts        # Feature flags read from the environment
+│       │   └── context.ts       # The GraphQL context type
+│       ├── http/            # Plain HTTP, nothing GraphQL
+│       │   └── static.ts        # Serves the built web client
+│       ├── graphql/         # The schema, and what applies to every table in it
+│       │   ├── build-schema.ts  # createSchema(db) — buildSchema + extensions
+│       │   ├── schema.ts        # Binds createSchema to the real database
+│       │   ├── write-schema.ts  # Codegen entry: prints the SDL
+│       │   ├── handler.ts       # The /graphql router
+│       │   ├── tenancy.ts       # Row scope + server-owned columns, as buildSchema config
+│       │   ├── write-guards.ts  # onWrite checks the row scope cannot express
+│       │   └── loaders.ts       # Per-request DataLoaders
+│       ├── auth/            # Signing in, and who a request is
+│       │   ├── resolvers.ts     # Magic-link SDL extension, tokens, extractUserId
+│       │   └── rate-limit.ts    # In-process limiter for sign-in requests
+│       ├── habits/          # The habit domain
+│       │   ├── resolvers.ts     # SDL extension for what CRUD cannot express
+│       │   ├── periods.ts       # Where the period boundaries are drawn
+│       │   ├── streaks.ts       # What a run of kept days is worth
+│       │   └── cadence.ts       # What a period can be asked for
 │       └── __tests__/       # Server tests
 ├── db/
 │   ├── drizzle/             # Generated migrations (committed)
@@ -105,7 +119,7 @@ Three consequences worth internalising:
 - **`relations.ts`, not `schema.ts`, is what the library reads.** A table with no
   entry there gets no relation fields.
 - **Only what CRUD cannot express gets a resolver.** Those live in
-  `server/src/resolvers/` and are applied by `build-schema.ts` in order.
+  `resolvers.ts` of their domain folder (`auth/`, `habits/`) and are applied by `build-schema.ts` in order.
 - **Generated names say their arity.** `typeNameMapper: 'singularize'` maps the
   plural table key onto a singular type, and the noun is what tells the two
   forms of an operation apart: `habits` / `habit` for reads, `createHabits` /
@@ -126,14 +140,14 @@ pins the same version for anything that asks for its own.
 
 ## Rules that carry weight
 
-**Every table needs a `scope` entry.** `server/src/tenancy.ts` maps each table to
+**Every table needs a `scope` entry.** `server/src/graphql/tenancy.ts` maps each table to
 a `RowScope` that is ANDed into the SQL of every generated read, update and
 delete. A table missing from `scope` is visible across tenants, and nothing else
 in the code will say so. `tenancy.test.ts` fails when you forget — do not delete
 the test to make it pass.
 
 **`scope` cannot reach a plain insert.** Any foreign key a caller can state gets
-checked in an `onWrite` hook in `server/src/resolvers/write-guards.ts`. A new
+checked in an `onWrite` hook in `server/src/graphql/write-guards.ts`. A new
 table with a user-facing FK needs an entry in `FOREIGN_KEYS`.
 
 **The day is the key.** A day is a `YYYY-MM-DD` label the keeper wrote, not an
@@ -147,7 +161,7 @@ double-click, two open tabs and a retried request are all the same tick.
 **A skip is not a miss, and there are two of them.** A day you deliberately
 declined comes off what the period asked for; an untouched day is the miss. That
 is right — an instance you declined was never owed — and is exactly why it is
-capped at `MAX_SKIPS_PER_PERIOD` in `server/src/streaks.ts`: a habit that can be
+capped at `MAX_SKIPS_PER_PERIOD` in `server/src/habits/streaks.ts`: a habit that can be
 skipped without limit has no completion rate left to read, because every period
 can be skipped down to owing nothing and reported as kept. The cap is counted
 over the period's *other* days, so a period at the cap can still change its mind
@@ -160,7 +174,7 @@ a failure. A week with one of three done is not a failed week, it is Tuesday —
 joins the streak once it is met and is stepped over otherwise, but only for the
 period containing today. Any earlier period is finished, and a finished period
 that fell short is where the streak ends. All three rules live in
-`server/src/streaks.ts`, which is pure and has no database in its tests; anything
+`server/src/habits/streaks.ts`, which is pure and has no database in its tests; anything
 the app reports about a habit is one of them applied.
 
 **Recording a day has no generated mutations.** `features` in `tenancy.ts` turns
@@ -173,28 +187,28 @@ skip in a week, and every rate and streak in the app is counted off those rows.
 row that will ever exist — `target_count > 0`, and a daily habit asking for more
 than one. The ceiling is not: February holds 28 days, so "20× a month" is real
 and "40× a month" is one no month could satisfy. `assertTargetsFitPeriods` in
-`server/src/cadence.ts` checks it in an `after` hook over the caller's rows,
+`server/src/habits/cadence.ts` checks it in an `after` hook over the caller's rows,
 deliberately not a `before` hook over the arguments: a write that changes only
 `period` — month to week, target left where it was — is exactly the one a check
 reading the arguments would wave through. The ceiling is measured against the
 *shortest* instance of a period, because a cadence that works in August and fails
 in February is a habit that breaks once a year for reasons nobody wrote down.
 
-**Periods are ISO weeks, and all the arithmetic is UTC.** `server/src/periods.ts`
+**Periods are ISO weeks, and all the arithmetic is UTC.** `server/src/habits/periods.ts`
 never constructs a local `Date`: `new Date('2026-09-17')` is UTC midnight, which
 is the sixteenth for most of the Americas, so every calculation goes through
 `Date.UTC` where the offset is zero by construction. Weeks start on Monday, which
 is what the rest of the world writes and what puts a weekend at one end of a row
 instead of splitting it across two.
 
-**`app/src/lib/periods.ts` is a deliberate copy of `server/src/periods.ts`.** The
+**`app/src/lib/periods.ts` is a deliberate copy of `server/src/habits/periods.ts`.** The
 grid draws the periods the streak is counted over, so if the two disagree the app
 shows a streak nobody can reproduce by counting squares. They are separate
 packages — the app is bundled by Metro and must not pull the server's Drizzle
 imports into a browser — so the rule is kept by the files being twins rather than
 by an import. Change one, change both; the two `periods.test.ts` suites assert
 the same boundaries on either side. `app/src/lib/cadence.ts` mirrors
-`server/src/cadence.ts` the same way, and for the same reason: the form refuses
+`server/src/habits/cadence.ts` the same way, and for the same reason: the form refuses
 an impossible target while it is still being typed, but the server's copy is the
 one that decides.
 
@@ -211,7 +225,7 @@ midnight would otherwise keep yesterday's grid.
 generated resolvers select the columns the client asked for, so a query for
 `{ streak }` with no `period` alongside it hands the field resolver a row with no
 cadence on it — and `periodOf(undefined, day)` does not fail, it silently answers
-with a month. `loaders.cadence` in `server/src/loaders.ts` is where the derived
+with a month. `loaders.cadence` in `server/src/graphql/loaders.ts` is where the derived
 fields get `period` and `targetCount`, so what a streak means never depends on
 what else the caller happened to select.
 
@@ -276,7 +290,7 @@ field stale, so widen the fragment rather than the document.
 **Nothing marks a day optimistically.** Every other write in the app edits the
 cache before the request leaves; a tick does not, because what it changes is the
 streak, and answering that on the client would mean reimplementing
-`server/src/streaks.ts` in the browser and keeping the two in step. The controls
+`server/src/habits/streaks.ts` in the browser and keeping the two in step. The controls
 disable while the mutation is in flight instead. A create is still optimistic —
 what a new habit's fields are is not in question.
 
@@ -363,7 +377,7 @@ a value it failed to read.
   is `HabitPage` in `domain/habit/habit-page.tsx`. A screen whose whole content
   is "nothing here" or "that failed" is `EmptyState` (from `page.tsx`), not a
   hand-built column.
-- `import './preflight.ts';` stays first in `server/src/index.ts`, separated by a
+- `import './core/preflight.ts';` stays first in `server/src/index.ts`, separated by a
   blank line so Biome's import sorting leaves it there. It has to run before
   `@ethos/db` is imported.
 - Comments explain *why*. The code already says what.

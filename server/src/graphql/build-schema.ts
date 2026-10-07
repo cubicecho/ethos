@@ -1,8 +1,8 @@
 import { buildSchema, GraphQLDateTime } from '@vantreeseba/drizzle-graphql';
-import { applyAuthExtension } from './resolvers/auth.ts';
-import { applyHabitsExtension } from './resolvers/habits.ts';
-import { onWrite } from './resolvers/write-guards.ts';
+import { applyAuthExtension } from '../auth/resolvers.ts';
+import { applyHabitsExtension } from '../habits/resolvers.ts';
 import { contextValues, features, scope } from './tenancy.ts';
+import { onWrite } from './write-guards.ts';
 
 // The whole CRUD surface is generated from the Drizzle schema — there are no
 // hand-written create/read/update/delete resolvers, and adding a column to a

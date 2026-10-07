@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { describeCadence, describeProgress, isPeriod, maxTargetFor, PERIODS } from '../cadence';
 
-// The ceiling here is a copy of `server/src/cadence.ts`, and the server's is the
+// The ceiling here is a copy of `server/src/habits/cadence.ts`, and the server's is the
 // one that decides. This one exists so the form refuses an impossible target
 // while it is still being typed — so the numbers have to agree.
 
