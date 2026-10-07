@@ -19,6 +19,8 @@ const config: CodegenConfig = {
           field: true,
         },
         useTypeImports: true,
+        // A TypeScript enum is not erasable syntax, which Node needs to run a file as is.
+        enumsAsTypes: true,
         defaultScalarType: 'unknown',
         skipTypeNameForRoot: true,
         scalars: {
