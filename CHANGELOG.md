@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/cubicecho/ethos/compare/v1.1.0...v1.1.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* **docker:** the image runs as node, not root ([25f5630](https://github.com/cubicecho/ethos/commit/25f5630b8b4b62d9341d668cb86c9ef31aedc0c0))
+
 # [1.1.0](https://github.com/cubicecho/ethos/compare/v1.0.0...v1.1.0) (2026-10-07)
 
 
