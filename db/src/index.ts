@@ -1,3 +1,4 @@
+import { DATABASE_DEFAULTS } from './defaults.ts';
 import { relations } from './relations.ts';
 import * as schema from './schema.ts';
 import { requiresSsl } from './ssl.ts';
@@ -27,6 +28,11 @@ const connection: any = {
 // biome-ignore lint/suspicious/noExplicitAny: db type varies by driver at runtime; callers cast as needed
 export type DB = any;
 export const db: DB = drizzle({ connection, relations });
+
+/** Closes the pool, giving running queries `closeTimeoutSeconds` to finish. */
+export function closeDatabase(): Promise<void> {
+  return db.$client.end({ timeout: DATABASE_DEFAULTS.closeTimeoutSeconds });
+}
 
 export * from './schema.ts';
 export { relations, schema };

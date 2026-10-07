@@ -17,7 +17,12 @@ interface GraphQLHandlerDeps {
 /** Builds and starts Apollo Server over `db`, as Express middleware for /graphql. */
 export async function createGraphQLHandler({ db, limiter }: GraphQLHandlerDeps): Promise<RequestHandler> {
   const { schema } = createSchema(db);
-  const apolloServer = new ApolloServer<Context>({ schema });
+  const apolloServer = new ApolloServer<Context>({
+    schema,
+    // Apollo would install its own SIGTERM handler and race the one in
+    // http/shutdown.ts, which is the one that drains and closes the database.
+    stopOnTerminationSignals: false,
+  });
   await apolloServer.start();
 
   return expressMiddleware(apolloServer, {

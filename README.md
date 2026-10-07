@@ -104,6 +104,7 @@ domain.
 | `JWT_SECRET` | — | **Required in production.** Signs session and magic-link tokens. `openssl rand -hex 32`. |
 | `APP_URL` | `http://localhost:3006` | Public URL; magic-link URLs are built from it. |
 | `PORT` | `3006` | Port the server listens on. |
+| `DB_CONNECT_TIMEOUT_MS` | `60000` | How long boot waits for Postgres to start answering. |
 | `AUTH_MAGIC_LINK` | `true` | Set to `false` to sign in with an address alone, no link. |
 | `EXPOSE_MAGIC_LINK` | dev only | Return the magic link in the API response so the login page can show it. |
 

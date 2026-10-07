@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+import { DATABASE_DEFAULTS } from '@ethos/db/defaults';
 import { HTTP_DEFAULTS } from './defaults.ts';
 
 /** What `version()` answers when the root package.json cannot be read. */
@@ -15,6 +16,11 @@ export function isProduction(): boolean {
 /** The Postgres connection string, or empty when unset. Preflight refuses empty. */
 export function databaseUrl(): string {
   return process.env.DATABASE_URL ?? '';
+}
+
+/** How long boot waits for Postgres: `DB_CONNECT_TIMEOUT_MS`, or the default. */
+export function dbConnectTimeoutMs(): number {
+  return Number(process.env.DB_CONNECT_TIMEOUT_MS ?? DATABASE_DEFAULTS.connectTimeoutMs);
 }
 
 /** `JWT_SECRET` exactly as set, for preflight to judge. */

@@ -6,11 +6,17 @@ export interface HttpSettings {
   port: number;
   /** How long a browser may keep a hashed bundle without asking again. */
   immutableCacheSeconds: number;
+  /** How long shutdown lets requests in flight finish before closing their sockets. */
+  drainSeconds: number;
+  /** How long shutdown may take in all before the process exits anyway. */
+  shutdownDeadlineSeconds: number;
 }
 
 export const HTTP_DEFAULTS: Readonly<HttpSettings> = Object.freeze({
   port: 3006,
   immutableCacheSeconds: 31_536_000,
+  drainSeconds: 5,
+  shutdownDeadlineSeconds: 8,
 });
 
 export interface RateLimitSettings {
