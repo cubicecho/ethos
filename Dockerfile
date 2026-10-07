@@ -41,9 +41,13 @@ ENV PORT=3006
 
 EXPOSE 3006
 
+# Nothing here writes to the filesystem, so the server needs no more than read access.
+USER node
+
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3006)+'/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 # No --preserve-symlinks: it would resolve @ethos/db to its path inside
 # node_modules, and Node refuses to strip types from anything under there.
+# Exec form, so node is PID 1 and gets SIGTERM itself.
 CMD ["node", "server/src/index.ts"]
