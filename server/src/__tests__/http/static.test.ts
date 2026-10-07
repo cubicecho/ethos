@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createStaticHandler } from '../http/static.ts';
+import { createStaticHandler } from '../../http/static.ts';
 
 // A real directory rather than a mocked fs: the guard's whole job is to compare
 // a resolved path against a real root, and a mock would be checking the mock.

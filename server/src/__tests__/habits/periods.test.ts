@@ -9,7 +9,7 @@ import {
   periodOf,
   periodStart,
   recentPeriods,
-} from '../habits/periods.ts';
+} from '../../habits/periods.ts';
 
 // The bug this file exists to catch is the quiet one: a day that shifts by one
 // because something parsed it as an instant. Every case below is a day that a

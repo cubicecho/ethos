@@ -15,7 +15,7 @@ import type { Context } from '../core/context.ts';
 // foreign key *points at* — graphql/write-guards.ts closes that half.
 //
 // The rule for anyone adding a table: it needs an entry here, or its rows are
-// visible across tenants. __tests__/tenancy.test.ts fails when one is missing.
+// visible across tenants. __tests__/graphql/tenancy.test.ts fails when one is missing.
 
 // biome-ignore lint/suspicious/noExplicitAny: drizzle-orm 1.0 table/column type compat
 type AnyTable = any;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractUserId, signMagicToken, signToken } from '../auth/resolvers.ts';
+import { extractUserId, signMagicToken, signToken } from '../../auth/resolvers.ts';
 
 /** A request as `extractUserId` reads it: one header and nothing else. */
 const request = (authorization?: string) => ({ headers: { authorization } });

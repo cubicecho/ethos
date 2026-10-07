@@ -1,7 +1,7 @@
 import * as dbSchema from '@ethos/db/schema';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { addDays, periodBefore } from '../habits/periods.ts';
-import { createClient, createTestDb, createUser, type TestClient, type TestDb } from './helpers.ts';
+import { addDays, periodBefore } from '../../habits/periods.ts';
+import { createClient, createTestDb, createUser, type TestClient, type TestDb } from '../helpers.ts';
 
 // Recording a day, end to end. The pure rules live in streaks.test.ts; what is
 // under test here is everything between the request and the row — the day key,

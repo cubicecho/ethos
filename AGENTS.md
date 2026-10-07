@@ -78,7 +78,7 @@ ethos/
 │       │   ├── periods.ts       # Where the period boundaries are drawn
 │       │   ├── streaks.ts       # What a run of kept days is worth
 │       │   └── cadence.ts       # What a period can be asked for
-│       └── __tests__/       # Server tests
+│       └── __tests__/       # Server tests, in the same folders; helpers.ts at the root
 ├── db/
 │   ├── drizzle/             # Generated migrations (committed)
 │   └── src/

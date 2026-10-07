@@ -1,7 +1,7 @@
 import * as dbSchema from '@ethos/db/schema';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { assertTargetsFitPeriods, describeCadenceLimit, maxTargetFor } from '../habits/cadence.ts';
-import { createTestDb, createUser, type TestDb } from './helpers.ts';
+import { assertTargetsFitPeriods, describeCadenceLimit, maxTargetFor } from '../../habits/cadence.ts';
+import { createTestDb, createUser, type TestDb } from '../helpers.ts';
 
 let db: TestDb;
 let mine: string;

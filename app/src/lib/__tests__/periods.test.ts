@@ -16,7 +16,7 @@ import {
   weekdayInitial,
 } from '../periods';
 
-// The other half of `server/src/__tests__/periods.test.ts`. The two modules are
+// The other half of `server/src/__tests__/habits/periods.test.ts`. The two modules are
 // deliberate copies of each other — the grid draws the periods the streak is
 // counted over — so the boundary cases are asserted on both sides, and a change
 // made to one file and not the other fails here.

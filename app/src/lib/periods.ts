@@ -7,7 +7,7 @@
  * squares. They are separate packages — the app is bundled by Metro and must not
  * pull the server's Drizzle imports into a browser — so the rule is kept by the
  * files being identical rather than by an import. Change one, change both;
- * `__tests__/periods.test.ts` is the same suite on either side.
+ * `periods.test.ts` is the same suite on either side.
  *
  * Nothing here constructs a `Date` from a day string. A day is a label, not an
  * instant: `new Date('2026-09-17')` is UTC midnight, which is the sixteenth for

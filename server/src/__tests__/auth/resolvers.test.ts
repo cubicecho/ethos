@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { signMagicToken, signToken, verifyMagicToken, verifyToken } from '../auth/resolvers.ts';
-import { createClient, createTestDb, createUser, type TestClient, type TestDb } from './helpers.ts';
+import { signMagicToken, signToken, verifyMagicToken, verifyToken } from '../../auth/resolvers.ts';
+import { createClient, createTestDb, createUser, type TestClient, type TestDb } from '../helpers.ts';
 
 const REQUEST = `mutation ($email: String!) { requestMagicLink(email: $email) { ok magicLink token userId } }`;
 const VERIFY = `mutation ($token: String!) { verifyMagicLink(token: $token) { token userId } }`;

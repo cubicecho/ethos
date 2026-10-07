@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { periodOf } from '../habits/periods.ts';
+import { periodOf } from '../../habits/periods.ts';
 import {
   currentStreak,
   type EntryLike,
@@ -8,7 +8,7 @@ import {
   MAX_SKIPS_PER_PERIOD,
   tallyPeriod,
   tallyRecent,
-} from '../habits/streaks.ts';
+} from '../../habits/streaks.ts';
 
 // The three rules from streaks.ts, one describe block each. Everything the app
 // reports about a habit is one of them applied, so a change that quietly
