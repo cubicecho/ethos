@@ -50,15 +50,17 @@ export function HabitGrid({
   history,
   entries,
   today,
-  isPending,
-  onSet,
+  disabled,
+  onValueChange,
 }: {
   habit: HabitSummary;
   history: readonly HabitPeriodSummary[];
   entries: readonly HabitEntrySummary[];
   today: string;
-  isPending: boolean;
-  onSet: (day: string, status: DayStatus) => void;
+  /** Whether the squares refuse a press: a mark is on its way to the server. */
+  disabled: boolean;
+  /** Called with a day and what it should become. */
+  onValueChange: (day: string, value: DayStatus) => void;
 }) {
   const period = asPeriod(habit.period);
   const rows = buildRows(period, history, today);
@@ -92,12 +94,12 @@ export function HabitGrid({
                 <DaySquare
                   key={day}
                   day={day}
-                  status={status.get(day) ?? null}
+                  value={status.get(day) ?? null}
                   color={habit.color}
                   isToday={day === today}
                   isFuture={day > today}
-                  disabled={isPending}
-                  onSet={onSet}
+                  disabled={disabled}
+                  onValueChange={(value) => onValueChange(day, value)}
                 />
               ))}
             </View>

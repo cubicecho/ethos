@@ -1,8 +1,8 @@
 import { useQuery } from '@apollo/client';
 import { DescriptionList, PropertyRow } from '@/components/description-list';
+import { LoadFailure } from '@/components/domain/query/load-state';
 import { PageLayout } from '@/components/page-layout';
 import { Section } from '@/components/section';
-import { LoadFailure } from '@/components/ui/load-failure';
 import { ThemePicker } from '@/components/ui/theme-picker';
 import { PALETTE_PREFERENCES } from '@/components/ui/theme-preference-base';
 import { MeDocument } from '@/lib/graphql';

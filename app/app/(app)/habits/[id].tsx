@@ -4,12 +4,12 @@ import { BackToTodayLink } from '@/components/domain/habit/back-to-today-link';
 import { HabitGrid } from '@/components/domain/habit/habit-grid';
 import { HabitPage } from '@/components/domain/habit/habit-page';
 import { useMarkHabitDay } from '@/components/domain/habit/use-mark-habit';
+import { LoadState } from '@/components/domain/query/load-state';
 import { EmptyState } from '@/components/page';
 import { PageLayout } from '@/components/page-layout';
 import { Section } from '@/components/section';
 import { Alert } from '@/components/ui/alert';
 import { Search } from '@/components/ui/icons';
-import { LoadState } from '@/components/ui/load-failure';
 import { HabitDocument } from '@/lib/graphql';
 import { useToday } from '@/lib/use-today';
 
@@ -63,8 +63,8 @@ export default function HabitScreen() {
                 history={habit.history}
                 entries={habit.entries}
                 today={today}
-                isPending={isPending}
-                onSet={(day, status) => setDay(habit.id, day, status)}
+                disabled={isPending}
+                onValueChange={(day, value) => setDay(habit.id, day, value)}
               />
               {markError ? <Alert variant="destructive" className="mt-3" description={markError} /> : null}
             </>

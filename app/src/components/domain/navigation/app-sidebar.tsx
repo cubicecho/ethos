@@ -3,19 +3,19 @@ import { Link, usePathname } from 'expo-router';
 import { useState } from 'react';
 import { Archive, CalendarCheck, LogOut } from '@/components/app-icons';
 import { HabitFormDialog } from '@/components/domain/habit/habit-form-dialog';
+import { LoadState } from '@/components/domain/query/load-state';
 import { EmptyState } from '@/components/page';
-import { Sidebar as SidebarFrame, SidebarNavItem, SidebarSection } from '@/components/sidebar';
+import { Sidebar, SidebarNavItem, SidebarSection } from '@/components/sidebar';
 import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
 import { Plus, Settings } from '@/components/ui/icons';
-import { LoadState } from '@/components/ui/load-failure';
 import { clearToken } from '@/lib/auth';
 import { HabitsDocument } from '@/lib/graphql';
 import { habitPath, nextPosition } from '@/lib/habits';
 import { useToday } from '@/lib/use-today';
 
 /** The persistent shell: today, and every habit, always one click away. */
-export function Sidebar() {
+export function AppSidebar() {
   const pathname = usePathname();
   const today = useToday();
   const habitsQuery = useQuery(HabitsDocument, { variables: { today } });
@@ -29,7 +29,7 @@ export function Sidebar() {
 
   return (
     <>
-      <SidebarFrame
+      <Sidebar
         label="Ethos"
         headerSlot={
           <>

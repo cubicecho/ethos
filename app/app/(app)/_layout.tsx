@@ -1,7 +1,7 @@
 import { Redirect, Slot } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Sidebar } from '@/components/layouts/sidebar';
+import { AppSidebar } from '@/components/domain/navigation/app-sidebar';
 import { SidebarLayout } from '@/components/split-layout';
 import { isAuthenticated } from '@/lib/auth';
 
@@ -28,7 +28,7 @@ export default function AppLayout() {
       stackBelow="never"
       // The sidebar draws its own rule.
       divider="none"
-      sidebarSlot={<Sidebar />}
+      sidebarSlot={<AppSidebar />}
       contentSlot={
         // `role="main"` becomes a <main>. It does not scroll: each screen's
         // `PageLayout` scrolls under its pinned header and needs a height to divide.

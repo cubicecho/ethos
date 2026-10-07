@@ -57,11 +57,19 @@ const weekdayHeader = () => screen.queryAllByText((text) => INITIALS.includes(te
 const square = (day: string) => screen.getByRole('button', { name: new RegExp(formatDayLong(day)) });
 
 function renderGrid(props: Partial<Parameters<typeof HabitGrid>[0]> = {}) {
-  const onSet = vi.fn();
+  const onValueChange = vi.fn();
   render(
-    <HabitGrid habit={habit()} history={[]} entries={[]} today={TODAY} isPending={false} onSet={onSet} {...props} />,
+    <HabitGrid
+      habit={habit()}
+      history={[]}
+      entries={[]}
+      today={TODAY}
+      disabled={false}
+      onValueChange={onValueChange}
+      {...props}
+    />,
   );
-  return { onSet };
+  return { onValueChange };
 }
 
 describe('HabitGrid for a daily habit', () => {
@@ -151,14 +159,14 @@ describe('HabitGrid squares', () => {
 
   it('cycles a day through kept, skipped and back to nothing', async () => {
     const user = userEvent.setup();
-    const { onSet } = renderGrid({ entries: [entry('2026-09-16', 'done'), entry('2026-09-15', 'skipped')] });
+    const { onValueChange } = renderGrid({ entries: [entry('2026-09-16', 'done'), entry('2026-09-15', 'skipped')] });
 
     // Undo is the third click, which is why "nothing" is in the cycle.
     await user.click(square('2026-09-14'));
     await user.click(square('2026-09-16'));
     await user.click(square('2026-09-15'));
 
-    expect(onSet.mock.calls).toEqual([
+    expect(onValueChange.mock.calls).toEqual([
       ['2026-09-14', 'done'],
       ['2026-09-16', 'skipped'],
       ['2026-09-15', null],
@@ -169,8 +177,8 @@ describe('HabitGrid squares', () => {
     // A disabled Pressable is `pointer-events: none`, which user-event refuses
     // to click. Skip that check so the assertion is about the handler.
     const user = userEvent.setup({ pointerEventsCheck: 0 });
-    const { onSet } = renderGrid({ isPending: true });
+    const { onValueChange } = renderGrid({ disabled: true });
     await user.click(square(TODAY));
-    expect(onSet).not.toHaveBeenCalled();
+    expect(onValueChange).not.toHaveBeenCalled();
   });
 });

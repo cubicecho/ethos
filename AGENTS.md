@@ -41,8 +41,7 @@ ethos/
 │   │   │   ├── app-form.tsx # `useAppForm`: cubeui's `createAppForm`, plus the colour field
 │   │   │   ├── app-icons.tsx, app-icons.web.tsx  # The icons cubeui's set does not carry
 │   │   │   ├── page-layout.tsx, card-layout.tsx, section.tsx, sidebar.tsx, …  # cubeui layouts
-│   │   │   ├── domain/      # habit/
-│   │   │   └── layouts/     # sidebar — the app's rail, built on cubeui's `Sidebar`
+│   │   │   └── domain/      # habit/, navigation/ (the app's rail), query/ (`LoadState`)
 │   │   └── lib/             # apollo, auth, cache writers, periods, cadence, graphql documents, cn()
 │   ├── public/index.html    # HTML shell; applies the theme before first paint
 │   ├── app.json             # Expo config
@@ -295,7 +294,7 @@ disable while the mutation is in flight instead. A create is still optimistic �
 what a new habit's fields are is not in question.
 
 **An empty state means the server said "none", never that we failed to ask.**
-A list renders `LoadState` from `ui/load-failure.tsx` (cubeui's `QueryState` over
+A list renders `LoadState` from `domain/query/load-state.tsx` (cubeui's `QueryState` over
 an Apollo result) and hands it the empty state as `emptySlot`; a single failure
 renders `LoadFailure` (cubeui's `QueryError`). The ordering is the rule, and
 `LoadState` is what keeps it: the failure rung comes *before* the empty one, and
