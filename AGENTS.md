@@ -18,7 +18,7 @@ monorepo (npm workspaces) with three packages — `app/` (frontend), `server/`
 | Database | Drizzle ORM + PostgreSQL (`postgres-js`)                 |
 | Testing  | Vitest, PGlite as an in-memory Postgres fixture          |
 | Linting  | Biome (formatter + linter)                               |
-| Runtime  | Node.js 24+, ESM (`"type": "module"` throughout)         |
+| Runtime  | Node.js 26+, ESM (`"type": "module"` throughout)         |
 
 ## Project Structure
 
@@ -334,7 +334,7 @@ a value it failed to read.
 ## Code style
 
 - Biome, single quotes, 2-space indent, 120 columns, trailing commas. `npm run check:fix`.
-- `server/` and `db/` run under `--experimental-strip-types` with no build step,
+- `server/` and `db/` run as TypeScript under Node 26 with no build step,
   so **relative imports there carry an explicit `.ts` extension**. `app/` is
   bundled by Metro and omits it.
 - **Never add `--preserve-symlinks`.** It resolves `@ethos/db` to its path inside

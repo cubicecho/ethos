@@ -5,11 +5,11 @@
   "type": "module",
   "main": "./src/index.ts",
   "scripts": {
-    "dev": "node --experimental-strip-types --env-file-if-exists=../.env --watch src/index.ts",
+    "dev": "node --env-file-if-exists=../.env --watch src/index.ts",
     "build": "echo 'no server build needed — TypeScript runs directly'",
-    "start": "node --experimental-strip-types src/index.ts",
+    "start": "node src/index.ts",
     "clean": "rm -rf __generated__",
-    "codegen": "node --experimental-strip-types --import=./src/preload-env.ts src/write_schema.ts && graphql-codegen-esm"
+    "codegen": "node --import=./src/preload-env.ts src/write_schema.ts && graphql-codegen-esm"
   },
   "dependencies": {
     "@apollo/server": "^5.5.1",

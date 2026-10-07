@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ── Stage 1: build ────────────────────────────────────────────────────────────
-FROM node:24-alpine AS builder
+FROM node:26-slim AS builder
 
 WORKDIR /app
 
@@ -17,7 +17,7 @@ ENV DATABASE_URL=postgres://build:build@127.0.0.1:5432/build
 RUN npm run codegen && npm run build:app
 
 # ── Stage 2: runtime ──────────────────────────────────────────────────────────
-FROM node:24-alpine
+FROM node:26-slim
 
 WORKDIR /app
 
@@ -32,7 +32,7 @@ RUN npm ci --omit=dev --include-workspace-root --workspace @ethos/db --workspace
  && npm cache clean --force
 
 # The server is not compiled: it runs its TypeScript sources directly under
-# --experimental-strip-types, so the sources are the build output.
+# Node, which strips the types itself, so the sources are the build output.
 COPY db/src db/src
 COPY db/drizzle db/drizzle
 COPY server/src server/src
@@ -48,4 +48,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=20s \
 
 # No --preserve-symlinks: it would resolve @ethos/db to its path inside
 # node_modules, and Node refuses to strip types from anything under there.
-CMD ["node", "--experimental-strip-types", "server/src/index.ts"]
+CMD ["node", "server/src/index.ts"]
