@@ -64,7 +64,7 @@ function renderGrid(props: Partial<Parameters<typeof HabitGrid>[0]> = {}) {
   return { onSet };
 }
 
-describe('a daily habit', () => {
+describe('HabitGrid for a daily habit', () => {
   it('lays its days out in weeks rather than one row per day', () => {
     // A row per period would be a column of single squares. Four weeks of seven
     // reads as a month, and the squares still mean one day each.
@@ -87,7 +87,7 @@ describe('a daily habit', () => {
   });
 });
 
-describe('a weekly habit', () => {
+describe('HabitGrid for a weekly habit', () => {
   const weekly = habit({ period: 'week', targetCount: 3 });
   const history = [
     period('2026-09-07', '2026-09-14', { done: 3, met: true }),
@@ -118,7 +118,7 @@ describe('a weekly habit', () => {
   });
 });
 
-describe('a monthly habit', () => {
+describe('HabitGrid for a monthly habit', () => {
   it('has no weekday header, because its rows start on whatever day the first is', () => {
     renderGrid({
       habit: habit({ period: 'month', targetCount: 10 }),
@@ -130,7 +130,7 @@ describe('a monthly habit', () => {
   });
 });
 
-describe('the squares themselves', () => {
+describe('HabitGrid squares', () => {
   it('says what each day is, so the state is readable without the colour', () => {
     renderGrid({ entries: [entry('2026-09-16', 'done'), entry('2026-09-15', 'skipped')] });
     expect(square('2026-09-16')).toHaveAccessibleName(/kept$/);

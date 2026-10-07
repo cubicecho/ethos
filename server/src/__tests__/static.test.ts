@@ -60,7 +60,7 @@ function call(url: string, method = 'GET'): Promise<{ status: number; headers: I
   });
 }
 
-describe('staying inside the root', () => {
+describe('createStaticHandler staying inside the root', () => {
   // Every one of these is clamped before `static.ts`'s own guard is consulted:
   // `new URL()` resolves `..` segments away, and `normalize()` drops any that
   // survive percent-decoding, because a pathname always starts at `/` and there
@@ -94,7 +94,7 @@ describe('staying inside the root', () => {
   });
 });
 
-describe('serving the built client', () => {
+describe('createStaticHandler serving the built client', () => {
   it('serves a file that exists, with its body and its type', async () => {
     const res = await call('/app.css');
     expect(res.status).toBe(200);
