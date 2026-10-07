@@ -10,20 +10,9 @@ import { describeCadence, maxTargetFor } from '@/lib/cadence';
 import { describeError } from '@/lib/errors';
 import { CreateHabitDocument, UpdateHabitDocument } from '@/lib/graphql';
 import { newId } from '@/lib/ids';
+import { PALETTE } from '@/lib/palette';
 import { type Period, periodOf } from '@/lib/periods';
 import type { HabitSummary } from './types';
-
-/** A small fixed palette — picking a colour should be one click, not a colour wheel. */
-const PALETTE: readonly string[] = [
-  '#0f766e',
-  '#0369a1',
-  '#4f46e5',
-  '#7c3aed',
-  '#be185d',
-  '#b91c1c',
-  '#c2410c',
-  '#4d7c0f',
-];
 
 const CADENCES: readonly RadioOption[] = [
   { value: 'day', label: 'Daily' },
