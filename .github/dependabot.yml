@@ -1,0 +1,7 @@
+version: 2
+updates:
+  # Keeps action majors from drifting. Its PRs are `ci`-style, so they release nothing.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
