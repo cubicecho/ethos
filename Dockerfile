@@ -1,6 +1,5 @@
 # syntax=docker/dockerfile:1
 
-# ── Stage 1: build ────────────────────────────────────────────────────────────
 FROM node:26-slim AS builder
 
 WORKDIR /app
@@ -16,7 +15,6 @@ RUN npm ci
 ENV DATABASE_URL=postgres://build:build@127.0.0.1:5432/build
 RUN npm run codegen && npm run build:app
 
-# ── Stage 2: runtime ──────────────────────────────────────────────────────────
 FROM node:26-slim
 
 WORKDIR /app

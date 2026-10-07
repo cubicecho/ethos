@@ -28,7 +28,7 @@ try {
   const cause = (error as { cause?: NodeJS.ErrnoException })?.cause;
   if (cause && (cause.code === 'ECONNREFUSED' || cause.code === 'ENOTFOUND' || cause.code === 'ETIMEDOUT')) {
     const { hostname, port } = new URL(process.env.DATABASE_URL ?? '');
-    console.error(`✖ Cannot reach Postgres at ${hostname}:${port || 5432} (${cause.code}).`);
+    console.error(`[boot] Cannot reach Postgres at ${hostname}:${port || 5432} (${cause.code}).`);
     console.error('  Check DATABASE_URL in .env, and that the database is up and reachable from here.');
     console.error('  If your Docker daemon is remote (`docker context ls`), a container published on');
     console.error("  127.0.0.1 is bound to the daemon host's loopback. Set POSTGRES_BIND=0.0.0.0 and");
@@ -50,11 +50,11 @@ app.get('/healthz', (_req, res) => {
 app.use((req, res) => serveStatic(req, res));
 
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Ethos ready at http://localhost:${PORT}`);
-  console.log(`   GraphQL at http://localhost:${PORT}/graphql`);
+  console.log(`[boot] Ethos ready at http://localhost:${PORT}`);
+  console.log(`[boot] GraphQL at http://localhost:${PORT}/graphql`);
   if (!magicLinkRequired()) {
-    console.warn('⚠️  AUTH_MAGIC_LINK is off: any email address signs in without a link. Private networks only.');
+    console.warn('[auth] AUTH_MAGIC_LINK is off: any email address signs in without a link. Private networks only.');
   } else if (magicLinkExposed()) {
-    console.warn('⚠️  EXPOSE_MAGIC_LINK is on: sign-in links are returned in API responses. Private networks only.');
+    console.warn('[auth] EXPOSE_MAGIC_LINK is on: sign-in links are returned in API responses. Private networks only.');
   }
 });

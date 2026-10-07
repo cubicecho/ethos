@@ -160,7 +160,7 @@ put in `.env`:
 
 ```
 Docker daemon is docker.lan, not this machine — publishing Postgres on 0.0.0.0:5438 so you can reach it.
-⚠️  .env points DATABASE_URL at 127.0.0.1, but the database is on docker.lan. Set:
+[db-up] .env points DATABASE_URL at 127.0.0.1, but the database is on docker.lan. Set:
       DATABASE_URL=postgres://ethos:ethos@docker.lan:5438/ethos
 ```
 

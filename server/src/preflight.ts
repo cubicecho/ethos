@@ -5,7 +5,7 @@
 const DEV_SECRET = 'dev-secret-change-in-production';
 
 function fatal(message: string): never {
-  console.error(`FATAL: ${message}`);
+  console.error(`[preflight] ${message}`);
   process.exit(1);
 }
 

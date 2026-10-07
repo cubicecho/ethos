@@ -74,7 +74,7 @@ const url = `postgres://ethos:ethos@${host}:${port}/ethos`;
 const configured = configuredHost();
 if (configured && configured !== host) {
   console.log('');
-  console.log(`⚠️  .env points DATABASE_URL at ${configured}, but the database is on ${host}. Set:`);
+  console.log(`[db-up] .env points DATABASE_URL at ${configured}, but the database is on ${host}. Set:`);
   console.log(`      DATABASE_URL=${url}`);
 } else if (!configured) {
   console.log('');
