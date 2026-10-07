@@ -1,4 +1,5 @@
-import { date, index, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { check, date, index, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
 import { habits } from './habits.ts';
 import { users } from './users.ts';
@@ -43,6 +44,7 @@ export const habitEntries = pgTable(
     index('idx_habit_entries_user_id').on(table.userId),
     index('idx_habit_entries_habit_id').on(table.habitId),
     index('idx_habit_entries_day').on(table.day),
+    check('ck_habit_entries_status', sql`${table.status} in ('done', 'skipped')`),
   ],
 );
 
