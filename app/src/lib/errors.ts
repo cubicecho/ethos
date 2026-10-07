@@ -10,7 +10,7 @@
  */
 
 /** What a browser says when the request never reached anything. */
-const FETCH_FAILURES = [
+const FETCH_FAILURES: readonly string[] = [
   // Chrome
   'failed to fetch',
   // Firefox

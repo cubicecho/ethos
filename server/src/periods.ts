@@ -100,9 +100,9 @@ export function periodOf(period: Period, day: string): PeriodRange {
 
 /** The period `count` periods before the one containing `day`. */
 export function periodBefore(period: Period, day: string, count = 1): PeriodRange {
-  let start = periodStart(period, day);
-  for (let i = 0; i < count; i += 1) start = periodStart(period, addDays(start, -1));
-  return { start, end: periodEnd(period, start) };
+  const start = periodStart(period, day);
+  if (count <= 0) return { start, end: periodEnd(period, start) };
+  return periodBefore(period, addDays(start, -1), count - 1);
 }
 
 /**

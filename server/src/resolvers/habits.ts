@@ -137,7 +137,7 @@ function assertSkipAllowed(habit: AnyRow, entries: readonly { day: string; statu
 }
 
 /** The periods field resolvers share: the habit's entries, as streaks.ts reads them. */
-function entriesOf(parent: AnyRow, context: Context) {
+function entriesOf(parent: AnyRow, context: Context): Promise<EntryLike[]> {
   return context.loaders.entries.load(String(parent.id));
 }
 

@@ -14,6 +14,15 @@ const PRIVATE_SUFFIXES = [
   '.private',
 ];
 
+/** The URL's hostname, lowercased and without IPv6 brackets, or null when the URL does not parse. */
+function hostnameOf(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Whether to insist on TLS for a connection string.
  *
@@ -31,12 +40,8 @@ export function requiresSsl(url: string): boolean {
   // An explicit sslmode is the operator's decision; postgres-js reads it itself.
   if (/[?&]sslmode=/i.test(url)) return false;
 
-  let hostname: string;
-  try {
-    hostname = new URL(url).hostname.replace(/^\[|\]$/g, '').toLowerCase();
-  } catch {
-    return false;
-  }
+  const hostname = hostnameOf(url);
+  if (hostname === null) return false;
 
   if (hostname === 'localhost' || hostname.endsWith('.localhost')) return false;
   // A name with no dots is a container or LAN hostname, not a public address.

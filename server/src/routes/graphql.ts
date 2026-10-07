@@ -11,7 +11,7 @@ import { schema } from '../schema.ts';
 
 export type { Context };
 
-export async function createGraphQLRouter(httpServer: Server) {
+export async function createGraphQLRouter(httpServer: Server): Promise<Router> {
   const apolloServer = new ApolloServer<Context>({
     schema,
     plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],

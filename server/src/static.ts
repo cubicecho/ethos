@@ -17,39 +17,47 @@ const MIME: Record<string, string> = {
   '.ttf': 'font/ttf',
 };
 
+export type StaticHandler = (req: IncomingMessage, res: ServerResponse) => void;
+
+/** The request's path with its percent-escapes decoded, or null when they are malformed. */
+function decodedPathname(url: string | undefined): string | null {
+  try {
+    return decodeURIComponent(new URL(url ?? '/', 'http://host').pathname);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Serves the built web client next to /graphql, so one container is the whole
  * deployment and a magic link needs no second origin. Unknown paths fall back to
  * index.html — the SPA owns routing, including /auth/verify?token=… . Expo's
  * hashed bundles under /_expo get immutable caching; everything else revalidates.
  */
-export function createStaticHandler(root: string) {
+export function createStaticHandler(root: string): StaticHandler {
   const rootDir = resolve(root);
-  return (req: IncomingMessage, res: ServerResponse): void => {
+  return (req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.writeHead(405, { allow: 'GET, HEAD' }).end();
       return;
     }
-    let pathname: string;
-    try {
-      pathname = decodeURIComponent(new URL(req.url ?? '/', 'http://host').pathname);
-    } catch {
+    const pathname = decodedPathname(req.url);
+    if (pathname === null) {
       res.writeHead(400).end();
       return;
     }
-    let filePath = resolve(join(rootDir, normalize(pathname)));
+    const requested = resolve(join(rootDir, normalize(pathname)));
     // normalize() alone does not stop "..%2f" walking out of the root once the
     // path has been decoded — compare the resolved path instead.
-    if (filePath !== rootDir && !filePath.startsWith(rootDir + sep)) {
+    if (requested !== rootDir && !requested.startsWith(rootDir + sep)) {
       res.writeHead(403).end();
       return;
     }
-    if (!existsSync(filePath) || statSync(filePath).isDirectory()) {
-      filePath = join(rootDir, 'index.html');
-      if (!existsSync(filePath)) {
-        res.writeHead(404).end();
-        return;
-      }
+    const isFile = existsSync(requested) && !statSync(requested).isDirectory();
+    const filePath = isFile ? requested : join(rootDir, 'index.html');
+    if (!isFile && !existsSync(filePath)) {
+      res.writeHead(404).end();
+      return;
     }
     res.writeHead(200, {
       'content-type': MIME[extname(filePath)] ?? 'application/octet-stream',

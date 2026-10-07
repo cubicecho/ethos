@@ -53,8 +53,7 @@ export function createSchema(db: AnyDb) {
     onWrite,
   });
 
-  let schema = applyAuthExtension(drizzleSchema);
-  schema = applyHabitsExtension(schema);
+  const schema = applyHabitsExtension(applyAuthExtension(drizzleSchema));
 
   return { schema, entities };
 }

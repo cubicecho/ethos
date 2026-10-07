@@ -87,9 +87,9 @@ export function periodOf(period: Period, day: string): PeriodRange {
 }
 
 export function periodBefore(period: Period, day: string, count = 1): PeriodRange {
-  let start = periodStart(period, day);
-  for (let index = 0; index < count; index += 1) start = periodStart(period, addDays(start, -1));
-  return { start, end: periodEnd(period, start) };
+  const start = periodStart(period, day);
+  if (count <= 0) return { start, end: periodEnd(period, start) };
+  return periodBefore(period, addDays(start, -1), count - 1);
 }
 
 /** The last `count` periods ending with the one containing `day`, oldest first. */
@@ -99,9 +99,7 @@ export function recentPeriods(period: Period, day: string, count: number): Perio
 
 /** Every day of a period, in order — the squares of one row of the grid. */
 export function daysOf(range: PeriodRange): string[] {
-  const days: string[] = [];
-  for (let day = range.start; day < range.end; day = addDays(day, 1)) days.push(day);
-  return days;
+  return Array.from({ length: daysBetween(range.start, range.end) }, (_, index) => addDays(range.start, index));
 }
 
 const MONTH = new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric', timeZone: 'UTC' });
