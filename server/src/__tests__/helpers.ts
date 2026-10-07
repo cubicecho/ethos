@@ -1,3 +1,4 @@
+import type { Server } from 'node:http';
 import { PGlite } from '@electric-sql/pglite';
 import { relations } from '@ethos/db/relations';
 import * as dbSchema from '@ethos/db/schema';
@@ -76,4 +77,13 @@ export function createClient(db: TestDb, userId: string | null, deps: ClientDeps
       return { message: error.message, code: error.extensions?.code };
     },
   };
+}
+
+/** The port the OS gave a server that listened on port 0. */
+export function portOf(server: Server): number {
+  const address = server.address();
+  if (address === null || typeof address === 'string') {
+    throw new Error('The test server is not listening on a TCP port.');
+  }
+  return address.port;
 }
