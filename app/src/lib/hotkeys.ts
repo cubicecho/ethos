@@ -19,11 +19,19 @@ import { useEffect, useRef } from 'react';
  * a screen the reader cannot see.
  */
 export function isTyping(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable) return true;
-  if (/^(input|textarea|select)$/i.test(target.tagName)) return true;
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  if (target.isContentEditable) {
+    return true;
+  }
+  if (/^(input|textarea|select)$/i.test(target.tagName)) {
+    return true;
+  }
   const role = target.getAttribute('role');
-  if (role === 'textbox' || role === 'combobox' || role === 'searchbox') return true;
+  if (role === 'textbox' || role === 'combobox' || role === 'searchbox') {
+    return true;
+  }
   return target.closest('[role="dialog"], [role="alertdialog"]') != null;
 }
 
@@ -40,14 +48,22 @@ export function useHotkey(key: string, handler: (event: KeyboardEvent) => void, 
   latest.current = handler;
 
   useEffect(() => {
-    if (!isEnabled || typeof document === 'undefined') return;
+    if (!isEnabled || typeof document === 'undefined') {
+      return;
+    }
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-      if (event.key !== key) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+      if (event.key !== key) {
+        return;
+      }
       // Escape is the exception: its whole job is to get you *out* of a field,
       // so it is the one key that must still fire while one has focus.
-      if (key !== 'Escape' && isTyping(event.target)) return;
+      if (key !== 'Escape' && isTyping(event.target)) {
+        return;
+      }
       latest.current(event);
     }
 
@@ -58,7 +74,9 @@ export function useHotkey(key: string, handler: (event: KeyboardEvent) => void, 
 
 /** Focus an element and, when it is a field, select what is in it — so typing replaces. */
 export function focusAndSelect(element: HTMLInputElement | HTMLTextAreaElement | null): void {
-  if (!element) return;
+  if (!element) {
+    return;
+  }
   element.focus();
   element.select();
 }

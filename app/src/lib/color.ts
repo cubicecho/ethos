@@ -12,9 +12,13 @@ export function hexToHsl(hex: string): { h: number; s: number; l: number } {
   if (max !== min) {
     const d = max - min;
     s = d / (1 - Math.abs(2 * l - 1));
-    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-    else if (max === g) h = ((b - r) / d + 2) / 6;
-    else h = ((r - g) / d + 4) / 6;
+    if (max === r) {
+      h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    } else if (max === g) {
+      h = ((b - r) / d + 2) / 6;
+    } else {
+      h = ((r - g) / d + 4) / 6;
+    }
   }
 
   return { h: Math.round(h * 360), s, l };

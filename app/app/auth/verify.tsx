@@ -18,11 +18,15 @@ export default function VerifyScreen() {
   const hasStarted = useRef(false);
 
   useEffect(() => {
-    if (hasStarted.current || !token) return;
+    if (hasStarted.current || !token) {
+      return;
+    }
     hasStarted.current = true;
     verifyMagicLink({ variables: { token } })
       .then(({ data }) => {
-        if (!data?.verifyMagicLink) return;
+        if (!data?.verifyMagicLink) {
+          return;
+        }
         setToken(data.verifyMagicLink.token);
         router.replace('/');
       })

@@ -8,7 +8,9 @@
  * hand rather than reaching for `Math.random`.
  */
 export function newId(): string {
-  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
 
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   // Version 4, then variant 1: the RFC 4122 layout.

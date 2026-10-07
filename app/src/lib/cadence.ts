@@ -22,14 +22,20 @@ export function isPeriod(value: string): value is Period {
  * seven days, and the shortest month has twenty-eight.
  */
 export function maxTargetFor(period: Period): number {
-  if (period === 'day') return 1;
+  if (period === 'day') {
+    return 1;
+  }
   return period === 'week' ? 7 : 28;
 }
 
 /** "Every day", "3× a week" — the cadence as a line of text under the name. */
 export function describeCadence(period: Period, targetCount: number): string {
-  if (period === 'day') return 'Every day';
-  if (targetCount === 1) return `Once a ${period}`;
+  if (period === 'day') {
+    return 'Every day';
+  }
+  if (targetCount === 1) {
+    return `Once a ${period}`;
+  }
   return `${targetCount}× a ${period}`;
 }
 

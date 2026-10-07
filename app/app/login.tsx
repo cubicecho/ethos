@@ -29,7 +29,9 @@ export default function LoginScreen() {
     try {
       const { data } = await requestMagicLink({ variables: { email } });
       const result = data?.requestMagicLink;
-      if (!result) return;
+      if (!result) {
+        return;
+      }
       // With AUTH_MAGIC_LINK=false the server hands back a live session instead of
       // a link, so the client keeps one code path and stores whatever it gets.
       if (result.token) {

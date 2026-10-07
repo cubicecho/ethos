@@ -58,7 +58,9 @@ export function daysBetween(from: string, to: string): number {
  * of the row instead of splitting it across two.
  */
 export function periodStart(period: Period, day: string): string {
-  if (period === 'day') return day;
+  if (period === 'day') {
+    return day;
+  }
   if (period === 'week') {
     const weekday = new Date(toUtc(day)).getUTCDay();
     return addDays(day, -((weekday + 6) % 7));
@@ -69,8 +71,12 @@ export function periodStart(period: Period, day: string): string {
 /** The day after the period's last — exclusive, so ranges compare as `[start, end)`. */
 export function periodEnd(period: Period, day: string): string {
   const start = periodStart(period, day);
-  if (period === 'day') return addDays(start, 1);
-  if (period === 'week') return addDays(start, 7);
+  if (period === 'day') {
+    return addDays(start, 1);
+  }
+  if (period === 'week') {
+    return addDays(start, 7);
+  }
   const [year, month] = start.split('-').map(Number);
   return fromUtc(Date.UTC(month === 12 ? year + 1 : year, month === 12 ? 0 : month, 1));
 }
@@ -95,7 +101,9 @@ export function periodOf(period: Period, day: string): PeriodRange {
 /** The period `count` periods before the one containing `day`. */
 export function periodBefore(period: Period, day: string, count = 1): PeriodRange {
   const start = periodStart(period, day);
-  if (count <= 0) return { start, end: periodEnd(period, start) };
+  if (count <= 0) {
+    return { start, end: periodEnd(period, start) };
+  }
   return periodBefore(period, addDays(start, -1), count - 1);
 }
 

@@ -27,10 +27,14 @@ function daemonHost() {
   });
   // No docker, no context, no opinion — fall through to the local defaults and
   // let `docker compose` itself be the one to complain.
-  if (probe.status !== 0) return null;
+  if (probe.status !== 0) {
+    return null;
+  }
 
   const endpoint = probe.stdout.trim();
-  if (endpoint.startsWith('unix://') || endpoint.startsWith('npipe://')) return null;
+  if (endpoint.startsWith('unix://') || endpoint.startsWith('npipe://')) {
+    return null;
+  }
   try {
     return new URL(endpoint).hostname || null;
   } catch {
@@ -40,11 +44,15 @@ function daemonHost() {
 
 /** The host `.env` tells the app to connect to, if it says anything at all. */
 function configuredHost() {
-  if (!existsSync('.env')) return null;
+  if (!existsSync('.env')) {
+    return null;
+  }
   const line = readFileSync('.env', 'utf8')
     .split('\n')
     .find((line) => line.trim().startsWith('DATABASE_URL='));
-  if (!line) return null;
+  if (!line) {
+    return null;
+  }
   try {
     return new URL(line.slice(line.indexOf('=') + 1).trim()).hostname;
   } catch {
@@ -70,7 +78,9 @@ const up = spawnSync('docker', ['compose', '-f', COMPOSE_FILE, 'up', '-d', '--wa
   stdio: 'inherit',
   env: { ...process.env, POSTGRES_BIND: bind, POSTGRES_PORT: port },
 });
-if (up.status !== 0) process.exit(up.status ?? 1);
+if (up.status !== 0) {
+  process.exit(up.status ?? 1);
+}
 
 const url = `postgres://ethos:ethos@${host}:${port}/ethos`;
 const configured = configuredHost();

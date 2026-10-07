@@ -22,14 +22,20 @@ type AnyDb = any;
  * February is a habit that fails once a year for reasons nobody wrote down.
  */
 export function maxTargetFor(period: Period): number {
-  if (period === 'day') return 1;
-  if (period === 'week') return 7;
+  if (period === 'day') {
+    return 1;
+  }
+  if (period === 'week') {
+    return 7;
+  }
   // 2026-02-01 is a February, and February is the shortest month there is.
   return periodLength('month', '2026-02-01');
 }
 
 export function describeCadenceLimit(period: Period): string {
-  if (period === 'day') return 'A daily habit is kept once a day.';
+  if (period === 'day') {
+    return 'A daily habit is kept once a day.';
+  }
   return `A ${period} has at most ${maxTargetFor(period)} days, so it cannot ask for more.`;
 }
 
@@ -45,7 +51,9 @@ export async function assertTargetsFitPeriods(db: AnyDb, userId: string): Promis
     .where(eq(dbSchema.habits.userId, userId));
 
   const impossible = rows.find((row) => row.targetCount > maxTargetFor(row.period));
-  if (!impossible) return;
+  if (!impossible) {
+    return;
+  }
   throw new GraphQLError(
     `“${impossible.name}” asks for ${impossible.targetCount} days a ${impossible.period}. ${describeCadenceLimit(impossible.period)}`,
     { extensions: { code: 'BAD_USER_INPUT' } },

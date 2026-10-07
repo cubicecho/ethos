@@ -51,9 +51,14 @@ export function tallyPeriod(habit: HabitLike, entries: readonly EntryLike[], ran
   let done = 0;
   let skipped = 0;
   for (const entry of entries) {
-    if (!isInRange(entry, range)) continue;
-    if (entry.status === 'done') done += 1;
-    else skipped += 1;
+    if (!isInRange(entry, range)) {
+      continue;
+    }
+    if (entry.status === 'done') {
+      done += 1;
+    } else {
+      skipped += 1;
+    }
   }
   const target = habit.targetCount;
   const effectiveTarget = Math.max(target - skipped, 0);
@@ -91,7 +96,9 @@ export function tallyRecent(
  * back to the epoch.
  */
 export function currentStreak(habit: HabitLike, entries: readonly EntryLike[], today: string): number {
-  if (entries.length === 0) return 0;
+  if (entries.length === 0) {
+    return 0;
+  }
   const oldest = entries.reduce((min, entry) => (entry.day < min ? entry.day : min), entries[0].day);
   const floor = periodStart(habit.period, oldest);
 
@@ -100,8 +107,11 @@ export function currentStreak(habit: HabitLike, entries: readonly EntryLike[], t
   let isNewestPeriod = true;
   while (range.start >= floor) {
     const tally = tallyPeriod(habit, entries, range);
-    if (tally.met) streak += 1;
-    else if (!isNewestPeriod) break;
+    if (tally.met) {
+      streak += 1;
+    } else if (!isNewestPeriod) {
+      break;
+    }
     isNewestPeriod = false;
     range = periodBefore(habit.period, range.start);
   }
@@ -118,7 +128,9 @@ export function currentStreak(habit: HabitLike, entries: readonly EntryLike[], t
  * reason it does above.
  */
 export function longestStreak(habit: HabitLike, entries: readonly EntryLike[], today: string): number {
-  if (entries.length === 0) return 0;
+  if (entries.length === 0) {
+    return 0;
+  }
   const oldest = entries.reduce((min, entry) => (entry.day < min ? entry.day : min), entries[0].day);
 
   let best = 0;

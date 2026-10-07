@@ -13,7 +13,9 @@ import { clearToken, getToken } from '@/lib/auth';
 // the dev server, and breaks the moment you open the app from a phone or a
 // second laptop. EXPO_PUBLIC_API_URL overrides this outright.
 function devApiUrl(): string {
-  if (process.env.NODE_ENV === 'production' || Platform.OS !== 'web') return '';
+  if (process.env.NODE_ENV === 'production' || Platform.OS !== 'web') {
+    return '';
+  }
   return `${window.location.protocol}//${window.location.hostname}:${process.env.EXPO_PUBLIC_API_PORT ?? '3006'}`;
 }
 

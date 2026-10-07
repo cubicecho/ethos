@@ -62,7 +62,9 @@ export function createClient(db: TestDb, userId: string | null): TestClient {
     expectError: async (query, variables) => {
       const result = await run(query, variables);
       const error = result.errors?.[0];
-      if (!error) throw new Error('expected an error, got a successful result');
+      if (!error) {
+        throw new Error('expected an error, got a successful result');
+      }
       return { message: error.message, code: error.extensions?.code };
     },
   };

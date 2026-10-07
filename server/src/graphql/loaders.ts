@@ -23,7 +23,9 @@ const NO_ENTRIES: EntryLike[] = [];
  */
 async function findEntries(db: AnyDb, habitIds: readonly string[]): Promise<Map<string, EntryLike[]>> {
   const byHabit = new Map<string, EntryLike[]>();
-  if (habitIds.length === 0) return byHabit;
+  if (habitIds.length === 0) {
+    return byHabit;
+  }
   const rows: Array<{ habitId: string; day: string; status: EntryLike['status'] }> = await db
     .select({
       habitId: dbSchema.habitEntries.habitId,
@@ -35,8 +37,11 @@ async function findEntries(db: AnyDb, habitIds: readonly string[]): Promise<Map<
     .orderBy(asc(dbSchema.habitEntries.day));
   for (const row of rows) {
     const existing = byHabit.get(row.habitId);
-    if (existing) existing.push({ day: row.day, status: row.status });
-    else byHabit.set(row.habitId, [{ day: row.day, status: row.status }]);
+    if (existing) {
+      existing.push({ day: row.day, status: row.status });
+    } else {
+      byHabit.set(row.habitId, [{ day: row.day, status: row.status }]);
+    }
   }
   return byHabit;
 }
@@ -53,7 +58,9 @@ async function findEntries(db: AnyDb, habitIds: readonly string[]): Promise<Map<
  */
 async function findCadences(db: AnyDb, habitIds: readonly string[]): Promise<Map<string, HabitLike>> {
   const byHabit = new Map<string, HabitLike>();
-  if (habitIds.length === 0) return byHabit;
+  if (habitIds.length === 0) {
+    return byHabit;
+  }
   const rows: Array<{ id: string; period: HabitLike['period']; targetCount: number }> = await db
     .select({
       id: dbSchema.habits.id,
@@ -62,7 +69,9 @@ async function findCadences(db: AnyDb, habitIds: readonly string[]): Promise<Map
     })
     .from(dbSchema.habits)
     .where(inArray(dbSchema.habits.id, [...habitIds]));
-  for (const row of rows) byHabit.set(row.id, { period: row.period, targetCount: row.targetCount });
+  for (const row of rows) {
+    byHabit.set(row.id, { period: row.period, targetCount: row.targetCount });
+  }
   return byHabit;
 }
 

@@ -29,7 +29,9 @@ describe('newId', () => {
   it('does not repeat itself, on either path', () => {
     const ids = new Set(Array.from({ length: 500 }, newId));
     withoutRandomUUID();
-    for (let i = 0; i < 500; i++) ids.add(newId());
+    for (let i = 0; i < 500; i++) {
+      ids.add(newId());
+    }
     expect(ids.size).toBe(1000);
   });
 });

@@ -84,7 +84,9 @@ export function verifyMagicToken(token: string): { email: string } | null {
 /** Read the authenticated userId from a request's Bearer token, if any. */
 export function extractUserId(request: { headers: { authorization?: string } }): string | null {
   const auth = request.headers.authorization;
-  if (!auth?.startsWith('Bearer ')) return null;
+  if (!auth?.startsWith('Bearer ')) {
+    return null;
+  }
   return verifyToken(auth.slice(7))?.userId ?? null;
 }
 
@@ -112,11 +114,15 @@ export async function findOrCreateUser(db: any, email: string): Promise<string> 
     .select({ id: dbSchema.users.id })
     .from(dbSchema.users)
     .where(eq(dbSchema.users.email, email));
-  if (existing.length > 0) return existing[0].id;
+  if (existing.length > 0) {
+    return existing[0].id;
+  }
 
   const [created] = await db.insert(dbSchema.users).values({ email }).returning({ id: dbSchema.users.id });
   // Not a caller's mistake, so not a coded error: the server reports it as its own failure.
-  if (!created) throw new Error('The users insert returned no row.');
+  if (!created) {
+    throw new Error('The users insert returned no row.');
+  }
   return created.id;
 }
 

@@ -60,12 +60,16 @@ export function HabitFormDialog({
   });
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     form.reset(valuesOf(habit));
   }, [open, habit, form]);
 
   async function save({ name, notes, color, period, targetCount }: HabitValues) {
-    if (isCreating || isUpdating) return;
+    if (isCreating || isUpdating) {
+      return;
+    }
     const values = {
       name: name.trim(),
       notes: notes.trim() === '' ? null : notes.trim(),
@@ -109,7 +113,9 @@ export function HabitFormDialog({
             },
           },
           update(cache, { data }) {
-            if (data?.createHabit) placeHabit(cache, today, data.createHabit);
+            if (data?.createHabit) {
+              placeHabit(cache, today, data.createHabit);
+            }
           },
         });
       }
@@ -169,7 +175,9 @@ export function HabitFormDialog({
                     // rather than after it.
                     onChange: ({ value }) => {
                       const max = maxTargetFor(period);
-                      if (value == null || !Number.isInteger(value) || value < 1) return 'Enter a whole number.';
+                      if (value == null || !Number.isInteger(value) || value < 1) {
+                        return 'Enter a whole number.';
+                      }
                       return value > max ? `A ${period} has at most ${max} days to keep it on.` : undefined;
                     },
                   }}

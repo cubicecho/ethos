@@ -53,7 +53,9 @@ export function HabitPage({
       await updateHabit({
         variables: { id: habit.id, set: { archivedAt: next ? new Date().toISOString() : null }, today },
         update(cache, { data }) {
-          if (data?.updateHabit) placeHabit(cache, today, data.updateHabit);
+          if (data?.updateHabit) {
+            placeHabit(cache, today, data.updateHabit);
+          }
         },
       });
     } catch (cause) {

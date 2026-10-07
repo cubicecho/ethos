@@ -96,8 +96,12 @@ async function loadOwnedHabit(context: Context, id: string): Promise<AnyRow> {
 }
 
 function parseStatus(value: string | null | undefined): EntryStatus {
-  if (value == null || value === 'done') return 'done';
-  if (value === 'skipped') return 'skipped';
+  if (value == null || value === 'done') {
+    return 'done';
+  }
+  if (value === 'skipped') {
+    return 'skipped';
+  }
   throw new GraphQLError(`"${value}" is not a status. Expected "done" or "skipped".`, {
     extensions: { code: 'BAD_USER_INPUT' },
   });
@@ -129,7 +133,9 @@ function assertSkipAllowed(habit: AnyRow, entries: readonly { day: string; statu
   const skips = entries.filter(
     (entry) => entry.status === 'skipped' && entry.day >= range.start && entry.day < range.end && entry.day !== day,
   );
-  if (skips.length < MAX_SKIPS_PER_PERIOD) return;
+  if (skips.length < MAX_SKIPS_PER_PERIOD) {
+    return;
+  }
   throw new GraphQLError(
     `Already skipped ${skips.length} days of “${habit.name}” this ${habit.period}. The limit is ${MAX_SKIPS_PER_PERIOD}.`,
     { extensions: { code: 'BAD_USER_INPUT' } },
@@ -152,7 +158,9 @@ function entriesOf(parent: AnyRow, context: Context): Promise<EntryLike[]> {
  */
 async function cadenceOf(parent: AnyRow, context: Context): Promise<HabitLike> {
   const cadence = await context.loaders.cadence.load(String(parent.id));
-  if (!cadence) throw new GraphQLError('Habit not found', { extensions: { code: 'NOT_FOUND' } });
+  if (!cadence) {
+    throw new GraphQLError('Habit not found', { extensions: { code: 'NOT_FOUND' } });
+  }
   return cadence;
 }
 

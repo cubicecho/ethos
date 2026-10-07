@@ -46,8 +46,12 @@ const FOREIGN_KEYS: Record<string, ForeignKey[]> = {
  * writes nothing and so has nothing to check.
  */
 export function writtenRows(args: { values?: Row | Row[]; set?: Row; updates?: Array<{ set?: Row }> }): Row[] {
-  if (args.values) return Array.isArray(args.values) ? args.values : [args.values];
-  if (args.updates) return args.updates.flatMap((entry) => (entry.set ? [entry.set] : []));
+  if (args.values) {
+    return Array.isArray(args.values) ? args.values : [args.values];
+  }
+  if (args.updates) {
+    return args.updates.flatMap((entry) => (entry.set ? [entry.set] : []));
+  }
   return args.set ? [args.set] : [];
 }
 
@@ -61,7 +65,9 @@ export async function assertForeignKeysOwned(
     const referenced = [
       ...new Set(rows.map((row) => row[foreignKey.key]).filter((id): id is string => typeof id === 'string')),
     ];
-    if (referenced.length === 0) continue;
+    if (referenced.length === 0) {
+      continue;
+    }
     const owned: Array<{ id: string }> = await tx
       .select({ id: foreignKey.parent.id })
       .from(foreignKey.parent)
@@ -81,7 +87,9 @@ export async function assertForeignKeysOwned(
  * skip past the cap — and every rate in the app is counted off those rows.
  */
 function assertEntriesUntouched(args: Parameters<typeof writtenRows>[0]): void {
-  if (writtenRows(args).length === 0) return;
+  if (writtenRows(args).length === 0) {
+    return;
+  }
   throw new GraphQLError('Use markHabit and clearHabit to record a day.', {
     extensions: { code: 'BAD_USER_INPUT' },
   });
@@ -98,7 +106,9 @@ export const onWrite: NonNullable<BuildSchemaConfig['onWrite']> = {
     // After the statement, not before: a write that changes only `period` would
     // pass a check that reads the arguments. The throw rolls it back.
     after: async ({ context, operation, tx }: WriteHookPayload) => {
-      if (operation === 'delete' || operation === 'restore') return;
+      if (operation === 'delete' || operation === 'restore') {
+        return;
+      }
       await assertTargetsFitPeriods(tx, requireAuth(context as Context));
     },
   },

@@ -12,7 +12,9 @@ const SRC = join(__dirname, '..', '..');
 function twins(dir: string): Array<[string, string]> {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
-    if (entry.isDirectory()) return entry.name === '__generated__' ? [] : twins(path);
+    if (entry.isDirectory()) {
+      return entry.name === '__generated__' ? [] : twins(path);
+    }
     const match = /^(.*)\.web\.(tsx?)$/.exec(entry.name);
     return match ? [[join(dir, `${match[1]}.${match[2]}`), path] as [string, string]] : [];
   });
@@ -28,7 +30,9 @@ function runtimeExports(path: string): string[] {
   for (const [, list] of source.matchAll(/^export \{([^}]*)\}/gm)) {
     for (const part of list.split(',')) {
       const spec = part.trim();
-      if (spec === '' || spec.startsWith('type ')) continue;
+      if (spec === '' || spec.startsWith('type ')) {
+        continue;
+      }
       names.add(spec.split(/\s+as\s+/).pop() as string);
     }
   }

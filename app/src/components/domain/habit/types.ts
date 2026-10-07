@@ -30,6 +30,8 @@ export function asStatus(value: string | null | undefined): DayStatus {
  * a separate clear.
  */
 export function nextStatus(current: DayStatus): DayStatus {
-  if (current === null) return 'done';
+  if (current === null) {
+    return 'done';
+  }
   return current === 'done' ? 'skipped' : null;
 }

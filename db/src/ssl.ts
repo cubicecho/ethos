@@ -34,35 +34,61 @@ function hostnameOf(url: string): string | null {
  */
 export function requiresSsl(url: string): boolean {
   // An explicit sslmode is the operator's decision; postgres-js reads it itself.
-  if (/[?&]sslmode=/i.test(url)) return false;
+  if (/[?&]sslmode=/i.test(url)) {
+    return false;
+  }
 
   const hostname = hostnameOf(url);
-  if (hostname === null) return false;
+  if (hostname === null) {
+    return false;
+  }
 
-  if (hostname === 'localhost' || hostname.endsWith('.localhost')) return false;
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    return false;
+  }
   // A name with no dots is a container or LAN hostname, not a public address.
-  if (!hostname.includes('.') && !hostname.includes(':')) return false;
+  if (!hostname.includes('.') && !hostname.includes(':')) {
+    return false;
+  }
   // Nor is a name under a private-use suffix: the router or mDNS resolves it,
   // and the dot in it says nothing about reach.
-  if (PRIVATE_SUFFIXES.some((suffix) => hostname.endsWith(suffix))) return false;
+  if (PRIVATE_SUFFIXES.some((suffix) => hostname.endsWith(suffix))) {
+    return false;
+  }
 
   const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
   if (ipv4) {
     const [firstOctet, secondOctet] = ipv4.slice(1).map(Number);
     // Loopback, the three RFC 1918 ranges, then link-local.
-    if (firstOctet === 127) return false;
-    if (firstOctet === 10) return false;
-    if (firstOctet === 172 && secondOctet >= 16 && secondOctet <= 31) return false;
-    if (firstOctet === 192 && secondOctet === 168) return false;
-    if (firstOctet === 169 && secondOctet === 254) return false;
+    if (firstOctet === 127) {
+      return false;
+    }
+    if (firstOctet === 10) {
+      return false;
+    }
+    if (firstOctet === 172 && secondOctet >= 16 && secondOctet <= 31) {
+      return false;
+    }
+    if (firstOctet === 192 && secondOctet === 168) {
+      return false;
+    }
+    if (firstOctet === 169 && secondOctet === 254) {
+      return false;
+    }
     return true;
   }
 
   if (hostname.includes(':')) {
     // Loopback, unique-local fc00::/7, then link-local fe80::/10.
-    if (hostname === '::1') return false;
-    if (/^f[cd]/.test(hostname)) return false;
-    if (/^fe[89ab]/.test(hostname)) return false;
+    if (hostname === '::1') {
+      return false;
+    }
+    if (/^f[cd]/.test(hostname)) {
+      return false;
+    }
+    if (/^fe[89ab]/.test(hostname)) {
+      return false;
+    }
     return true;
   }
 
