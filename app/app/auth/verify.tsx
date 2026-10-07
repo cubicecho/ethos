@@ -1,8 +1,7 @@
 import { useMutation } from '@apollo/client';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Text, View } from 'react-native';
-import { EmptyState } from '@/components/page';
+import { CenteredLayout } from '@/components/centered-layout';
 import { CircleAlert } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/spinner';
 import { setToken } from '@/lib/auth';
@@ -35,27 +34,24 @@ export default function VerifyScreen() {
       });
   }, [token, verifyMagicLink, router]);
 
-  return (
-    <View className="min-h-full flex-1 items-center justify-center bg-background px-4">
-      <View className="w-full max-w-sm items-center">
-        {!token || error ? (
-          <EmptyState
-            icon={CircleAlert}
-            title="That link didn't work"
-            description={`${error ? describeError(error) : 'The link is missing its token.'} Sign-in links expire after 15 minutes.`}
-            actionSlot={
-              <Link href="/login" className="text-info text-sm underline">
-                Request a new one
-              </Link>
-            }
-          />
-        ) : (
-          <View className="flex-row items-center justify-center gap-2">
-            <Spinner />
-            <Text className="text-foreground/60 text-sm">Signing you in…</Text>
-          </View>
-        )}
-      </View>
-    </View>
-  );
+  const failure = token ? (error ? describeError(error) : null) : 'The link is missing its token.';
+
+  if (failure) {
+    return (
+      <CenteredLayout
+        className="bg-background"
+        level={1}
+        iconSlot={<CircleAlert className="size-4" />}
+        title="That link didn't work"
+        description={`${failure} Sign-in links expire after 15 minutes.`}
+        footerSlot={
+          <Link href="/login" className="text-info text-sm underline">
+            Request a new one
+          </Link>
+        }
+      />
+    );
+  }
+
+  return <CenteredLayout className="bg-background" level={1} iconSlot={<Spinner />} title="Signing you in…" />;
 }

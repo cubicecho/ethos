@@ -2,6 +2,7 @@ import { Redirect, Slot } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Sidebar } from '@/components/layouts/sidebar';
+import { SidebarLayout } from '@/components/split-layout';
 import { isAuthenticated } from '@/lib/auth';
 
 export default function AppLayout() {
@@ -20,13 +21,21 @@ export default function AppLayout() {
   }
 
   return (
-    <View className="h-full flex-1 flex-row bg-background">
-      <Sidebar />
-      {/* `role="main"` becomes a <main>. It does not scroll: each screen's
-          `PageLayout` scrolls under its pinned header and needs a height to divide. */}
-      <View role="main" className="min-h-0 min-w-0 flex-1">
-        <Slot />
-      </View>
-    </View>
+    <SidebarLayout
+      className="h-full flex-1 bg-background"
+      sidebarPosition="start"
+      sidebarWidth="auto"
+      stackBelow="never"
+      // The sidebar draws its own rule.
+      divider="none"
+      sidebarSlot={<Sidebar />}
+      contentSlot={
+        // `role="main"` becomes a <main>. It does not scroll: each screen's
+        // `PageLayout` scrolls under its pinned header and needs a height to divide.
+        <View role="main" className="min-h-0 min-w-0 flex-1">
+          <Slot />
+        </View>
+      }
+    />
   );
 }

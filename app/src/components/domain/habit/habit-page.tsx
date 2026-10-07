@@ -7,12 +7,13 @@ import { Archive, ArchiveRestore } from '@/components/app-icons';
 import { ConfirmButton } from '@/components/confirm-button';
 import { PageLayout } from '@/components/page-layout';
 import { StatTile } from '@/components/stat-tile';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert } from '@/components/ui/alert';
 import { ColorDot } from '@/components/ui/color-dot';
 import { Pencil, Trash2 } from '@/components/ui/icons';
 import { placeHabit, removeHabit } from '@/lib/cache';
 import { asPeriod, describeCadence } from '@/lib/cadence';
 import { describeError } from '@/lib/errors';
+import { joinStats } from '@/lib/format';
 import { DeleteHabitDocument, UpdateHabitDocument } from '@/lib/graphql';
 import { THIS_PERIOD } from '@/lib/periods';
 import type { SlotNode } from '@/lib/utils';
@@ -84,7 +85,7 @@ export function HabitPage({
       <PageLayout
         width="prose"
         title={habit.name}
-        description={`${describeCadence(period, habit.targetCount)}${isArchived ? ' · Archived' : ''}`}
+        description={joinStats(describeCadence(period, habit.targetCount), isArchived && 'Archived')}
         // The habit's colour is how it is recognised on every other screen.
         iconSlot={<ColorDot color={habit.color} />}
         actionSlot={
@@ -134,11 +135,7 @@ export function HabitPage({
               />
             </View>
 
-            {actionError ? (
-              <Alert variant="destructive">
-                <AlertDescription>{actionError}</AlertDescription>
-              </Alert>
-            ) : null}
+            {actionError ? <Alert variant="destructive" description={actionError} /> : null}
 
             {contentSlot}
           </View>

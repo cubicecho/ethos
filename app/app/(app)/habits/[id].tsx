@@ -1,6 +1,5 @@
 import { useQuery } from '@apollo/client';
 import { useLocalSearchParams } from 'expo-router';
-import { Text } from 'react-native';
 import { BackToTodayLink } from '@/components/domain/habit/back-to-today-link';
 import { HabitGrid } from '@/components/domain/habit/habit-grid';
 import { HabitPage } from '@/components/domain/habit/habit-page';
@@ -8,6 +7,7 @@ import { useMarkHabitDay } from '@/components/domain/habit/use-mark-habit';
 import { EmptyState } from '@/components/page';
 import { PageLayout } from '@/components/page-layout';
 import { Section } from '@/components/section';
+import { Alert } from '@/components/ui/alert';
 import { Search } from '@/components/ui/icons';
 import { LoadState } from '@/components/ui/load-failure';
 import { HabitDocument } from '@/lib/graphql';
@@ -66,11 +66,7 @@ export default function HabitScreen() {
                 isPending={isPending}
                 onSet={(day, status) => setDay(habit.id, day, status)}
               />
-              {markError ? (
-                <Text className="mt-3 text-negative text-sm" aria-live="polite">
-                  {markError}
-                </Text>
-              ) : null}
+              {markError ? <Alert variant="destructive" className="mt-3" description={markError} /> : null}
             </>
           }
         />

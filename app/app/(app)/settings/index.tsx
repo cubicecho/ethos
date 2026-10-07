@@ -1,5 +1,6 @@
 import { useQuery } from '@apollo/client';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { DescriptionList, PropertyRow } from '@/components/description-list';
 import { PageLayout } from '@/components/page-layout';
 import { Section } from '@/components/section';
 import { LoadFailure } from '@/components/ui/load-failure';
@@ -36,7 +37,7 @@ export default function SettingsScreen() {
               error && me === undefined ? (
                 <LoadFailure error={error} onRetry={() => refetch()} what="your account" compact />
               ) : (
-                <Text className="text-foreground text-sm">{email}</Text>
+                <DescriptionList contentSlot={[<PropertyRow key="email" label="Email" value={email} />]} />
               )
             }
           />

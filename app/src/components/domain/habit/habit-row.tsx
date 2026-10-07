@@ -1,11 +1,13 @@
 import { useRouter } from 'expo-router';
-import { Text, View } from 'react-native';
 import { ActionButton } from '@/components/action-button';
 import { Flame, SkipForward } from '@/components/app-icons';
 import { ListItem } from '@/components/list-item';
+import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { Check } from '@/components/ui/icons';
 import { asPeriod, describeCadence, describeProgress } from '@/lib/cadence';
+import { joinStats } from '@/lib/format';
 import { habitPath } from '@/lib/habits';
 import { readableTextColor } from '@/lib/readable-text-color';
 import { cn } from '@/lib/utils';
@@ -33,12 +35,13 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
   const toggle = (next: EntryStatus) => setDay(habit.id, today, status === next ? null : next);
 
   return (
-    <View role="listitem" className="gap-1 rounded-lg border border-foreground/10 bg-secondary">
+    <Card role="listitem" className="gap-1">
       <ListItem
         title={habit.name}
-        description={`${describeCadence(period, habit.targetCount)} · ${
-          isSkipped ? 'Skipped today' : describeProgress(habit.current.done, habit.current.effectiveTarget, period)
-        }`}
+        description={joinStats(
+          describeCadence(period, habit.targetCount),
+          isSkipped ? 'Skipped today' : describeProgress(habit.current.done, habit.current.effectiveTarget, period),
+        )}
         onPress={() => router.push(habitPath(habit.id))}
         leadingSlot={
           <ActionButton
@@ -85,11 +88,7 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
 
       {/* Beside the control that caused it: a refused skip is worth reading,
           and a toast in a corner is not where the click was. */}
-      {error ? (
-        <Text className="pb-2.5 pl-16 text-negative text-xs" aria-live="polite">
-          {error}
-        </Text>
-      ) : null}
-    </View>
+      {error ? <Alert variant="destructive" className="mx-3 mb-3 w-auto" description={error} /> : null}
+    </Card>
   );
 }
