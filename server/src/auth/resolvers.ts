@@ -115,7 +115,8 @@ export async function findOrCreateUser(db: any, email: string): Promise<string> 
   if (existing.length > 0) return existing[0].id;
 
   const [created] = await db.insert(dbSchema.users).values({ email }).returning({ id: dbSchema.users.id });
-  if (!created) throw new GraphQLError('Failed to create user');
+  // Not a caller's mistake, so not a coded error: the server reports it as its own failure.
+  if (!created) throw new Error('The users insert returned no row.');
   return created.id;
 }
 
