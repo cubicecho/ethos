@@ -1,7 +1,7 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { formatDayLong, periodOf } from '@/lib/periods';
+import { daysOf, formatDayLong, periodOf, weekdayInitial } from '@/lib/periods';
 import { HabitGrid } from '../habit-grid';
 import type { HabitEntrySummary, HabitPeriodSummary, HabitSummary } from '../types';
 
@@ -12,38 +12,47 @@ import type { HabitEntrySummary, HabitPeriodSummary, HabitSummary } from '../typ
 
 const TODAY = '2026-09-17';
 
-const habit = (overrides: Partial<HabitSummary> = {}): HabitSummary =>
-  ({
-    id: 'habit-1',
-    name: 'Read',
-    notes: null,
-    color: '#7c3aed',
-    period: 'day',
-    targetCount: 1,
-    position: 0,
-    archivedAt: null,
-    streak: 0,
-    longestStreak: 0,
-    current: null,
-    todayEntry: [],
-    ...overrides,
-  }) as unknown as HabitSummary;
+const habit = (overrides: Partial<HabitSummary> = {}): HabitSummary => ({
+  id: 'habit-1',
+  name: 'Read',
+  notes: null,
+  color: '#7c3aed',
+  period: 'day',
+  targetCount: 1,
+  position: 0,
+  archivedAt: null,
+  streak: 0,
+  longestStreak: 0,
+  current: period(TODAY, '2026-09-18'),
+  todayEntry: [],
+  ...overrides,
+});
 
-const period = (start: string, end: string, overrides: Partial<HabitPeriodSummary> = {}): HabitPeriodSummary =>
-  ({
-    start,
-    end,
-    done: 0,
-    skipped: 0,
-    target: 3,
-    effectiveTarget: 3,
-    met: false,
-    rate: 0,
-    ...overrides,
-  }) as unknown as HabitPeriodSummary;
+const period = (start: string, end: string, overrides: Partial<HabitPeriodSummary> = {}): HabitPeriodSummary => ({
+  start,
+  end,
+  done: 0,
+  skipped: 0,
+  target: 3,
+  effectiveTarget: 3,
+  met: false,
+  rate: 0,
+  ...overrides,
+});
 
-const entry = (day: string, status: string): HabitEntrySummary =>
-  ({ id: `entry-${day}`, day, status, note: null }) as unknown as HabitEntrySummary;
+const entry = (day: string, status: string): HabitEntrySummary => ({
+  id: `entry-${day}`,
+  day,
+  status,
+  note: null,
+});
+
+/**
+ * The header's initials, Monday first. The header is `aria-hidden` — each square already says its
+ * day — so it has no role to find it by, and its text is the only handle.
+ */
+const INITIALS = daysOf(periodOf('week', TODAY)).map(weekdayInitial);
+const weekdayHeader = () => screen.queryAllByText((text) => INITIALS.includes(text));
 
 const square = (day: string) => screen.getByRole('button', { name: new RegExp(formatDayLong(day)) });
 
@@ -74,8 +83,7 @@ describe('a daily habit', () => {
     renderGrid();
     // Seven initials over seven aligned columns — Monday-first, like the weeks
     // the server counts.
-    const header = document.querySelector('[aria-hidden]');
-    expect(within(header as HTMLElement).getAllByText(/./)).toHaveLength(7);
+    expect(weekdayHeader().map((initial) => initial.textContent)).toEqual(INITIALS);
   });
 });
 
@@ -116,7 +124,7 @@ describe('a monthly habit', () => {
       habit: habit({ period: 'month', targetCount: 10 }),
       history: [period('2026-09-01', '2026-10-01', { done: 4, target: 10, effectiveTarget: 10 })],
     });
-    expect(document.querySelector('[aria-hidden]')).toBeNull();
+    expect(weekdayHeader()).toHaveLength(0);
     // September has thirty days, and the row draws all of them.
     expect(screen.getAllByRole('button')).toHaveLength(30);
   });

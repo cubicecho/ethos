@@ -18,7 +18,7 @@ export type TestDb = any;
 export async function createTestDb(): Promise<TestDb> {
   const client = new PGlite('memory://');
   const db = drizzle({ client, relations });
-  const { apply } = await pushSchema(dbSchema as never, db as never);
+  const { apply } = await pushSchema(dbSchema, db);
   await apply();
   return db;
 }

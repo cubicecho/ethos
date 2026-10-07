@@ -37,12 +37,9 @@ describe('assertDay', () => {
   });
 
   it('refuses with BAD_USER_INPUT rather than a 500', () => {
-    try {
-      assertDay('nope');
-      expect.unreachable();
-    } catch (error) {
-      expect((error as { extensions: { code: string } }).extensions.code).toBe('BAD_USER_INPUT');
-    }
+    expect(() => assertDay('nope')).toThrow(
+      expect.objectContaining({ extensions: expect.objectContaining({ code: 'BAD_USER_INPUT' }) }),
+    );
   });
 });
 

@@ -192,7 +192,7 @@ describe('focusAndSelect', () => {
 
     await user.click(screen.getByRole('button', { name: 'Focus' }));
 
-    const field = screen.getByLabelText('Target') as HTMLInputElement;
+    const field = screen.getByLabelText<HTMLInputElement>('Target');
     expect(field).toHaveFocus();
     expect(field.selectionStart).toBe(0);
     expect(field.selectionEnd).toBe('already here'.length);

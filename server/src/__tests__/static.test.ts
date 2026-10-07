@@ -1,8 +1,8 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import type { IncomingMessage, ServerResponse } from 'node:http';
+import { createServer, type IncomingHttpHeaders, request, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Writable } from 'node:stream';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createStaticHandler } from '../static.ts';
 
@@ -10,7 +10,7 @@ import { createStaticHandler } from '../static.ts';
 // a resolved path against a real root, and a mock would be checking the mock.
 let root: string;
 let outside: string;
-let serve: ReturnType<typeof createStaticHandler>;
+let server: Server;
 
 const INDEX = '<!doctype html><title>Ethos</title>';
 const SECRET = 'JWT_SECRET=hunter2';
@@ -26,39 +26,37 @@ beforeAll(() => {
   writeFileSync(join(outside, 'secret.env'), SECRET);
   mkdirSync(join(outside, 'web-secrets'), { recursive: true });
   writeFileSync(join(outside, 'web-secrets', 'x.txt'), SECRET);
-  serve = createStaticHandler(root);
+  server = createServer(createStaticHandler(root));
+  return new Promise<void>((listening) => {
+    server.listen(0, '127.0.0.1', listening);
+  });
 });
 
-afterAll(() => rmSync(outside, { recursive: true, force: true }));
+afterAll(() => {
+  server.close();
+  rmSync(outside, { recursive: true, force: true });
+});
 
 /**
- * Call the handler and wait for it to finish answering.
+ * Ask the handler for a path and wait for the whole answer.
  *
- * A real `Writable` rather than an object of spies, because the success path
- * ends in `createReadStream().pipe(res)` — a plain recorder would let the test
- * return before the file had been read, and the body is half of what is being
- * asserted.
+ * Through a real server rather than a recorder standing in for the response: the
+ * success path ends in `createReadStream().pipe(res)`, and the body is half of what
+ * is asserted. `request` sends the path as written, which a traversal test needs —
+ * `fetch` would resolve the `..` away before anything left the test.
  */
-function call(url: string, method = 'GET'): Promise<{ status: number; headers: Record<string, string>; body: string }> {
-  return new Promise((settle) => {
-    const chunks: Buffer[] = [];
-    let status = 0;
-    let headers: Record<string, string> = {};
-    const res = new Writable({
-      write(chunk, _encoding, done) {
-        chunks.push(Buffer.from(chunk));
-        done();
-      },
+function call(url: string, method = 'GET'): Promise<{ status: number; headers: IncomingHttpHeaders; body: string }> {
+  const { port } = server.address() as AddressInfo;
+  return new Promise((settle, fail) => {
+    const outgoing = request({ host: '127.0.0.1', port, path: url, method }, (response) => {
+      const chunks: Buffer[] = [];
+      response.on('data', (chunk: Buffer) => chunks.push(chunk));
+      response.on('end', () =>
+        settle({ status: response.statusCode ?? 0, headers: response.headers, body: Buffer.concat(chunks).toString() }),
+      );
     });
-    Object.assign(res, {
-      writeHead(code: number, given?: Record<string, string>) {
-        status = code;
-        headers = given ?? {};
-        return res;
-      },
-    });
-    res.on('finish', () => settle({ status, headers, body: Buffer.concat(chunks).toString() }));
-    serve({ url, method, headers: {} } as IncomingMessage, res as unknown as ServerResponse);
+    outgoing.on('error', fail);
+    outgoing.end();
   });
 }
 
