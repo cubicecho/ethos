@@ -2,7 +2,6 @@ import * as dbSchema from '@ethos/db/schema';
 import type { BuildSchemaConfig, WriteHookPayload } from '@vantreeseba/drizzle-graphql';
 import { and, eq, inArray } from 'drizzle-orm';
 import { requireAuth } from '../auth/resolvers.ts';
-import type { Context } from '../core/context.ts';
 import { badInput, notFound } from '../core/errors.ts';
 import { assertTargetsFitPeriods } from '../habits/cadence.ts';
 
@@ -97,7 +96,7 @@ export const onWrite: NonNullable<BuildSchemaConfig['onWrite']> = {
   habitEntries: {
     before: async ({ args, context, tx }: WriteHookPayload) => {
       assertEntriesUntouched(args);
-      await assertForeignKeysOwned(tx, requireAuth(context as Context), writtenRows(args), FOREIGN_KEYS.habitEntries);
+      await assertForeignKeysOwned(tx, requireAuth(context), writtenRows(args), FOREIGN_KEYS.habitEntries);
     },
   },
   habits: {
@@ -107,7 +106,7 @@ export const onWrite: NonNullable<BuildSchemaConfig['onWrite']> = {
       if (operation === 'delete' || operation === 'restore') {
         return;
       }
-      await assertTargetsFitPeriods(tx, requireAuth(context as Context));
+      await assertTargetsFitPeriods(tx, requireAuth(context));
     },
   },
 };

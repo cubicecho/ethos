@@ -5,9 +5,8 @@ import { Flame, SkipForward } from '@/components/app-icons';
 import { ListItem } from '@/components/list-item';
 import { Badge } from '@/components/ui/badge';
 import { Check } from '@/components/ui/icons';
-import { describeCadence, describeProgress } from '@/lib/cadence';
+import { asPeriod, describeCadence, describeProgress } from '@/lib/cadence';
 import { habitPath } from '@/lib/habits';
-import type { Period } from '@/lib/periods';
 import { readableTextColor } from '@/lib/readable-text-color';
 import { cn } from '@/lib/utils';
 import { asStatus, ENTRY_DONE, ENTRY_SKIPPED, type EntryStatus, type HabitSummary } from './types';
@@ -27,7 +26,7 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
   const router = useRouter();
   const { setDay, isPending, error } = useMarkHabit(today);
   const status = asStatus(habit.todayEntry[0]?.status);
-  const period = habit.period as Period;
+  const period = asPeriod(habit.period);
   const isDone = status === ENTRY_DONE;
   const isSkipped = status === ENTRY_SKIPPED;
 

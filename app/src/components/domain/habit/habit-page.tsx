@@ -11,10 +11,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ColorDot } from '@/components/ui/color-dot';
 import { Pencil, Trash2 } from '@/components/ui/icons';
 import { placeHabit, removeHabit } from '@/lib/cache';
-import { describeCadence } from '@/lib/cadence';
+import { asPeriod, describeCadence } from '@/lib/cadence';
 import { describeError } from '@/lib/errors';
 import { DeleteHabitDocument, UpdateHabitDocument } from '@/lib/graphql';
-import { type Period, THIS_PERIOD } from '@/lib/periods';
+import { THIS_PERIOD } from '@/lib/periods';
 import type { SlotNode } from '@/lib/utils';
 import { HabitFormDialog } from './habit-form-dialog';
 import type { HabitSummary } from './types';
@@ -38,7 +38,7 @@ export function HabitPage({
   const [updateHabit] = useMutation(UpdateHabitDocument);
   const [deleteHabit] = useMutation(DeleteHabitDocument);
 
-  const period = habit.period as Period;
+  const period = asPeriod(habit.period);
   const isArchived = habit.archivedAt != null;
 
   /**

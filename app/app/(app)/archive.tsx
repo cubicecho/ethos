@@ -8,10 +8,9 @@ import { EmptyState } from '@/components/page';
 import { PageLayout } from '@/components/page-layout';
 import { ColorDot } from '@/components/ui/color-dot';
 import { LoadState } from '@/components/ui/load-failure';
-import { describeCadence } from '@/lib/cadence';
+import { asPeriod, describeCadence } from '@/lib/cadence';
 import { ArchivedHabitsDocument } from '@/lib/graphql';
 import { habitPath } from '@/lib/habits';
-import type { Period } from '@/lib/periods';
 import { useToday } from '@/lib/use-today';
 
 /**
@@ -46,7 +45,7 @@ export default function ArchiveScreen() {
                 <View key={habit.id} role="listitem">
                   <ListItem
                     title={habit.name}
-                    description={describeCadence(habit.period as Period, habit.targetCount)}
+                    description={describeCadence(asPeriod(habit.period), habit.targetCount)}
                     leadingSlot={<ColorDot color={habit.color} />}
                     onPress={() => router.push(habitPath(habit.id))}
                   />

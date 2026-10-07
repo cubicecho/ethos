@@ -44,7 +44,7 @@ export function describeError(error: unknown): string {
     return UNKNOWN;
   }
 
-  const like = error as ErrorLike;
+  const like: ErrorLike = error;
 
   // A GraphQL error first: the server understood the request and refused it,
   // so it knows more about why than anything downstream does.

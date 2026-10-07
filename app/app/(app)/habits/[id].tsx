@@ -17,7 +17,7 @@ export default function HabitScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const today = useToday();
   const habitQuery = useQuery(HabitDocument, {
-    variables: { id: id as string, today },
+    variables: { id, today },
     skip: !id,
   });
   const { setDay, isPending, error: markError } = useMarkHabitDay(today);

@@ -13,6 +13,18 @@ import { createStaticHandler } from './http/static.ts';
 
 export type { Context } from './core/context.ts';
 
+/** What Node reports when nothing answers at the database's address. */
+const UNREACHABLE_CODES: readonly string[] = ['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT'];
+
+/** The errno code of whatever caused `error`, when it has one. */
+function errnoCode(error: unknown): string | undefined {
+  const cause = error instanceof Error ? error.cause : undefined;
+  if (typeof cause !== 'object' || cause === null || 'code' in cause === false) {
+    return undefined;
+  }
+  return typeof cause.code === 'string' ? cause.code : undefined;
+}
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3006);
 const staticDir = join(__dirname, '../../app/dist');
@@ -24,10 +36,10 @@ try {
 } catch (error) {
   // A misconfigured DATABASE_URL surfaces here as a driver stack trace about
   // `CREATE SCHEMA`. Name the actual problem instead.
-  const cause = (error as { cause?: NodeJS.ErrnoException })?.cause;
-  if (cause && (cause.code === 'ECONNREFUSED' || cause.code === 'ENOTFOUND' || cause.code === 'ETIMEDOUT')) {
+  const code = errnoCode(error);
+  if (code !== undefined && UNREACHABLE_CODES.includes(code)) {
     const { hostname, port } = new URL(process.env.DATABASE_URL ?? '');
-    console.error(`[boot] Cannot reach Postgres at ${hostname}:${port || 5432} (${cause.code}).`);
+    console.error(`[boot] Cannot reach Postgres at ${hostname}:${port || 5432} (${code}).`);
     console.error('  Check DATABASE_URL in .env, and that the database is up and reachable from here.');
     console.error('  If your Docker daemon is remote (`docker context ls`), a container published on');
     console.error("  127.0.0.1 is bound to the daemon host's loopback. Set POSTGRES_BIND=0.0.0.0 and");

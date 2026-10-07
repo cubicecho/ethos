@@ -13,9 +13,6 @@ import type { Context } from '../core/context.ts';
 // A new table needs an entry here, or its rows are visible across tenants;
 // __tests__/graphql/tenancy.test.ts fails when one is missing.
 
-// biome-ignore lint/suspicious/noExplicitAny: drizzle-orm 1.0 table/column type compat
-type AnyTable = any;
-
 /**
  * Every table but `users` carries its own `user_id`. An entry is owned through
  * its habit as well, but carrying the column directly costs one uuid a row and
@@ -27,11 +24,13 @@ export const USER_OWNED_TABLES = ['habits', 'habitEntries'] as const;
 /** Every table drizzle-graphql will generate fields for. */
 export const ALL_TABLES = ['users', ...USER_OWNED_TABLES] as const;
 
-const scopeByUserId: RowScope<Context> = (context, table) => eq((table as AnyTable).userId, requireAuth(context));
+const scopeByUserId: RowScope<Context> = (context, table) => eq(table.userId, requireAuth(context));
+
+const scopeByOwnId: RowScope<Context> = (context, table) => eq(table.id, requireAuth(context));
 
 export const scope: NonNullable<BuildSchemaConfig['scope']> = {
   // A user row is only ever visible to its owner. There is no directory here.
-  users: (context, table) => eq((table as AnyTable).id, requireAuth(context as Context)),
+  users: scopeByOwnId,
   ...Object.fromEntries(USER_OWNED_TABLES.map((name) => [name, scopeByUserId])),
 };
 

@@ -6,7 +6,7 @@ import { isHexColor } from '@/components/ui/color-picker';
 import { Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { placeHabit } from '@/lib/cache';
-import { describeCadence, maxTargetFor } from '@/lib/cadence';
+import { asPeriod, describeCadence, isPeriod, maxTargetFor } from '@/lib/cadence';
 import { describeError } from '@/lib/errors';
 import { CreateHabitDocument, UpdateHabitDocument } from '@/lib/graphql';
 import { newId } from '@/lib/ids';
@@ -33,7 +33,7 @@ const valuesOf = (habit: HabitSummary | undefined): HabitValues => ({
   name: habit?.name ?? '',
   notes: habit?.notes ?? '',
   color: habit?.color ?? PALETTE[0],
-  period: (habit?.period as Period) ?? Period.Day,
+  period: habit ? asPeriod(habit.period) : Period.Day,
   targetCount: habit?.targetCount ?? 1,
 });
 
@@ -155,7 +155,10 @@ export function HabitFormDialog({
               // A day cannot be kept twice, so daily has no number to pick. Forced
               // here, not at submit, so the form holds what it will send.
               onChange: ({ value }) => {
-                const next = value as Period;
+                if (isPeriod(value) === false) {
+                  return;
+                }
+                const next = value;
                 const current = form.getFieldValue('targetCount') ?? 1;
                 form.setFieldValue(
                   'targetCount',

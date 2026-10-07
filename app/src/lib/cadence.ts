@@ -17,6 +17,11 @@ export function isPeriod(value: string): value is Period {
   return PERIODS.includes(value);
 }
 
+/** A period narrowed from the `String` the schema serves. The database allows no other value. */
+export function asPeriod(value: string): Period {
+  return isPeriod(value) ? value : Period.Day;
+}
+
 const MAX_TARGET = {
   [Period.Day]: 1,
   [Period.Week]: 7,

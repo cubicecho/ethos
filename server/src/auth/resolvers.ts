@@ -1,6 +1,6 @@
 import * as dbSchema from '@ethos/db/schema';
 import { eq } from 'drizzle-orm';
-import { extendSchema, type GraphQLObjectType, type GraphQLSchema, parse } from 'graphql';
+import { assertObjectType, extendSchema, type GraphQLSchema, parse } from 'graphql';
 import jwt from 'jsonwebtoken';
 import { DEV_SECRET, isMagicLinkExposed, isMagicLinkRequired } from '../core/config.ts';
 import type { Context } from '../core/context.ts';
@@ -65,7 +65,9 @@ export function signMagicToken(email: string): string {
 
 export function verifyToken(token: string): { userId: string } | null {
   try {
-    return jwt.verify(token, jwtSecret()) as { userId: string };
+    const payload = jwt.verify(token, jwtSecret());
+    const isSession = typeof payload === 'object' && typeof payload.userId === 'string';
+    return isSession ? { userId: payload.userId } : null;
   } catch {
     return null;
   }
@@ -73,8 +75,9 @@ export function verifyToken(token: string): { userId: string } | null {
 
 export function verifyMagicToken(token: string): { email: string } | null {
   try {
-    const payload = jwt.verify(token, jwtSecret()) as { email?: string };
-    return payload.email ? { email: payload.email } : null;
+    const payload = jwt.verify(token, jwtSecret());
+    const hasEmail = typeof payload === 'object' && typeof payload.email === 'string' && payload.email !== '';
+    return hasEmail ? { email: payload.email } : null;
   } catch {
     return null;
   }
@@ -125,7 +128,7 @@ export async function findOrCreateUser(db: any, email: string): Promise<string> 
 
 export function applyAuthExtension(schema: GraphQLSchema): GraphQLSchema {
   const extendedSchema = extendSchema(schema, AUTH_SDL);
-  const mutationType = extendedSchema.getType('Mutation') as GraphQLObjectType;
+  const mutationType = assertObjectType(extendedSchema.getType('Mutation'));
   const fields = mutationType.getFields();
 
   fields.requestMagicLink.resolve = async (_parent: unknown, args: { email: string }, context: Context) => {

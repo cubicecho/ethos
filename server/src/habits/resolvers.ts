@@ -1,7 +1,7 @@
 import * as dbSchema from '@ethos/db/schema';
 import { ENTRY_DONE, ENTRY_SKIPPED, type EntryStatus } from '@ethos/db/schema';
 import { and, eq } from 'drizzle-orm';
-import { extendSchema, type GraphQLObjectType, type GraphQLSchema, parse } from 'graphql';
+import { assertObjectType, extendSchema, type GraphQLSchema, parse } from 'graphql';
 import { requireAuth } from '../auth/resolvers.ts';
 import type { Context } from '../core/context.ts';
 import { badInput, notFound } from '../core/errors.ts';
@@ -88,7 +88,7 @@ const habitNotFound = () => notFound('Habit not found');
  */
 async function loadOwnedHabit(context: Context, id: string): Promise<AnyRow> {
   const userId = requireAuth(context);
-  const rows = await (context.db as AnyRow)
+  const rows = await context.db
     .select()
     .from(dbSchema.habits)
     .where(and(eq(dbSchema.habits.id, id), eq(dbSchema.habits.userId, userId)))
@@ -173,7 +173,7 @@ async function readingOf(parent: AnyRow, context: Context): Promise<[HabitLike, 
 export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
   const extendedSchema = extendSchema(schema, HABITS_SDL);
 
-  const habitFields = (extendedSchema.getType('Habit') as GraphQLObjectType).getFields();
+  const habitFields = assertObjectType(extendedSchema.getType('Habit')).getFields();
 
   habitFields.streak.resolve = async (parent: AnyRow, args: { today: string | null }, context: Context) => {
     const [habit, entries] = await readingOf(parent, context);
@@ -203,7 +203,7 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
     return tallyPeriod(habit, entries, periodOf(habit.period, today));
   };
 
-  const mutations = (extendedSchema.getType('Mutation') as GraphQLObjectType).getFields();
+  const mutations = assertObjectType(extendedSchema.getType('Mutation')).getFields();
 
   mutations.markHabit.resolve = async (
     _parent: unknown,
@@ -227,7 +227,7 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
 
     // Upsert onto the day key: two tabs, a double-click and a retried request
     // are the same tick, and the unique index makes that true with no transaction.
-    await (context.db as AnyRow)
+    await context.db
       .insert(dbSchema.habitEntries)
       .values({ userId, habitId: habit.id, day, status, note: args.note ?? null })
       .onConflictDoUpdate({
@@ -244,7 +244,7 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
   mutations.clearHabit.resolve = async (_parent: unknown, args: { habitId: string; day: string }, context: Context) => {
     const userId = requireAuth(context);
     const habit = await loadOwnedHabit(context, args.habitId);
-    await (context.db as AnyRow)
+    await context.db
       .delete(dbSchema.habitEntries)
       .where(
         and(

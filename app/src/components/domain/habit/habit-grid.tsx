@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 import { Check } from '@/components/ui/icons';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { asPeriod } from '@/lib/cadence';
 import { HISTORY_PERIODS } from '@/lib/graphql';
 import { daysOf, Period, periodLabel, recentPeriods, weekdayInitial } from '@/lib/periods';
 import { cn } from '@/lib/utils';
@@ -62,7 +63,7 @@ export function HabitGrid({
   isPending: boolean;
   onSet: (day: string, status: DayStatus) => void;
 }) {
-  const period = habit.period as Period;
+  const period = asPeriod(habit.period);
   const rows = buildRows(period, history, today);
   const status = new Map<string, DayStatus>(entries.map((entry) => [entry.day, asStatus(entry.status)]));
   // Weeks all start on Monday, so the columns are worth naming once at the top.
