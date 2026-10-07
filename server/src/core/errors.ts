@@ -1,4 +1,5 @@
 import { GraphQLError } from 'graphql';
+import { HttpStatus } from './wire.ts';
 
 /** The `extensions.code` values clients branch on. */
 export const ErrorCode = {
@@ -6,6 +7,7 @@ export const ErrorCode = {
   NotFound: 'NOT_FOUND',
   BadUserInput: 'BAD_USER_INPUT',
   TooManyRequests: 'TOO_MANY_REQUESTS',
+  QueryTooComplex: 'QUERY_TOO_COMPLEX',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
@@ -23,6 +25,16 @@ export const unauthenticated = withCode(ErrorCode.Unauthenticated);
 /** Too many attempts for now. `retryAfter` is the seconds until the next one would be let through. */
 export function rateLimited(message: string, retryAfter: number): GraphQLError {
   return new GraphQLError(message, { extensions: { code: ErrorCode.TooManyRequests, retryAfter } });
+}
+
+/**
+ * The operation asks for more than one request may: too deep, too many aliases
+ * or too costly. Refused before it runs, so it is a 400 and not a result.
+ */
+export function tooComplex(message: string): GraphQLError {
+  return new GraphQLError(message, {
+    extensions: { code: ErrorCode.QueryTooComplex, http: { status: HttpStatus.BadRequest } },
+  });
 }
 
 /** What went wrong, as a sentence: an `Error`'s message, or the thrown value as text. */

@@ -6,6 +6,8 @@ import { requireAuth } from '../auth/resolvers.ts';
 import type { Context } from '../core/context.ts';
 import { HABIT_DEFAULTS } from '../core/defaults.ts';
 import { badInput, notFound } from '../core/errors.ts';
+import { parseOrThrow } from '../core/validation.ts';
+import { entryNote } from './input.ts';
 import { assertDay, daysBetween, periodOf } from './periods.ts';
 import { currentStreak, type EntryLike, type HabitLike, longestStreak, tallyPeriod, tallyRecent } from './streaks.ts';
 
@@ -209,6 +211,7 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
     const day = assertDay(args.day);
     assertNotFuture(day);
     const status = parseStatus(args.status);
+    parseOrThrow(entryNote, args.note);
 
     if (habit.archivedAt != null) {
       // An archived habit is a record, not a practice. Silently accepting the

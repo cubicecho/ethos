@@ -15,6 +15,8 @@ export interface HttpSettings {
    * Express's `trust proxy` accepts. False believes only the socket.
    */
   trustProxy: boolean | number | string;
+  /** The largest request body /graphql reads, as `bytes` writes sizes. Larger is a 413. */
+  bodyLimit: string;
 }
 
 export const HTTP_DEFAULTS: Readonly<HttpSettings> = Object.freeze({
@@ -23,6 +25,7 @@ export const HTTP_DEFAULTS: Readonly<HttpSettings> = Object.freeze({
   drainSeconds: 5,
   shutdownDeadlineSeconds: 8,
   trustProxy: false,
+  bodyLimit: '1mb',
 });
 
 export interface RateLimitSettings {
@@ -68,10 +71,40 @@ export interface HabitSettings {
   historyPeriods: number;
   /** The most periods `history` returns, whatever the caller asks for. */
   maxHistoryPeriods: number;
+  /** The longest name a habit may have. */
+  maxNameLength: number;
+  /** The longest note, on a habit or on one of its days. */
+  maxNoteLength: number;
 }
 
 export const HABIT_DEFAULTS: Readonly<HabitSettings> = Object.freeze({
   maxSkipsPerPeriod: 2,
   historyPeriods: 12,
   maxHistoryPeriods: 52,
+  maxNameLength: 120,
+  maxNoteLength: 2_000,
+});
+
+export interface OperationLimitSettings {
+  /** Rows a list field returns when the query states no `limit`. */
+  defaultPageSize: number;
+  /** The largest `limit` a query may state. Larger is refused, not trimmed. */
+  maxPageSize: number;
+  /** How many levels of selection a query may nest. */
+  maxDepth: number;
+  /** How many aliases one operation may use. An alias is how one request asks for a field many times. */
+  maxAliases: number;
+  /** The most one operation may cost: roughly the fields it could return, lists priced by their `limit`. */
+  maxCost: number;
+  /** What a field costs when the schema states no price for it. */
+  defaultFieldCost: number;
+}
+
+export const OPERATION_LIMIT_DEFAULTS: Readonly<OperationLimitSettings> = Object.freeze({
+  defaultPageSize: 50,
+  maxPageSize: 500,
+  maxDepth: 8,
+  maxAliases: 15,
+  maxCost: 10_000,
+  defaultFieldCost: 1,
 });

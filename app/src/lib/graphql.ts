@@ -35,9 +35,10 @@ export const HabitFieldsFragment = graphql(`
     current(today: $today) {
       ...HabitPeriodFields
     }
-    # An array of at most one, by the unique index on (habit, day). The tally
-    # cannot say whether today is done: "1 of 3" may have been Monday.
-    todayEntry: entries(where: { day: { eq: $today } }) {
+    # An array of at most one, by the unique index on (habit, day), and the limit
+    # says so: the server prices a list by its limit. The tally cannot say
+    # whether today is done: "1 of 3" may have been Monday.
+    todayEntry: entries(where: { day: { eq: $today } }, limit: 1) {
       ...HabitEntryFields
     }
   }

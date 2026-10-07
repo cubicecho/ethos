@@ -1,5 +1,6 @@
 import { buildSchema, GraphQLDateTime } from '@vantreeseba/drizzle-graphql';
 import { applyAuthExtension } from '../auth/resolvers.ts';
+import { OPERATION_LIMIT_DEFAULTS } from '../core/defaults.ts';
 import { applyHabitsExtension } from '../habits/resolvers.ts';
 import { contextValues, features, scope } from './tenancy.ts';
 import { onWrite } from './write-guards.ts';
@@ -45,6 +46,14 @@ export function createSchema(db: AnyDb) {
     contextValues,
     features,
     mapColumnType: timestampInput,
+    // Applies to root lists and to-many relations alike. A `limit` over the
+    // maximum is refused, not trimmed: a trimmed page looks like the last one.
+    limits: {
+      defaultLimit: OPERATION_LIMIT_DEFAULTS.defaultPageSize,
+      maxLimit: OPERATION_LIMIT_DEFAULTS.maxPageSize,
+    },
+    // Prices each list by its `limit`, for graphql/operation-limits.ts to add up.
+    complexity: true,
     onWrite,
   });
 

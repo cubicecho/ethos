@@ -39,7 +39,7 @@ export async function createApp({
   // Decides what `request.ip` is, and the sign-in throttle is keyed by it.
   app.set('trust proxy', trustProxy);
   app.use(cors({ origin: allowedOrigins }));
-  app.use('/graphql', express.json(), await createGraphQLHandler({ db, limiter }));
+  app.use('/graphql', express.json({ limit: HTTP_DEFAULTS.bodyLimit }), await createGraphQLHandler({ db, limiter }));
   app.get('/healthz', async (_request, response) => {
     const health = await checkHealth(db);
     response.status(health.ok ? HttpStatus.Ok : HttpStatus.ServiceUnavailable).json(health);

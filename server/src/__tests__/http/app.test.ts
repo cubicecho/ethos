@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createRateLimiter } from '../../auth/rate-limit.ts';
 import { signToken } from '../../auth/resolvers.ts';
 import { version } from '../../core/config.ts';
+import { OPERATION_LIMIT_DEFAULTS } from '../../core/defaults.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { HttpStatus } from '../../core/wire.ts';
 import { createApp } from '../../http/app.ts';
@@ -18,6 +19,8 @@ import { createTestDb, createUser, portOf } from '../helpers.ts';
 const INDEX = '<!doctype html><title>Ethos</title>';
 const HABITS = '{ habits { id } }';
 const EMAIL = 'alice@example.com';
+/** Past `HTTP_DEFAULTS.bodyLimit`, which is 1 MiB. */
+const OVERSIZED_BODY_BYTES = 1_100_000;
 const APP_ORIGIN = 'http://ethos.test';
 const OTHER_ORIGIN = 'http://elsewhere.test';
 
@@ -87,6 +90,33 @@ describe('app', () => {
   it('gives any other origin no permission to read one', async () => {
     const response = await fetch(`${base}/healthz`, { headers: { origin: OTHER_ORIGIN } });
     expect(response.headers.get('access-control-allow-origin')).toBeNull();
+  });
+
+  it('refuses a query that costs too much, before running it', async () => {
+    const { maxPageSize } = OPERATION_LIMIT_DEFAULTS;
+    const response = await post(
+      `{ habits(limit: ${maxPageSize}) { entries(limit: ${maxPageSize}) { id } } }`,
+      `Bearer ${signToken(aliceId)}`,
+    );
+    const body: AnyBody = await response.json();
+    expect(response.status).toBe(HttpStatus.BadRequest);
+    expect(body.errors[0].extensions.code).toBe(ErrorCode.QueryTooComplex);
+    expect(body.data).toBeUndefined();
+  });
+
+  it('refuses a query nested too deep', async () => {
+    // One row at every level, so it is the depth and not the cost that is over.
+    const levels = Array.from({ length: OPERATION_LIMIT_DEFAULTS.maxDepth }, (_, level) =>
+      level % 2 === 0 ? 'entries(limit: 1)' : 'habit',
+    );
+    const body = await ask(`{ habits(limit: 1) { ${levels.join(' { ')} { id ${'} '.repeat(levels.length)}} }`);
+    expect(body.errors[0].extensions.code).toBe(ErrorCode.QueryTooComplex);
+    expect(body.errors[0].message).toContain('levels deep');
+  });
+
+  it('refuses a body over the limit with a 413', async () => {
+    const response = await post(`{ habits { id } } # ${'x'.repeat(OVERSIZED_BODY_BYTES)}`);
+    expect(response.status).toBe(HttpStatus.PayloadTooLarge);
   });
 
   it('serves the web client for a path it does not know', async () => {

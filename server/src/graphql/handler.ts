@@ -7,6 +7,7 @@ import { extractUserId } from '../auth/resolvers.ts';
 import { type Context, UNKNOWN_IP } from '../core/context.ts';
 import { createSchema } from './build-schema.ts';
 import { createLoaders } from './loaders.ts';
+import { operationLimits } from './operation-limits.ts';
 
 /** What the handler passes on to resolvers. */
 interface GraphQLHandlerDeps {
@@ -22,6 +23,7 @@ export async function createGraphQLHandler({ db, limiter }: GraphQLHandlerDeps):
     // Apollo would install its own SIGTERM handler and race the one in
     // http/shutdown.ts, which is the one that drains and closes the database.
     stopOnTerminationSignals: false,
+    plugins: [operationLimits()],
   });
   await apolloServer.start();
 

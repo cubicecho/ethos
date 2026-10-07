@@ -1,6 +1,7 @@
 import * as dbSchema from '@ethos/db/schema';
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { HABIT_DEFAULTS } from '../../core/defaults.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { assertForeignKeysOwned, writtenRows } from '../../graphql/write-guards.ts';
 import { createClient, createTestDb, createUser, type TestClient, type TestDb } from '../helpers.ts';
@@ -42,6 +43,37 @@ describe('writes reserved to a hand-written mutation', () => {
   it.each(['updateHabitEntry', 'updateHabitEntries', 'deleteHabitEntries'])('generates no %s either', async (field) => {
     const error = await mine.expectError(`mutation { ${field}(where: {}) { id } }`);
     expect(error.message).toContain(field);
+  });
+});
+
+describe("how long a habit's text may be", () => {
+  const UPDATE = `mutation ($id: UUID!, $set: UpdateHabitInput!) {
+    updateHabit(set: $set, where: { id: { eq: $id } }) { id }
+  }`;
+  const tooLongName = 'n'.repeat(HABIT_DEFAULTS.maxNameLength + 1);
+
+  it('accepts a name of the maximum length', async () => {
+    const name = 'n'.repeat(HABIT_DEFAULTS.maxNameLength);
+    expect((await mine.expectOk(CREATE, { values: { name } })).createHabit.name).toBe(name);
+  });
+
+  it('refuses a longer name on create, and writes nothing', async () => {
+    const error = await mine.expectError(CREATE, { values: { name: tooLongName } });
+    expect(error.code).toBe(ErrorCode.BadUserInput);
+    expect(await db.select().from(dbSchema.habits).where(eq(dbSchema.habits.userId, myUserId))).toHaveLength(0);
+  });
+
+  it('refuses a longer name on update', async () => {
+    const id = (await mine.expectOk(CREATE, { values: { name: 'Run' } })).createHabit.id;
+    const error = await mine.expectError(UPDATE, { id, set: { name: tooLongName } });
+    expect(error.code).toBe(ErrorCode.BadUserInput);
+  });
+
+  it('refuses notes over the maximum, and still lets them be cleared', async () => {
+    const id = (await mine.expectOk(CREATE, { values: { name: 'Run' } })).createHabit.id;
+    const notes = 'n'.repeat(HABIT_DEFAULTS.maxNoteLength + 1);
+    expect((await mine.expectError(UPDATE, { id, set: { notes } })).code).toBe(ErrorCode.BadUserInput);
+    await mine.expectOk(UPDATE, { id, set: { notes: null } });
   });
 });
 

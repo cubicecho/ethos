@@ -3,7 +3,9 @@ import type { BuildSchemaConfig, WriteHookPayload } from '@vantreeseba/drizzle-g
 import { and, eq, inArray } from 'drizzle-orm';
 import { requireAuth } from '../auth/resolvers.ts';
 import { badInput, notFound } from '../core/errors.ts';
+import { parseOrThrow } from '../core/validation.ts';
 import { assertTargetsFitPeriods } from '../habits/cadence.ts';
+import { habitInput } from '../habits/input.ts';
 
 // A row scope cannot reach a plain insert, and says nothing about the rows a
 // foreign key *points at*. These hooks close both holes: every id a caller can
@@ -100,6 +102,12 @@ export const onWrite: NonNullable<BuildSchemaConfig['onWrite']> = {
     },
   },
   habits: {
+    // Before the statement: what is wrong is in the arguments, so nothing need be written to see it.
+    before: ({ args }: WriteHookPayload) => {
+      for (const row of writtenRows(args)) {
+        parseOrThrow(habitInput, row);
+      }
+    },
     // After the statement, not before: a write that changes only `period` would
     // pass a check that reads the arguments. The throw rolls it back.
     after: async ({ context, operation, tx }: WriteHookPayload) => {

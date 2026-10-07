@@ -1,5 +1,6 @@
 import * as dbSchema from '@ethos/db/schema';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { HABIT_DEFAULTS } from '../../core/defaults.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { addDays, periodBefore } from '../../habits/periods.ts';
 import { createClient, createTestDb, createUser, type TestClient, type TestDb } from '../helpers.ts';
@@ -45,6 +46,13 @@ describe('markHabit', () => {
     // The `Date` scalar serializes to `YYYY-MM-DD`, not to an instant: a habit
     // kept at 11pm on Tuesday is a Tuesday wherever it is read from.
     expect(data.habitEntries).toEqual([{ day: yesterday, status: 'done', note: null }]);
+  });
+
+  it('refuses a note over the maximum length, and records nothing', async () => {
+    const note = 'n'.repeat(HABIT_DEFAULTS.maxNoteLength + 1);
+    const error = await mine.expectError(MARK, { id: habitId, day: yesterday, note });
+    expect(error.code).toBe(ErrorCode.BadUserInput);
+    expect(await db.select().from(dbSchema.habitEntries)).toHaveLength(0);
   });
 
   it('stores the day verbatim, with no zone left to shift it', async () => {
