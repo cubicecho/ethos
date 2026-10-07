@@ -1,8 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { focusAndSelect, isTyping, useHotkey } from '../hotkeys';
+import { isTyping, useHotkey } from '../hotkeys';
 
 function Harness({ onFire, hotkey = 'n' }: { onFire: () => void; hotkey?: string }) {
   useHotkey(hotkey, onFire);
@@ -169,35 +168,5 @@ describe('isTyping', () => {
     // place a keystroke means a character.
     expect(isTyping(document)).toBe(false);
     expect(isTyping(null)).toBe(false);
-  });
-});
-
-describe('focusAndSelect', () => {
-  function Focusable() {
-    const ref = useRef<HTMLInputElement>(null);
-    return (
-      <>
-        <input ref={ref} aria-label="Target" defaultValue="already here" />
-        <button type="button" onClick={() => focusAndSelect(ref.current)}>
-          Focus
-        </button>
-      </>
-    );
-  }
-
-  it('focuses the field and selects what is in it, so typing replaces', async () => {
-    const user = userEvent.setup();
-    render(<Focusable />);
-
-    await user.click(screen.getByRole('button', { name: 'Focus' }));
-
-    const field = screen.getByLabelText<HTMLInputElement>('Target');
-    expect(field).toHaveFocus();
-    expect(field.selectionStart).toBe(0);
-    expect(field.selectionEnd).toBe('already here'.length);
-  });
-
-  it('does nothing at all when there is no element yet', () => {
-    expect(() => focusAndSelect(null)).not.toThrow();
   });
 });

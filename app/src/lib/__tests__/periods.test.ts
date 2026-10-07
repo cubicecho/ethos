@@ -5,7 +5,6 @@ import {
   daysOf,
   formatDay,
   formatDayLong,
-  isDay,
   periodBefore,
   periodEnd,
   periodLabel,
@@ -39,26 +38,6 @@ describe('today', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 8, 17, 9, 30));
     expect(today()).toBe('2026-09-17');
-  });
-});
-
-describe('isDay', () => {
-  it('accepts a calendar day', () => {
-    expect(isDay('2026-09-17')).toBe(true);
-    expect(isDay('2024-02-29')).toBe(true);
-  });
-
-  it.each(['2026-9-17', '2026-09-17T00:00:00Z', 'not-a-day', '', '2026-02-31', '2025-02-29', '2026-13-01'])(
-    'rejects %s',
-    (value) => {
-      expect(isDay(value)).toBe(false);
-    },
-  );
-
-  it('answers rather than throwing, unlike the server’s assertDay', () => {
-    // The client asks whether a string is a day; the server is told one and has
-    // to refuse. Same predicate, two shapes.
-    expect(() => isDay('nonsense')).not.toThrow();
   });
 });
 

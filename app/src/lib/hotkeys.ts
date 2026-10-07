@@ -78,16 +78,3 @@ export function useHotkey(key: string, handler: (event: KeyboardEvent) => void, 
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [key, isEnabled]);
 }
-
-/**
- * Focus an element and, when it is a field, select what is in it — so typing replaces.
- *
- * @param element - The field, or null when it has not mounted.
- */
-export function focusAndSelect(element: HTMLInputElement | HTMLTextAreaElement | null): void {
-  if (!element) {
-    return;
-  }
-  element.focus();
-  element.select();
-}
