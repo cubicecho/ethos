@@ -40,7 +40,6 @@ export function Sidebar() {
                 spend the colour on the action and the habit rows stay quiet. */}
             <Button
               size="sm"
-              className="w-full gap-2 rounded-lg"
               onPress={() => setIsCreating(true)}
               iconSlot={<Plus className="h-4 w-4" />}
               content="New habit"
@@ -54,7 +53,7 @@ export function Sidebar() {
               label="Main"
               contentSlot={[
                 <Link key="today" href="/" asChild>
-                  <SidebarNavItem href="/" label="Today" iconSlot={<CalendarCheck />} active={pathname === '/'} />
+                  <SidebarNavItem label="Today" iconSlot={<CalendarCheck />} active={pathname === '/'} />
                 </Link>,
               ]}
             />
@@ -77,7 +76,6 @@ export function Sidebar() {
               contentSlot={habits.map((habit) => (
                 <Link key={habit.id} href={habitPath(habit.id)} asChild>
                   <SidebarNavItem
-                    href={habitPath(habit.id)}
                     label={habit.name}
                     // The habit's colour is how it is recognised everywhere else.
                     // A dot, because filled rows would make the sidebar a colour chart.
@@ -97,20 +95,10 @@ export function Sidebar() {
               label="More"
               contentSlot={[
                 <Link key="archive" href="/archive" asChild>
-                  <SidebarNavItem
-                    href="/archive"
-                    label="Archive"
-                    iconSlot={<Archive />}
-                    active={pathname === '/archive'}
-                  />
+                  <SidebarNavItem label="Archive" iconSlot={<Archive />} active={pathname === '/archive'} />
                 </Link>,
                 <Link key="settings" href="/settings" asChild>
-                  <SidebarNavItem
-                    href="/settings"
-                    label="Settings"
-                    iconSlot={<Settings />}
-                    active={pathname === '/settings'}
-                  />
+                  <SidebarNavItem label="Settings" iconSlot={<Settings />} active={pathname === '/settings'} />
                 </Link>,
               ]}
             />

@@ -78,7 +78,7 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
             label={isSkipped ? `Un-skip ${habit.name} today` : `Skip ${habit.name} today`}
             aria-pressed={isSkipped}
             disabled={isPending}
-            variant={isSkipped ? 'secondary' : 'ghost'}
+            variant={isSkipped ? 'secondary' : 'outline'}
             size="icon-sm"
             onPress={() => toggle(ENTRY_SKIPPED)}
             iconSlot={<SkipForward />}

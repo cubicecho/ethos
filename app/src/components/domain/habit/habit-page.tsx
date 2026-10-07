@@ -92,21 +92,21 @@ export function HabitPage({
           <>
             <ActionButton
               label="Edit habit"
-              variant="ghost"
+              variant="outline"
               size="icon"
               onPress={() => setIsEditing(true)}
               iconSlot={<Pencil />}
             />
             <ActionButton
               label={isArchived ? 'Restore habit' : 'Archive habit'}
-              variant="ghost"
+              variant="outline"
               size="icon"
               onPress={() => void setArchived(isArchived === false)}
               iconSlot={isArchived ? <ArchiveRestore /> : <Archive />}
             />
             <ConfirmButton
               label="Delete habit"
-              variant="ghost"
+              variant="destructive-outline"
               size="icon"
               iconSlot={<Trash2 />}
               title={`Delete “${habit.name}”?`}
@@ -116,8 +116,9 @@ export function HabitPage({
             />
           </>
         }
+        contentClassName="gap-6 py-6"
         contentSlot={
-          <View className="gap-6 py-6">
+          <>
             {habit.notes ? <Text className="text-foreground text-sm">{habit.notes}</Text> : null}
 
             <View className="flex-row flex-wrap gap-3">
@@ -138,7 +139,7 @@ export function HabitPage({
             {actionError ? <Alert variant="destructive" description={actionError} /> : null}
 
             {contentSlot}
-          </View>
+          </>
         }
       />
       <HabitFormDialog open={isEditing} onOpenChange={setIsEditing} today={today} habit={habit} />

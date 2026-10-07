@@ -1,5 +1,4 @@
 import { useQuery } from '@apollo/client';
-import { View } from 'react-native';
 import { DescriptionList, PropertyRow } from '@/components/description-list';
 import { PageLayout } from '@/components/page-layout';
 import { Section } from '@/components/section';
@@ -21,8 +20,9 @@ export default function SettingsScreen() {
       width="prose"
       title="Settings"
       description="Theme and palette are kept on this device; the account is not."
+      contentClassName="gap-6 py-6"
       contentSlot={
-        <View className="gap-6 py-6">
+        <>
           <Section
             surface="card"
             title="Theme"
@@ -41,7 +41,7 @@ export default function SettingsScreen() {
               )
             }
           />
-        </View>
+        </>
       }
     />
   );

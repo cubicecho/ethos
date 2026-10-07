@@ -31,8 +31,9 @@ export default function ArchiveScreen() {
       width="prose"
       title="Archive"
       description="Every day recorded against these is still here. Open one to restore it."
+      contentClassName="py-6"
       contentSlot={
-        <View className="py-6">
+        <>
           <LoadState
             query={archivedQuery}
             what="the archive"
@@ -53,7 +54,7 @@ export default function ArchiveScreen() {
               ))}
             </View>
           ) : null}
-        </View>
+        </>
       }
     />
   );

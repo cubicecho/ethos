@@ -49,8 +49,9 @@ export default function TodayScreen() {
             content="New habit"
           />
         }
+        contentClassName="gap-2 py-6"
         contentSlot={
-          <View className="gap-2 py-6">
+          <>
             {/* Only when there is nothing to show: a refetch that fails with the
                 list on screen leaves it there, because the marks are still true. */}
             <LoadState
@@ -73,7 +74,7 @@ export default function TodayScreen() {
                 ))}
               </View>
             ) : null}
-          </View>
+          </>
         }
       />
       <HabitFormDialog
