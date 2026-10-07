@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/cubicecho/ethos/compare/v1.1.1...v1.1.2) (2026-10-07)
+
+
+### Bug Fixes
+
+* **db:** name the unique on users.email, check entry status, stamp users.updatedAt ([07e9d6a](https://github.com/cubicecho/ethos/commit/07e9d6a1b23687f9cf1c7b5f7f371b50c94a90e9))
+
 ## [1.1.1](https://github.com/cubicecho/ethos/compare/v1.1.0...v1.1.1) (2026-10-07)
 
 
