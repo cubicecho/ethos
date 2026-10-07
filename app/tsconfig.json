@@ -5,6 +5,7 @@
     "strict": true,
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
+    "types": ["node"],
     "paths": {
       "@/*": ["./src/*"]
     }

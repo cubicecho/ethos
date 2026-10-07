@@ -50,17 +50,12 @@ describe('isDay', () => {
     expect(isDay('2024-02-29')).toBe(true);
   });
 
-  it.each([
-    '2026-9-17',
-    '2026-09-17T00:00:00Z',
-    'not-a-day',
-    '',
-    '2026-02-31',
-    '2025-02-29',
-    '2026-13-01',
-  ])('rejects %s', (value) => {
-    expect(isDay(value)).toBe(false);
-  });
+  it.each(['2026-9-17', '2026-09-17T00:00:00Z', 'not-a-day', '', '2026-02-31', '2025-02-29', '2026-13-01'])(
+    'rejects %s',
+    (value) => {
+      expect(isDay(value)).toBe(false);
+    },
+  );
 
   it('answers rather than throwing, unlike the server’s assertDay', () => {
     // The client asks whether a string is a day; the server is told one and has

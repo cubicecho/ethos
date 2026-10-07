@@ -49,9 +49,10 @@ describe('device and web halves of a component', () => {
     expect(pairs.length).toBeGreaterThan(0);
   });
 
-  it.each(
-    pairs.map(([device, web]) => [relative(SRC, web), device, web]),
-  )('%s exports what its device half does', (_name, device, web) => {
-    expect(runtimeExports(web)).toEqual(runtimeExports(device));
-  });
+  it.each(pairs.map(([device, web]) => [relative(SRC, web), device, web]))(
+    '%s exports what its device half does',
+    (_name, device, web) => {
+      expect(runtimeExports(web)).toEqual(runtimeExports(device));
+    },
+  );
 });
