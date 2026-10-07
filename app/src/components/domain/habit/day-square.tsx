@@ -58,15 +58,17 @@ export function DaySquare({
           onPress={() => onSet(day, nextStatus(status))}
           className={cn(
             'h-5 w-5 shrink-0 rounded-[3px] border transition-colors',
-            // Further out than today's outline and in another colour, so focus on today still shows.
+            // Further out than today's outline, so focus on today still shows.
             'focus-visible:outline-2 focus-visible:outline-active focus-visible:outline-offset-2',
-            isFuture ? 'cursor-default border-border/50 border-dashed bg-transparent' : 'hover:border-ring',
+            isFuture
+              ? 'cursor-default border-foreground/10 border-dashed bg-transparent'
+              : 'hover:border-foreground/60',
             isFuture === false && disabled && 'opacity-60',
             status === ENTRY_SKIPPED && 'border-2 border-foreground/60 border-dashed bg-transparent',
-            status === null && isFuture === false && 'border-border bg-muted/50',
+            status === null && isFuture === false && 'border-foreground/10 bg-foreground/10',
             // Today is outlined rather than filled: the outline survives whatever
             // the square's own state is, so "today" and "kept" are readable at once.
-            isToday && 'outline-2 outline-ring outline-offset-1',
+            isToday && 'outline-2 outline-active outline-offset-1',
           )}
           style={status === ENTRY_DONE ? { backgroundColor: color, borderColor: color } : undefined}
         />

@@ -33,7 +33,7 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
   const toggle = (next: EntryStatus) => setDay(habit.id, today, status === next ? null : next);
 
   return (
-    <View role="listitem" className="gap-1 rounded-lg border border-border bg-card">
+    <View role="listitem" className="gap-1 rounded-lg border border-foreground/10 bg-secondary">
       <ListItem
         title={habit.name}
         description={`${describeCadence(period, habit.targetCount)} · ${
