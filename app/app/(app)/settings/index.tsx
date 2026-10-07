@@ -2,6 +2,7 @@ import { useQuery } from '@apollo/client';
 import { Text, View } from 'react-native';
 import { PageLayout } from '@/components/page-layout';
 import { Section } from '@/components/section';
+import { LoadFailure } from '@/components/ui/load-failure';
 import { ThemePicker } from '@/components/ui/theme-picker';
 import { PALETTE_PREFERENCES } from '@/components/ui/theme-preference-base';
 import { MeDocument } from '@/lib/graphql';
@@ -10,8 +11,9 @@ import { MeDocument } from '@/lib/graphql';
 export default function SettingsScreen() {
   // `users` is scoped to the caller, so the list is the one row the token
   // names — there is no "me" query because there is no one else to ask about.
-  const { data } = useQuery(MeDocument);
+  const { data, loading, error, refetch } = useQuery(MeDocument);
   const me = data?.users?.[0];
+  const email = me?.email ?? (loading ? 'Loading…' : '—');
 
   return (
     <PageLayout
@@ -30,7 +32,13 @@ export default function SettingsScreen() {
             surface="card"
             title="Account"
             description="Sign in with a link sent to this address."
-            contentSlot={<Text className="text-foreground text-sm">{me?.email ?? '—'}</Text>}
+            contentSlot={
+              error && me === undefined ? (
+                <LoadFailure error={error} onRetry={() => refetch()} what="your account" compact />
+              ) : (
+                <Text className="text-foreground text-sm">{email}</Text>
+              )
+            }
           />
         </View>
       }
