@@ -59,7 +59,9 @@ const bind = process.env.POSTGRES_BIND ?? (remote ? '0.0.0.0' : '127.0.0.1');
 const host = remote ?? '127.0.0.1';
 
 if (remote) {
-  console.log(`Docker daemon is ${remote}, not this machine — publishing Postgres on ${bind}:${port} so you can reach it.`);
+  console.log(
+    `Docker daemon is ${remote}, not this machine — publishing Postgres on ${bind}:${port} so you can reach it.`,
+  );
 }
 
 // `--wait` holds until the healthcheck passes, so `db:up && db:migrate` works as

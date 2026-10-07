@@ -100,7 +100,7 @@ npm run db:up            # Postgres in Docker, bind and host following the activ
 npm run db:generate      # new migration from a schema change
 npm run db:migrate       # apply migrations
 npm run codegen          # GraphQL types for both server and app
-npm run check            # codegen + biome + tsc --noEmit, all three workspaces
+npm run check            # codegen + biome (writes fixes) + tsc --noEmit, all three workspaces
 npm test                 # Vitest
 ```
 
@@ -347,7 +347,7 @@ a value it failed to read.
 
 ## Code style
 
-- Biome, single quotes, 2-space indent, 120 columns, trailing commas. `npm run check:fix`.
+- Biome, single quotes, 2-space indent, 120 columns, trailing commas. `npm run check` applies the fixes it can; CI runs `biome ci`, which writes nothing.
 - `server/` and `db/` run as TypeScript under Node 26 with no build step,
   so **relative imports there carry an explicit `.ts` extension**. `app/` is
   bundled by Metro and omits it.
