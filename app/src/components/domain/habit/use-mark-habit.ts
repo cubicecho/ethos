@@ -41,7 +41,7 @@ function useAction() {
   return { isPending, error, run };
 }
 
-/** For screens that show a habit but no history — the list and the sidebar. */
+/** For screens that show a habit but no history: the list. */
 export function useMarkHabit(today: string): Marker {
   const [mark] = useMutation(MarkHabitDocument);
   const [clear] = useMutation(ClearHabitDocument);

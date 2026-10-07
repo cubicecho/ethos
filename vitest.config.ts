@@ -8,12 +8,9 @@ const alias = [
   { find: /^graphql$/, replacement: path.resolve(import.meta.dirname, './node_modules/graphql/index.js') },
 ];
 
-// Two projects, because two kinds of test want two different worlds and one
-// global `environment` cannot be both. The server and db tests run a real
-// Postgres in-process and must not pay for a DOM; the component tests are a
-// DOM and nothing else. Splitting them is also what finally made component
-// tests possible here — there was no jsdom at all before, and the app's ~30
-// components had no coverage as a result.
+// Two projects, because one global `environment` cannot be both worlds. The
+// server and db tests run a real Postgres in-process and must not pay for a DOM;
+// the component tests are a DOM and nothing else.
 export default defineConfig({
   resolve: { alias },
   test: {

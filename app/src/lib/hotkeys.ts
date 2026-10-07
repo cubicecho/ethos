@@ -4,11 +4,9 @@ import { useEffect, useRef } from 'react';
  * Single-key shortcuts, for the parts of the app a pointer reaches faster than
  * a keyboard does.
  *
- * No dependency and no command palette: the app has four shortcuts, and a
- * palette is a different feature with a different budget. Arrow keys on the
- * List/Board tabs and dnd-kit's keyboard sensor on the board are unaffected —
- * both handle their own events locally, and this only ever sees what reaches
- * the document.
+ * No dependency and no command palette: the app has one shortcut, and a palette
+ * is a different feature with a different budget. This only ever sees what
+ * reaches the document.
  */
 
 /**
