@@ -22,7 +22,13 @@ export const badInput = withCode(ErrorCode.BadUserInput);
 export const notFound = withCode(ErrorCode.NotFound);
 /** Nobody is signed in, or the session has run out. */
 export const unauthenticated = withCode(ErrorCode.Unauthenticated);
-/** Too many attempts for now. `retryAfter` is the seconds until the next one would be let through. */
+/**
+ * Too many attempts for now. `retryAfter` is the seconds until the next one would be let through.
+ *
+ * @param message - What the caller is told.
+ * @param retryAfter - Seconds until the next attempt would be let through.
+ * @returns The error, coded `ErrorCode.TooManyRequests`.
+ */
 export function rateLimited(message: string, retryAfter: number): GraphQLError {
   return new GraphQLError(message, { extensions: { code: ErrorCode.TooManyRequests, retryAfter } });
 }
@@ -30,6 +36,9 @@ export function rateLimited(message: string, retryAfter: number): GraphQLError {
 /**
  * The operation asks for more than one request may: too deep, too many aliases
  * or too costly. Refused before it runs, so it is a 400 and not a result.
+ *
+ * @param message - Which limit the operation went over.
+ * @returns The error, coded `ErrorCode.QueryTooComplex`.
  */
 export function tooComplex(message: string): GraphQLError {
   return new GraphQLError(message, {
@@ -37,7 +46,12 @@ export function tooComplex(message: string): GraphQLError {
   });
 }
 
-/** What went wrong, as a sentence: an `Error`'s message, or the thrown value as text. */
+/**
+ * What went wrong, as a sentence: an `Error`'s message, or the thrown value as text.
+ *
+ * @param error - Whatever was thrown.
+ * @returns The message.
+ */
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }

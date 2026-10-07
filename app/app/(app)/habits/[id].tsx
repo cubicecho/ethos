@@ -13,6 +13,7 @@ import { Search } from '@/components/ui/icons';
 import { HabitDocument } from '@/lib/graphql';
 import { useToday } from '@/lib/use-today';
 
+/** One habit: its numbers, and its grid of days to mark. */
 export default function HabitScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const today = useToday();

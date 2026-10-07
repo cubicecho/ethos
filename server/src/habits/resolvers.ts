@@ -68,18 +68,28 @@ const HABITS_SDL = parse(`
  * its own `today` with anything that has to know which period is the current
  * one — a server in Berlin has no business telling someone in Auckland that
  * their Monday has not started.
+ *
+ * @returns The day, as `YYYY-MM-DD`.
  */
 function serverToday(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-/** One answer for a habit that is missing and a habit that is someone else's. */
+/**
+ * One answer for a habit that is missing and a habit that is someone else's.
+ *
+ * @returns The NOT_FOUND error.
+ */
 const habitNotFound = () => notFound('Habit not found');
 
 /**
  * A habit the caller owns, or NOT_FOUND. The hand-written mutations sit outside
  * the generated resolvers, so they do not inherit the `scope` from tenancy.ts
  * and have to state ownership themselves.
+ *
+ * @param context - The request context; its user scopes the lookup.
+ * @param id - The habit's id.
+ * @returns The habit's row.
  */
 async function loadOwnedHabit(context: Context, id: string): Promise<AnyRow> {
   const userId = requireAuth(context);
@@ -94,6 +104,12 @@ async function loadOwnedHabit(context: Context, id: string): Promise<AnyRow> {
   return rows[0];
 }
 
+/**
+ * The status a mark records, from the argument as sent.
+ *
+ * @param value - The `status` argument; missing means done.
+ * @returns The status. Throws BAD_USER_INPUT for anything else.
+ */
 function parseStatus(value: string | null | undefined): EntryStatus {
   if (value == null || value === ENTRY_DONE) {
     return ENTRY_DONE;
@@ -111,6 +127,8 @@ function parseStatus(value: string | null | undefined): EntryStatus {
  * it is the 17th in UTC someone in Auckland is honestly on the 18th. Past that
  * there is no zone that explains it, and a habit marked kept for next month is a
  * streak nobody earned.
+ *
+ * @param day - The day being marked.
  */
 function assertNotFuture(day: string): void {
   if (daysBetween(serverToday(), day) > 1) {
@@ -124,6 +142,10 @@ function assertNotFuture(day: string): void {
  * Counted over the period's existing entries rather than incremented: rewriting
  * a day that is already a skip is not a new one, and a period at the cap must
  * still be able to change its mind about which days it declined.
+ *
+ * @param habit - The habit's row.
+ * @param entries - The habit's entries so far.
+ * @param day - The day being skipped.
  */
 function assertSkipAllowed(habit: AnyRow, entries: readonly { day: string; status: EntryStatus }[], day: string): void {
   const range = periodOf(habit.period, day);
@@ -138,7 +160,13 @@ function assertSkipAllowed(habit: AnyRow, entries: readonly { day: string; statu
   );
 }
 
-/** The periods field resolvers share: the habit's entries, as streaks.ts reads them. */
+/**
+ * The periods field resolvers share: the habit's entries, as streaks.ts reads them.
+ *
+ * @param parent - The habit's row.
+ * @param context - The request context, for its loaders.
+ * @returns The entries, oldest first.
+ */
 function entriesOf(parent: AnyRow, context: Context): Promise<EntryLike[]> {
   return context.loaders.entries.load(String(parent.id));
 }
@@ -151,6 +179,10 @@ function entriesOf(parent: AnyRow, context: Context): Promise<EntryLike[]> {
  * arrives here as a row with no cadence — and `periodOf(undefined, day)` does
  * not fail, it silently answers with a month. What a streak means must not
  * depend on what else the caller happened to select.
+ *
+ * @param parent - The habit's row.
+ * @param context - The request context, for its loaders.
+ * @returns The cadence. Throws NOT_FOUND when the habit is gone.
  */
 async function cadenceOf(parent: AnyRow, context: Context): Promise<HabitLike> {
   const cadence = await context.loaders.cadence.load(String(parent.id));
@@ -160,11 +192,23 @@ async function cadenceOf(parent: AnyRow, context: Context): Promise<HabitLike> {
   return cadence;
 }
 
-/** Both halves at once — every derived field wants the cadence and the entries. */
+/**
+ * Both halves at once — every derived field wants the cadence and the entries.
+ *
+ * @param parent - The habit's row.
+ * @param context - The request context, for its loaders.
+ * @returns The cadence, then the entries.
+ */
 async function readingOf(parent: AnyRow, context: Context): Promise<[HabitLike, readonly EntryLike[]]> {
   return Promise.all([cadenceOf(parent, context), entriesOf(parent, context)]);
 }
 
+/**
+ * Adds what the generated schema cannot derive: streaks, history, and the two mutations that record a day.
+ *
+ * @param schema - The generated schema.
+ * @returns The schema with the habit fields, `markHabit` and `clearHabit` on it.
+ */
 export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
   const extendedSchema = extendSchema(schema, HABITS_SDL);
 

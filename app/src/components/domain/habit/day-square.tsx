@@ -9,7 +9,13 @@ const STATE_OF = {
   [ENTRY_SKIPPED]: 'skipped',
 } satisfies Record<EntryStatus, string>;
 
-/** The square's state in words, for the label a screen reader and the tooltip share. */
+/**
+ * The square's state in words, for the label a screen reader and the tooltip share.
+ *
+ * @param status - What the day is.
+ * @param isFuture - Whether the day has not happened yet.
+ * @returns The words.
+ */
 function describeState(status: DayStatus, isFuture: boolean): string {
   if (isFuture) {
     return 'to come';

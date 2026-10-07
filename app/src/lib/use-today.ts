@@ -11,6 +11,8 @@ const MS_PER_SECOND = 1000;
  * cache key: two components that disagreed across midnight would read and write
  * different entries for the same habit. Polled rather than scheduled, because a
  * timer set for midnight does not fire while a laptop is asleep.
+ *
+ * @returns The day, as `YYYY-MM-DD`.
  */
 export function useToday(): string {
   const [day, setDay] = useState(today);

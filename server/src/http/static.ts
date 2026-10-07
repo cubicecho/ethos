@@ -21,7 +21,12 @@ const CONTENT_TYPES: Record<string, string> = {
 
 export type StaticHandler = (request: IncomingMessage, response: ServerResponse) => void;
 
-/** The request's path with its percent-escapes decoded, or null when they are malformed. */
+/**
+ * The request's path with its percent-escapes decoded, or null when they are malformed.
+ *
+ * @param url - The request's URL.
+ * @returns The path, or null.
+ */
 function decodedPathname(url: string | undefined): string | null {
   try {
     return decodeURIComponent(new URL(url ?? '/', 'http://host').pathname);
@@ -35,6 +40,9 @@ function decodedPathname(url: string | undefined): string | null {
  * deployment and a magic link needs no second origin. Unknown paths fall back to
  * index.html — the SPA owns routing, including /auth/verify?token=… . Expo's
  * hashed bundles under /_expo get immutable caching; everything else revalidates.
+ *
+ * @param root - The directory holding the built client.
+ * @returns The handler.
  */
 export function createStaticHandler(root: string): StaticHandler {
   const rootDir = resolve(root);

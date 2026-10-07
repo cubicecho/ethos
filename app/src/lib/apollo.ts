@@ -12,6 +12,11 @@ import { clearToken, getToken } from '@/lib/auth';
 // actually opened on: hardcoding localhost works only for the machine running
 // the dev server, and breaks the moment you open the app from a phone or a
 // second laptop. EXPO_PUBLIC_API_URL overrides this outright.
+/**
+ * Where the API is when Expo serves the client.
+ *
+ * @returns The origin, or an empty string in production and off the web.
+ */
 function devApiUrl(): string {
   if (process.env.NODE_ENV === 'production' || Platform.OS !== 'web') {
     return '';

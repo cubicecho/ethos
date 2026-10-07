@@ -21,7 +21,12 @@ interface Queryable {
   execute: (query: ReturnType<typeof sql>) => Promise<unknown>;
 }
 
-/** The driver or errno code of `error`, or of whatever caused it. Drizzle wraps the driver's error. */
+/**
+ * The driver or errno code of `error`, or of whatever caused it. Drizzle wraps the driver's error.
+ *
+ * @param error - Whatever was thrown.
+ * @returns The code, or undefined when there is none.
+ */
 export function errorCode(error: unknown): string | undefined {
   if (typeof error !== 'object' || error === null) {
     return undefined;
@@ -39,6 +44,10 @@ export function errorCode(error: unknown): string | undefined {
  * exiting on the first refused connection turns every cold start into a
  * restart loop. Rejects with the last error once the time is up, or at once
  * for a failure that waiting will not cure.
+ *
+ * @param db - Anything that can run a query.
+ * @param [overrides] - Settings that replace the defaults.
+ * @param [log] - Where each retry is reported.
  */
 export async function waitForDatabase(
   db: Queryable,

@@ -8,6 +8,7 @@ import { setToken } from '@/lib/auth';
 import { describeError } from '@/lib/errors';
 import { VerifyMagicLinkDocument } from '@/lib/graphql';
 
+/** Spends the token of a sign-in link and opens the app. */
 export default function VerifyScreen() {
   const router = useRouter();
   const { token } = useLocalSearchParams<{ token?: string }>();

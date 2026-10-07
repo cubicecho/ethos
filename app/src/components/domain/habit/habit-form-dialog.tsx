@@ -29,6 +29,12 @@ type HabitValues = {
   targetCount: number | null;
 };
 
+/**
+ * What the form starts with: the habit's values, or a new habit's.
+ *
+ * @param habit - The habit being edited, or undefined for a new one.
+ * @returns The form's values.
+ */
 const valuesOf = (habit: HabitSummary | undefined): HabitValues => ({
   name: habit?.name ?? '',
   notes: habit?.notes ?? '',
@@ -37,6 +43,7 @@ const valuesOf = (habit: HabitSummary | undefined): HabitValues => ({
   targetCount: habit?.targetCount ?? 1,
 });
 
+/** Creates a habit, or edits the one it is given. */
 export function HabitFormDialog({
   open,
   onOpenChange,
@@ -46,7 +53,9 @@ export function HabitFormDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** The caller's day: the lists a saved habit is written into are keyed by it. */
   today: string;
+  /** The habit to edit. Left out, the dialog creates one. */
   habit?: HabitSummary;
   /** Where a new habit goes in the list. Ignored when editing. */
   nextPosition?: number;

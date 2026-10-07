@@ -4,6 +4,11 @@
 
 import { configuredJwtSecret, databaseUrl, describeWeakSecret, isProduction } from './config.ts';
 
+/**
+ * Reports a configuration fault and exits with status 1.
+ *
+ * @param message - What is wrong, as a sentence.
+ */
 function fatal(message: string): never {
   console.error(`[preflight] ${message}`);
   process.exit(1);

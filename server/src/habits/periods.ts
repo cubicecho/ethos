@@ -16,7 +16,12 @@ const DECEMBER = 12;
 const MONTH_LENGTH = 'YYYY-MM'.length;
 const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-/** A `YYYY-MM-DD` as milliseconds at UTC midnight, or a thrown BAD_USER_INPUT. */
+/**
+ * A `YYYY-MM-DD` as milliseconds at UTC midnight, or a thrown BAD_USER_INPUT.
+ *
+ * @param day - A `YYYY-MM-DD` day.
+ * @returns Milliseconds since the epoch.
+ */
 function toUtc(day: string): number {
   if (DAY_PATTERN.test(day) === false) {
     throw badInput(`"${day}" is not a date. Expected YYYY-MM-DD.`);
@@ -31,21 +36,45 @@ function toUtc(day: string): number {
   return milliseconds;
 }
 
+/**
+ * The `YYYY-MM-DD` of a UTC instant.
+ *
+ * @param milliseconds - Milliseconds since the epoch.
+ * @returns The day.
+ */
 function fromUtc(milliseconds: number): string {
   return new Date(milliseconds).toISOString().slice(0, 10);
 }
 
-/** Rejects anything that is not a calendar day, and returns it unchanged. */
+/**
+ * Rejects anything that is not a calendar day, and returns it unchanged.
+ *
+ * @param day - The value to check.
+ * @returns The same string.
+ */
 export function assertDay(day: string): string {
   toUtc(day);
   return day;
 }
 
+/**
+ * The day `count` days after `day`.
+ *
+ * @param day - A `YYYY-MM-DD` day.
+ * @param count - Days to add; negative goes back.
+ * @returns The day.
+ */
 export function addDays(day: string, count: number): string {
   return fromUtc(toUtc(day) + count * DAY_MS);
 }
 
-/** Whole days from `from` to `to`. Negative when `to` is earlier. */
+/**
+ * Whole days from `from` to `to`. Negative when `to` is earlier.
+ *
+ * @param from - The day counted from.
+ * @param to - The day counted to.
+ * @returns The number of days.
+ */
 export function daysBetween(from: string, to: string): number {
   return Math.round((toUtc(to) - toUtc(from)) / DAY_MS);
 }
@@ -56,6 +85,10 @@ export function daysBetween(from: string, to: string): number {
  * Weeks start on Monday (ISO 8601) rather than Sunday: it is what the rest of
  * the world writes, and a week that starts on Monday puts a weekend at one end
  * of the row instead of splitting it across two.
+ *
+ * @param period - The kind of period.
+ * @param day - Any day in the period.
+ * @returns The first day.
  */
 export function periodStart(period: Period, day: string): string {
   if (period === Period.Day) {
@@ -68,7 +101,13 @@ export function periodStart(period: Period, day: string): string {
   return `${day.slice(0, MONTH_LENGTH)}-01`;
 }
 
-/** The day after the period's last — exclusive, so ranges compare as `[start, end)`. */
+/**
+ * The day after the period's last — exclusive, so ranges compare as `[start, end)`.
+ *
+ * @param period - The kind of period.
+ * @param day - Any day in the period.
+ * @returns The day after the last.
+ */
 export function periodEnd(period: Period, day: string): string {
   const start = periodStart(period, day);
   if (period === Period.Day) {
@@ -81,7 +120,13 @@ export function periodEnd(period: Period, day: string): string {
   return fromUtc(Date.UTC(month === DECEMBER ? year + 1 : year, month === DECEMBER ? 0 : month, 1));
 }
 
-/** How many days the period holds — the ceiling on what one of them can ask for. */
+/**
+ * How many days the period holds — the ceiling on what one of them can ask for.
+ *
+ * @param period - The kind of period.
+ * @param day - Any day in the period.
+ * @returns The length, in days.
+ */
 export function periodLength(period: Period, day: string): number {
   return daysBetween(periodStart(period, day), periodEnd(period, day));
 }
@@ -93,12 +138,25 @@ export interface PeriodRange {
   end: string;
 }
 
-/** The period containing `day`. */
+/**
+ * The period containing `day`.
+ *
+ * @param period - The kind of period.
+ * @param day - Any day in it.
+ * @returns Its first day and its exclusive end.
+ */
 export function periodOf(period: Period, day: string): PeriodRange {
   return { start: periodStart(period, day), end: periodEnd(period, day) };
 }
 
-/** The period `count` periods before the one containing `day`. */
+/**
+ * The period `count` periods before the one containing `day`.
+ *
+ * @param period - The kind of period.
+ * @param day - A day in the period counted back from.
+ * @param [count] - How many periods to go back.
+ * @returns That period's first day and its exclusive end.
+ */
 export function periodBefore(period: Period, day: string, count = 1): PeriodRange {
   const start = periodStart(period, day);
   if (count <= 0) {
@@ -110,6 +168,11 @@ export function periodBefore(period: Period, day: string, count = 1): PeriodRang
 /**
  * The last `count` periods ending with the one containing `day`, oldest first —
  * which is the order a grid is read in.
+ *
+ * @param period - The kind of period.
+ * @param day - A day in the last period.
+ * @param count - How many periods.
+ * @returns The ranges.
  */
 export function recentPeriods(period: Period, day: string, count: number): PeriodRange[] {
   return Array.from({ length: count }, (_, index) => periodBefore(period, day, count - 1 - index));

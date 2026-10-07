@@ -18,6 +18,9 @@ export interface Health {
  *
  * A process that is up but cannot reach its database answers every request with
  * an error, and an orchestrator should hear that and stop routing to it.
+ *
+ * @param db - The database.
+ * @returns The report; `ok` is false when the query fails.
  */
 export async function checkHealth(db: DB): Promise<Health> {
   try {

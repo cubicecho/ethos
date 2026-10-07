@@ -26,6 +26,11 @@ interface GridRow {
  * is only how they are laid out, which is why such a row carries no tally. For
  * weekly and monthly habits the row *is* the period, and the tally beside it is
  * the server's, not a re-count of the squares.
+ *
+ * @param period - The habit's period.
+ * @param history - The server's tallies, one per period.
+ * @param today - The caller's day.
+ * @returns The rows, oldest first.
  */
 function buildRows(period: Period, history: readonly HabitPeriodSummary[], today: string): GridRow[] {
   if (period === Period.Day) {
@@ -45,6 +50,7 @@ function buildRows(period: Period, history: readonly HabitPeriodSummary[], today
   }));
 }
 
+/** A habit's recent periods as rows of day squares. */
 export function HabitGrid({
   habit,
   history,
@@ -54,8 +60,11 @@ export function HabitGrid({
   onValueChange,
 }: {
   habit: HabitSummary;
+  /** The server's tallies, one per recent period. */
   history: readonly HabitPeriodSummary[];
+  /** The days that carry a mark. */
   entries: readonly HabitEntrySummary[];
+  /** The caller's day. Days after it are drawn but cannot be pressed. */
   today: string;
   /** Whether the squares refuse a press: a mark is on its way to the server. */
   disabled: boolean;

@@ -13,6 +13,9 @@ export type CachedHabit = HabitsQuery['habits'][number];
  * move between them. Keeping the pair in one place is what stops a habit being
  * archived out of the sidebar and still sitting in the archive's cache as
  * active, or worse, appearing in both.
+ *
+ * @param today - The caller's day, a variable of both queries.
+ * @returns The active and the archived list queries.
  */
 function listsOf(today: string) {
   return {
@@ -21,6 +24,13 @@ function listsOf(today: string) {
   };
 }
 
+/**
+ * A list with one habit taken out.
+ *
+ * @param habits - The list.
+ * @param id - The habit to drop.
+ * @returns A new list.
+ */
 function without(habits: readonly CachedHabit[], id: string): CachedHabit[] {
   return habits.filter((habit) => habit.id !== id);
 }
@@ -37,6 +47,10 @@ function without(habits: readonly CachedHabit[], id: string): CachedHabit[] {
  * A no-op for a list that is not in the cache, which is the case for the
  * archive until someone opens it — `updateQuery` leaves a missing entry alone
  * rather than writing a partial one that the next read would trust.
+ *
+ * @param cache - The Apollo cache.
+ * @param today - The caller's day.
+ * @param habit - The habit as the server returned it.
  */
 export function placeHabit(cache: ApolloCache<unknown>, today: string, habit: CachedHabit): void {
   const { active, archived } = listsOf(today);
@@ -60,7 +74,13 @@ export function placeHabit(cache: ApolloCache<unknown>, today: string, habit: Ca
   );
 }
 
-/** Drop a habit from both lists — what a delete leaves behind is nothing. */
+/**
+ * Drop a habit from both lists — what a delete leaves behind is nothing.
+ *
+ * @param cache - The Apollo cache.
+ * @param today - The caller's day.
+ * @param id - The habit that was deleted.
+ */
 export function removeHabit(cache: ApolloCache<unknown>, today: string, id: string): void {
   const { active, archived } = listsOf(today);
   for (const list of [active, archived]) {

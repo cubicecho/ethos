@@ -1,3 +1,8 @@
+const UUID_BYTES = 16;
+const HEX = 16;
+/** Where the dashes fall in the 32 hex digits of a UUID. */
+const GROUP_ENDS = { first: 8, second: 12, third: 16, fourth: 20 } as const;
+
 /**
  * A v4 UUID, generated here rather than by Postgres.
  *
@@ -6,12 +11,9 @@
  * is restricted to secure contexts, and Ethos is meant to run on a LAN over
  * plain http. `crypto.getRandomValues` is not, so the fallback assembles a v4 by
  * hand rather than reaching for `Math.random`.
+ *
+ * @returns The UUID.
  */
-const UUID_BYTES = 16;
-const HEX = 16;
-/** Where the dashes fall in the 32 hex digits of a UUID. */
-const GROUP_ENDS = { first: 8, second: 12, third: 16, fourth: 20 } as const;
-
 export function newId(): string {
   if (typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();

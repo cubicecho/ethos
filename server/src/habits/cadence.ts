@@ -27,11 +27,20 @@ const MAX_TARGET = {
  * Measured against the shortest instance of the period rather than the one we
  * happen to be in: a cadence that is satisfiable in August and impossible in
  * February is a habit that fails once a year for reasons nobody wrote down.
+ *
+ * @param period - The kind of period.
+ * @returns The count, in days.
  */
 export function maxTargetFor(period: Period): number {
   return MAX_TARGET[period];
 }
 
+/**
+ * Why a target over the limit is refused, as a sentence for the user.
+ *
+ * @param period - The kind of period.
+ * @returns The sentence.
+ */
 export function describeCadenceLimit(period: Period): string {
   if (period === Period.Day) {
     return 'A daily habit is kept once a day.';
@@ -39,7 +48,12 @@ export function describeCadenceLimit(period: Period): string {
   return `A ${period} has at most ${maxTargetFor(period)} days, so it cannot ask for more.`;
 }
 
-/** Throws unless every habit of `userId`'s asks for something a period could give. */
+/**
+ * Throws unless every habit of `userId`'s asks for something a period could give.
+ *
+ * @param db - The database or transaction.
+ * @param userId - Whose habits to check.
+ */
 export async function assertTargetsFitPeriods(db: AnyDb, userId: string): Promise<void> {
   const rows: Array<{ name: string; period: Period; targetCount: number }> = await db
     .select({

@@ -20,6 +20,10 @@ const NO_ENTRIES: EntryLike[] = [];
  * thousand rows at the outside — one per day per habit, for as long as it has
  * been kept. Counting them in memory is what lets streaks.ts stay a pure module
  * with tests that need no database at all.
+ *
+ * @param db - The database.
+ * @param habitIds - The habits to load for.
+ * @returns Entries by habit id, oldest first. A habit with none has no key.
  */
 async function findEntries(db: AnyDb, habitIds: readonly string[]): Promise<Map<string, EntryLike[]>> {
   const byHabit = new Map<string, EntryLike[]>();
@@ -55,6 +59,10 @@ async function findEntries(db: AnyDb, habitIds: readonly string[]): Promise<Map<
  * monthly period. Every derived field reads the cadence from here instead, so
  * what the streak is counted over does not depend on what else the caller
  * happened to select.
+ *
+ * @param db - The database.
+ * @param habitIds - The habits to load for.
+ * @returns Cadence by habit id. A habit that does not exist has no key.
  */
 async function findCadences(db: AnyDb, habitIds: readonly string[]): Promise<Map<string, HabitLike>> {
   const byHabit = new Map<string, HabitLike>();
@@ -86,6 +94,9 @@ export interface Loaders {
  * to be told: `markHabit` writes an entry and then returns the habit, whose
  * streak is read through this loader, so the mutation clears its habit's key
  * before selecting — otherwise a tick would report the streak from before it.
+ *
+ * @param db - The database.
+ * @returns The request's loaders.
  */
 export function createLoaders(db: AnyDb): Loaders {
   return {

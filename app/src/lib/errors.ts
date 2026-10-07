@@ -34,10 +34,22 @@ interface ErrorLike {
   networkError?: { message?: unknown; statusCode?: unknown } | null;
 }
 
+/**
+ * A string worth showing: trimmed, and not blank.
+ *
+ * @param value - Anything.
+ * @returns The trimmed string, or undefined when it is not a string or is blank.
+ */
 function text(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
 }
 
+/**
+ * What went wrong, as a sentence to show the user.
+ *
+ * @param error - Whatever was thrown or returned.
+ * @returns The message, or a generic one when there is nothing to read.
+ */
 export function describeError(error: unknown): string {
   if (error == null) {
     return UNKNOWN;

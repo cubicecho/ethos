@@ -5,6 +5,7 @@ import { AppSidebar } from '@/components/domain/navigation/app-sidebar';
 import { SidebarLayout } from '@/components/split-layout';
 import { isAuthenticated } from '@/lib/auth';
 
+/** The signed-in shell: the rail beside the current screen, or a redirect to /login. */
 export default function AppLayout() {
   // The token lives in localStorage, which the first render cannot read. Decide
   // after mount rather than sending a signed-in user to /login for one frame.

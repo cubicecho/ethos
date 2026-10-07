@@ -19,6 +19,13 @@ export interface RateLimiter {
   hit(...keys: string[]): void;
 }
 
+/**
+ * Builds a limiter that holds its counts in this process.
+ *
+ * @param [overrides] - Settings that replace the defaults.
+ * @param [now] - The clock, in milliseconds since the epoch. Tests pass their own.
+ * @returns The limiter.
+ */
 export function createRateLimiter(
   overrides: Partial<RateLimitSettings> = {},
   now: () => number = Date.now,

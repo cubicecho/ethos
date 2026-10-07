@@ -26,7 +26,12 @@ const PRIVATE_IPV4: readonly { first: number; low: number; high: number }[] = [
   { first: 169, low: 254, high: 254 },
 ];
 
-/** The URL's hostname, lowercased and without IPv6 brackets, or null when the URL does not parse. */
+/**
+ * The URL's hostname, lowercased and without IPv6 brackets, or null when the URL does not parse.
+ *
+ * @param url - The connection string.
+ * @returns The hostname, or null.
+ */
 function hostnameOf(url: string): string | null {
   try {
     return new URL(url).hostname.replace(/^\[|\]$/g, '').toLowerCase();
@@ -43,6 +48,9 @@ function hostnameOf(url: string): string | null {
  * "Local" is wider than loopback, because self-hosting is: a compose service or
  * a box on the LAN speaks no TLS by default, and demanding it breaks the
  * connection. Only an address that could route off a private network gets it.
+ *
+ * @param url - The connection string.
+ * @returns false for a local host, and when the URL sets its own `sslmode`.
  */
 export function requiresSsl(url: string): boolean {
   // An explicit sslmode is the operator's decision; postgres-js reads it itself.

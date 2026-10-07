@@ -23,6 +23,9 @@ type AnyDb = any;
  * same override on the output side would hand resolvers a `Date` where they
  * have always had a string. A rule rather than a per-column list, so the next
  * nullable timestamp is already covered.
+ *
+ * @param column - The column being mapped.
+ * @returns The input override for a timestamp, or undefined to leave the column as detected.
  */
 function timestampInput(column: { columnType: string }): { input: typeof GraphQLDateTime } | undefined {
   return column.columnType === 'PgTimestamp' ? { input: GraphQLDateTime } : undefined;
@@ -31,6 +34,12 @@ function timestampInput(column: { columnType: string }): { input: typeof GraphQL
 // The return type is inferred rather than written out: `GeneratedEntities` is
 // keyed by the naming config, so spelling it here would mean restating
 // `typeNameMapper` in a second place that could disagree with the first.
+/**
+ * Builds the GraphQL schema: the generated CRUD, scoped to the caller, with the auth and habits extensions on it.
+ *
+ * @param db - The database the resolvers query.
+ * @returns The schema, and the generated entities it was built from.
+ */
 export function createSchema(db: AnyDb) {
   const { schema: drizzleSchema, entities } = buildSchema(db, {
     prefixes: {

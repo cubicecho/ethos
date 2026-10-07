@@ -8,6 +8,7 @@ import { client } from '@/lib/apollo';
 import { describeError } from '@/lib/errors';
 import '../global.css';
 
+/** The root of every route: the theme and the Apollo client around the stack. */
 export default function RootLayout() {
   // `public/index.html` has already painted the right theme; this keeps it on
   // every screen and repaints a `system` user when the OS switches.

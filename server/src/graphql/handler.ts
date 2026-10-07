@@ -15,7 +15,12 @@ interface GraphQLHandlerDeps {
   limiter: RateLimiter;
 }
 
-/** Builds and starts Apollo Server over `db`, as Express middleware for /graphql. */
+/**
+ * Builds and starts Apollo Server over `db`, as Express middleware for /graphql.
+ *
+ * @param deps - The database and the sign-in limiter every resolver is given.
+ * @returns The middleware.
+ */
 export async function createGraphQLHandler({ db, limiter }: GraphQLHandlerDeps): Promise<RequestHandler> {
   const { schema } = createSchema(db);
   const apolloServer = new ApolloServer<Context>({

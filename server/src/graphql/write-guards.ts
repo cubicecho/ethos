@@ -45,6 +45,9 @@ const FOREIGN_KEYS: Record<string, ForeignKey[]> = {
  * The rows a mutation is about to write: `values` on a create (one row or a
  * list), `set` on an update, one `set` per entry on a batch update. A delete
  * writes nothing and so has nothing to check.
+ *
+ * @param args - The mutation's arguments.
+ * @returns The rows, or an empty list.
  */
 export function writtenRows(args: { values?: Row | Row[]; set?: Row; updates?: Array<{ set?: Row }> }): Row[] {
   if (args.values) {
@@ -56,6 +59,14 @@ export function writtenRows(args: { values?: Row | Row[]; set?: Row; updates?: A
   return args.set ? [args.set] : [];
 }
 
+/**
+ * Throws NOT_FOUND unless every row a write points at belongs to the caller.
+ *
+ * @param tx - The transaction the write runs in.
+ * @param userId - The caller.
+ * @param rows - The rows being written.
+ * @param foreignKeys - The columns to check, and the table each points at.
+ */
 export async function assertForeignKeysOwned(
   tx: AnyTable,
   userId: string,
@@ -86,6 +97,8 @@ export async function assertForeignKeysOwned(
  * Whether a day ever counted is `markHabit`'s to decide. A generated write onto
  * `habit_entries` would be a second row for a day that already has one, or a
  * skip past the cap — and every rate in the app is counted off those rows.
+ *
+ * @param args - The mutation's arguments.
  */
 function assertEntriesUntouched(args: Parameters<typeof writtenRows>[0]): void {
   if (writtenRows(args).length === 0) {

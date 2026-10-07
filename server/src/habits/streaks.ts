@@ -34,9 +34,23 @@ export interface PeriodTally extends PeriodRange {
   rate: number;
 }
 
+/**
+ * Whether an entry's day falls inside a period.
+ *
+ * @param entry - The entry.
+ * @param range - The period, end exclusive.
+ * @returns true when it does.
+ */
 const isInRange = (entry: EntryLike, range: PeriodRange) => entry.day >= range.start && entry.day < range.end;
 
-/** One period, counted. */
+/**
+ * One period, counted.
+ *
+ * @param habit - The cadence to count against.
+ * @param entries - The habit's entries.
+ * @param range - The period to count.
+ * @returns The tally.
+ */
 export function tallyPeriod(habit: HabitLike, entries: readonly EntryLike[], range: PeriodRange): PeriodTally {
   let done = 0;
   let skipped = 0;
@@ -63,7 +77,15 @@ export function tallyPeriod(habit: HabitLike, entries: readonly EntryLike[], ran
   };
 }
 
-/** The last `count` periods, oldest first — the order the grid is read in. */
+/**
+ * The last `count` periods, oldest first — the order the grid is read in.
+ *
+ * @param habit - The cadence to count against.
+ * @param entries - The habit's entries.
+ * @param today - The caller's day.
+ * @param count - How many periods.
+ * @returns One tally per period.
+ */
 export function tallyRecent(
   habit: HabitLike,
   entries: readonly EntryLike[],
@@ -84,6 +106,11 @@ export function tallyRecent(
  * Bounded by the entries themselves: a habit with no history has no streak, so
  * the walk stops at the oldest day there is rather than counting empty periods
  * back to the epoch.
+ *
+ * @param habit - The cadence to count against.
+ * @param entries - The habit's entries.
+ * @param today - The caller's day.
+ * @returns The streak, in periods.
  */
 export function currentStreak(habit: HabitLike, entries: readonly EntryLike[], today: string): number {
   if (entries.length === 0) {
@@ -116,6 +143,11 @@ export function currentStreak(habit: HabitLike, entries: readonly EntryLike[], t
  * and a longest streak that skipped over them would be an achievement nobody
  * earned. The current period joins the run only when it is met, for the same
  * reason it does above.
+ *
+ * @param habit - The cadence to count against.
+ * @param entries - The habit's entries.
+ * @param today - The caller's day.
+ * @returns The streak, in periods.
  */
 export function longestStreak(habit: HabitLike, entries: readonly EntryLike[], today: string): number {
   if (entries.length === 0) {

@@ -26,6 +26,9 @@ export interface AppDeps {
  *
  * It does not listen, migrate or read the environment, so a test can build the
  * app production runs. Async only because Apollo Server has to start.
+ *
+ * @param deps - The database, and what the environment would otherwise decide.
+ * @returns The app.
  */
 export async function createApp({
   db,

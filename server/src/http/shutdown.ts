@@ -19,6 +19,9 @@ export interface ShutdownHooks {
  * Idle keep-alive sockets are closed at once, since nothing is waiting on them.
  * A request still running after `drainSeconds` has its socket closed under it,
  * so one stuck client cannot hold the process open.
+ *
+ * @param server - The HTTP server.
+ * @param drainSeconds - How long requests in flight get, in seconds.
  */
 export function drain(server: Server, drainSeconds: number): Promise<void> {
   return new Promise((resolve) => {
@@ -37,6 +40,10 @@ export function drain(server: Server, drainSeconds: number): Promise<void> {
  * Docker sends SIGTERM and then SIGKILL ten seconds later, so the whole stop is
  * held under `shutdownDeadlineSeconds`. A second signal exits at once, for the
  * person at the terminal who has stopped waiting.
+ *
+ * @param server - The HTTP server.
+ * @param [hooks] - What to run around the drain.
+ * @param [overrides] - Settings that replace the defaults.
  */
 export function stopOnSignals(server: Server, hooks: ShutdownHooks = {}, overrides: Partial<HttpSettings> = {}): void {
   const { drainSeconds, shutdownDeadlineSeconds } = { ...HTTP_DEFAULTS, ...overrides };

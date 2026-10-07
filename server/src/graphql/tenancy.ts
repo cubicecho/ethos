@@ -24,8 +24,22 @@ export const USER_OWNED_TABLES = ['habits', 'habitEntries'] as const;
 /** Every table drizzle-graphql will generate fields for. */
 export const ALL_TABLES = ['users', ...USER_OWNED_TABLES] as const;
 
+/**
+ * Limits a table to the rows whose `userId` is the caller's.
+ *
+ * @param context - The request context.
+ * @param table - The table being read or written.
+ * @returns The SQL condition.
+ */
 const scopeByUserId: RowScope<Context> = (context, table) => eq(table.userId, requireAuth(context));
 
+/**
+ * Limits `users` to the caller's own row.
+ *
+ * @param context - The request context.
+ * @param table - The table being read or written.
+ * @returns The SQL condition.
+ */
 const scopeByOwnId: RowScope<Context> = (context, table) => eq(table.id, requireAuth(context));
 
 export const scope: NonNullable<BuildSchemaConfig['scope']> = {
@@ -54,6 +68,12 @@ export const contextValues: NonNullable<BuildSchemaConfig['contextValues']> = Ob
  */
 const WRITES_RESERVED = new Set<string>(['users', 'habitEntries']);
 
+/**
+ * Whether drizzle-graphql generates mutations for a table.
+ *
+ * @param table - The table's key.
+ * @returns false for the tables in `WRITES_RESERVED`.
+ */
 const allowsGeneratedWrites = (table: string) => WRITES_RESERVED.has(table) === false;
 
 export const features: NonNullable<BuildSchemaConfig['features']> = {

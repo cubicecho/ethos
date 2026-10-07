@@ -11,6 +11,7 @@ import { setToken } from '@/lib/auth';
 import { describeError } from '@/lib/errors';
 import { RequestMagicLinkDocument } from '@/lib/graphql';
 
+/** Asks for an address and sends it a sign-in link. */
 export default function LoginScreen() {
   const router = useRouter();
   const [magicLink, setMagicLink] = useState<string | null>(null);

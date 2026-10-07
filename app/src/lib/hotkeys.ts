@@ -17,6 +17,9 @@ import { useEffect, useRef } from 'react';
  * check covers widgets that behave like a field without being one. The
  * `[role=dialog]` test is for modals: a shortcut that fires behind one acts on
  * a screen the reader cannot see.
+ *
+ * @param target - The event's target.
+ * @returns true inside a field, and anywhere inside a dialog.
  */
 export function isTyping(target: EventTarget | null): boolean {
   if (target instanceof HTMLElement === false) {
@@ -42,6 +45,10 @@ export function isTyping(target: EventTarget | null): boolean {
  * and stealing them is how a web app earns a reputation. `handler` is read from
  * a ref rather than named in the dependency list so a caller need not memoize
  * it; the listener is attached once per key for the life of the component.
+ *
+ * @param key - The key, as `KeyboardEvent.key` reports it.
+ * @param handler - What to run.
+ * @param [isEnabled] - Whether the shortcut is live.
  */
 export function useHotkey(key: string, handler: (event: KeyboardEvent) => void, isEnabled = true): void {
   const latest = useRef(handler);
@@ -72,7 +79,11 @@ export function useHotkey(key: string, handler: (event: KeyboardEvent) => void, 
   }, [key, isEnabled]);
 }
 
-/** Focus an element and, when it is a field, select what is in it — so typing replaces. */
+/**
+ * Focus an element and, when it is a field, select what is in it — so typing replaces.
+ *
+ * @param element - The field, or null when it has not mounted.
+ */
 export function focusAndSelect(element: HTMLInputElement | HTMLTextAreaElement | null): void {
   if (!element) {
     return;

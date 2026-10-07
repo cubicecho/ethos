@@ -25,6 +25,10 @@ interface Operation {
  * Pricing coerces the variables as execution will, and throws on the same
  * mistakes. Those are left for execution to report, as it always has: such a
  * request runs nothing, so there is nothing to price.
+ *
+ * @param operation - The schema, document, operation name and variables of one request.
+ * @param settings - The limits in force; only the default field cost is read.
+ * @returns The cost.
  */
 function priceOf({ schema, document, operationName, variables = {} }: Operation, settings: OperationLimitSettings) {
   try {

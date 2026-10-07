@@ -20,6 +20,11 @@ export interface Marker {
   error: string | null;
 }
 
+/**
+ * Runs an action, tracking whether it is pending and why the last one failed.
+ *
+ * @returns The pending flag, the last error as a sentence, and `run`.
+ */
 function useAction() {
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +54,13 @@ interface MarkDocuments {
   clear: TypedDocumentNode<unknown, DayVariables>;
 }
 
+/**
+ * Builds a marker over a pair of mutations.
+ *
+ * @param documents - The mark and clear mutations to send.
+ * @param today - The caller's day.
+ * @returns The marker.
+ */
 function useMarker(documents: MarkDocuments, today: string): Marker {
   const [mark] = useMutation(documents.mark);
   const [clear] = useMutation(documents.clear);
@@ -66,7 +78,12 @@ function useMarker(documents: MarkDocuments, today: string): Marker {
   };
 }
 
-/** For screens that show a habit but no history: the list. */
+/**
+ * For screens that show a habit but no history: the list.
+ *
+ * @param today - The caller's day.
+ * @returns The marker.
+ */
 export function useMarkHabit(today: string): Marker {
   return useMarker({ mark: MarkHabitDocument, clear: ClearHabitDocument }, today);
 }
@@ -75,6 +92,9 @@ export function useMarkHabit(today: string): Marker {
  * For the detail screen. Same two mutations, selecting the grid as well — the
  * duplication is in the documents and explained there: a screen asks back for
  * exactly what it is showing.
+ *
+ * @param today - The caller's day.
+ * @returns The marker.
  */
 export function useMarkHabitDay(today: string): Marker {
   return useMarker({ mark: MarkHabitDayDocument, clear: ClearHabitDayDocument }, today);
