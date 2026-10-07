@@ -1,4 +1,8 @@
+import { createRequire } from 'node:module';
 import { HTTP_DEFAULTS } from './defaults.ts';
+
+/** What `version()` answers when the root package.json cannot be read. */
+const UNKNOWN_VERSION = 'unknown';
 
 /** What signs tokens when `JWT_SECRET` is unset. Preflight refuses it in production. */
 export const DEV_SECRET = 'dev-secret-change-in-production';
@@ -21,6 +25,22 @@ export function configuredJwtSecret(): string | undefined {
 /** What signs tokens. Read at call time so a test — or a reload — sees the current environment. */
 export function jwtSecret(): string {
   return configuredJwtSecret() ?? DEV_SECRET;
+}
+
+/**
+ * The release this instance is running, from the root package.json.
+ *
+ * Read from the file, not `npm_package_version`: the image starts the server
+ * with `node`, so npm never sets it.
+ */
+export function version(): string {
+  try {
+    const manifest: unknown = createRequire(import.meta.url)('../../../package.json');
+    const isNamed = typeof manifest === 'object' && manifest !== null && 'version' in manifest;
+    return isNamed && typeof manifest.version === 'string' ? manifest.version : UNKNOWN_VERSION;
+  } catch {
+    return UNKNOWN_VERSION;
+  }
 }
 
 /** The port to listen on: `PORT`, or the default. */

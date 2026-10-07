@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { signToken } from '../../auth/resolvers.ts';
+import { version } from '../../core/config.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { HttpStatus } from '../../core/wire.ts';
 import { createApp } from '../../http/app.ts';
@@ -56,7 +57,7 @@ describe('app', () => {
   it('answers /healthz ahead of the web client', async () => {
     const response = await fetch(`${base}/healthz`);
     expect(response.status).toBe(HttpStatus.Ok);
-    expect(await response.json()).toMatchObject({ ok: true });
+    expect(await response.json()).toEqual({ ok: true, version: version() });
   });
 
   it('refuses a query with no session', async () => {
@@ -79,6 +80,20 @@ describe('app', () => {
     const response = await fetch(`${base}/habits/some-id`);
     expect(response.status).toBe(HttpStatus.Ok);
     expect(await response.text()).toBe(INDEX);
+  });
+});
+
+describe('app whose database does not answer', () => {
+  it('reports itself unhealthy with a 503', async () => {
+    const db = await createTestDb();
+    const down = Object.create(db, { execute: { value: () => Promise.reject(new Error('connection refused')) } });
+    const app = await createApp({ db: down });
+    const sick = app.listen(0);
+    await new Promise<void>((resolve) => sick.once('listening', resolve));
+    const response = await fetch(`http://127.0.0.1:${portOf(sick)}/healthz`);
+    await new Promise<void>((resolve) => sick.close(() => resolve()));
+    expect(response.status).toBe(HttpStatus.ServiceUnavailable);
+    expect(await response.json()).toEqual({ ok: false, version: version(), error: 'connection refused' });
   });
 });
 

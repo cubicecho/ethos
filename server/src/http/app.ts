@@ -2,7 +2,9 @@ import type { DB } from '@ethos/db';
 import cors from 'cors';
 import express, { type Express } from 'express';
 import { createRateLimiter, type RateLimiter } from '../auth/rate-limit.ts';
+import { HttpStatus } from '../core/wire.ts';
 import { createGraphQLHandler } from '../graphql/handler.ts';
+import { checkHealth } from './health.ts';
 import { createStaticHandler } from './static.ts';
 
 /** What the app talks to. Tests pass PGlite. */
@@ -25,8 +27,9 @@ export async function createApp({ db, limiter = createRateLimiter(), staticDir }
 
   app.use(cors());
   app.use('/graphql', express.json(), await createGraphQLHandler({ db, limiter }));
-  app.get('/healthz', (_request, response) => {
-    response.json({ ok: true });
+  app.get('/healthz', async (_request, response) => {
+    const health = await checkHealth(db);
+    response.status(health.ok ? HttpStatus.Ok : HttpStatus.ServiceUnavailable).json(health);
   });
   if (staticDir !== undefined) {
     const serveStatic = createStaticHandler(staticDir);

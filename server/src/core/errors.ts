@@ -22,3 +22,8 @@ export const notFound = withCode(ErrorCode.NotFound);
 export const unauthenticated = withCode(ErrorCode.Unauthenticated);
 /** Too many attempts for now. */
 export const rateLimited = withCode(ErrorCode.TooManyRequests);
+
+/** What went wrong, as a sentence: an `Error`'s message, or the thrown value as text. */
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
