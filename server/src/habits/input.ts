@@ -16,6 +16,10 @@ export const habitInput = z.object({
     .max(HABIT_DEFAULTS.maxNameLength, `A habit name is at most ${HABIT_DEFAULTS.maxNameLength} characters.`)
     .optional(),
   notes: note,
+  cue: z
+    .string()
+    .max(HABIT_DEFAULTS.maxCueLength, `A cue is at most ${HABIT_DEFAULTS.maxCueLength} characters.`)
+    .nullish(),
 });
 
 /** The note on one day, as `markHabit` takes it. */

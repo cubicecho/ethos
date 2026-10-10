@@ -1,46 +1,80 @@
-import { ApolloServer } from '@apollo/server';
-import { expressMiddleware } from '@as-integrations/express5';
 import type { DB } from '@ethos/db';
-import type { RequestHandler } from 'express';
+import type { Request } from 'express';
+import { type GraphQLSchema, NoSchemaIntrospectionCustomRule } from 'graphql';
+import { createYoga, type Plugin } from 'graphql-yoga';
+import { type Auth, sessionUserId } from '../auth/better-auth.ts';
 import type { RateLimiter } from '../auth/rate-limit.ts';
-import { extractUserId } from '../auth/resolvers.ts';
+import { isProduction } from '../core/config.ts';
 import { type Context, UNKNOWN_IP } from '../core/context.ts';
-import { createSchema } from './build-schema.ts';
 import { createLoaders } from './loaders.ts';
-import { operationLimits } from './operation-limits.ts';
+import { graphqlLogger } from './logger.ts';
+import { useOperationLimits } from './operation-limits.ts';
 
-/** What the handler passes on to resolvers. */
-interface GraphQLHandlerDeps {
+/** What every request's context is built from. */
+export interface ContextDeps {
   db: DB;
+  auth: Auth;
   limiter: RateLimiter;
 }
 
-/**
- * Builds and starts Apollo Server over `db`, as Express middleware for /graphql.
- *
- * @param deps - The database and the sign-in limiter every resolver is given.
- * @returns The middleware.
- */
-export async function createGraphQLHandler({ db, limiter }: GraphQLHandlerDeps): Promise<RequestHandler> {
-  const { schema } = createSchema(db);
-  const apolloServer = new ApolloServer<Context>({
-    schema,
-    // Apollo would install its own SIGTERM handler and race the one in
-    // http/shutdown.ts, which is the one that drains and closes the database.
-    stopOnTerminationSignals: false,
-    plugins: [operationLimits()],
-  });
-  await apolloServer.start();
+/** Builds one request's context from its headers and the caller's address. */
+export type ContextFactory = (headers: Headers, ip?: string) => Promise<Context>;
 
-  return expressMiddleware(apolloServer, {
-    // Loaders are built per request: their batching is only ever valid within
-    // one request, and their cache must not outlive it.
-    context: async ({ req }) => ({
-      db,
-      limiter,
-      userId: extractUserId(req),
-      ip: req.ip ?? UNKNOWN_IP,
-      loaders: createLoaders(db),
-    }),
+/**
+ * Builds the context factory /graphql and /mcp share, so both read the caller the same way.
+ *
+ * Loaders are built per call: their batching is only ever valid within one
+ * request, and their cache must not outlive it.
+ *
+ * @param deps - The database, the auth instance and the sign-in limiter every resolver is given.
+ * @returns The factory.
+ */
+export function createContextFactory({ db, auth, limiter }: ContextDeps): ContextFactory {
+  return async (headers, ip = UNKNOWN_IP) => ({
+    db,
+    auth,
+    limiter,
+    userId: await sessionUserId(auth, headers),
+    headers,
+    ip,
+    loaders: createLoaders(db),
+  });
+}
+
+/** What Express hands Yoga alongside the fetch request. */
+interface ServerContext {
+  req?: Request;
+}
+
+/**
+ * Refuses introspection, so a production instance does not hand out its schema.
+ *
+ * @returns The plugin, for `createYoga({ plugins })`.
+ */
+function useNoIntrospection(): Plugin {
+  return {
+    onValidate: ({ addValidationRule }) => {
+      addValidationRule(NoSchemaIntrospectionCustomRule);
+    },
+  };
+}
+
+/**
+ * Builds the Yoga handler for /graphql.
+ *
+ * @param schema - The schema to serve.
+ * @param contextFor - Builds a request's context.
+ * @returns The Yoga instance, callable as Express middleware.
+ */
+export function createGraphQLHandler(schema: GraphQLSchema, contextFor: ContextFactory) {
+  return createYoga<ServerContext, Context>({
+    schema,
+    graphqlEndpoint: '/graphql',
+    graphiql: isProduction() === false,
+    // Masked errors are logged here with their real cause.
+    logging: graphqlLogger,
+    plugins: [useOperationLimits(), ...(isProduction() ? [useNoIntrospection()] : [])],
+    // Express's view of the caller, which honours TRUST_PROXY.
+    context: ({ request, req }) => contextFor(request.headers, req?.ip),
   });
 }

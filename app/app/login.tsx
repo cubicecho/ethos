@@ -1,5 +1,5 @@
-import { useMutation } from '@apollo/client';
-import { Link, useRouter } from 'expo-router';
+import { useMutation, useQuery } from '@apollo/client';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useAppForm } from '@/components/app-form';
 import { CenteredLayout } from '@/components/centered-layout';
@@ -9,14 +9,19 @@ import { Form } from '@/components/ui/form';
 import { CircleCheck } from '@/components/ui/icons';
 import { setToken } from '@/lib/auth';
 import { describeError } from '@/lib/errors';
-import { RequestMagicLinkDocument } from '@/lib/graphql';
+import { AuthConfigDocument, RequestSignInDocument } from '@/lib/graphql';
 
-/** Asks for an address and sends it a sign-in link. */
+/** Asks for an address, and either emails it a sign-in link or signs it straight in. */
 export default function LoginScreen() {
   const router = useRouter();
-  const [magicLink, setMagicLink] = useState<string | null>(null);
-  const [hasSentLink, setHasSentLink] = useState(false);
-  const [requestMagicLink, { error }] = useMutation(RequestMagicLinkDocument);
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const configQuery = useQuery(AuthConfigDocument);
+  const [requestSignIn, { error }] = useMutation(RequestSignInDocument);
+
+  const config = configQuery.data?.authConfig;
+  const isLocalNet = config?.secureLocalNet === true;
+  // Only once the server has answered: a form that is merely still loading is not a broken instance.
+  const cannotSignIn = config !== undefined && isLocalNet === false && config.magicLink === false;
 
   const form = useAppForm({
     defaultValues: { email: '' },
@@ -24,23 +29,20 @@ export default function LoginScreen() {
   });
 
   async function send(email: string) {
-    setHasSentLink(false);
-    setMagicLink(null);
+    setSentTo(null);
     try {
-      const { data } = await requestMagicLink({ variables: { email } });
-      const result = data?.requestMagicLink;
+      const { data } = await requestSignIn({ variables: { email } });
+      const result = data?.requestSignIn;
       if (!result) {
         return;
       }
-      // With AUTH_MAGIC_LINK=false the server hands back a live session instead of
-      // a link, so the client keeps one code path and stores whatever it gets.
-      if (result.token) {
-        setToken(result.token);
+      // Under SECURE_LOCAL_NET the server answers with a session instead of sending a link.
+      if (result.session) {
+        setToken(result.session.token);
         router.replace('/');
         return;
       }
-      setMagicLink(result.magicLink ?? null);
-      setHasSentLink(true);
+      setSentTo(email);
     } catch {
       // Rendered from `error` below.
     }
@@ -51,7 +53,7 @@ export default function LoginScreen() {
       className="bg-background"
       level={1}
       title="Ethos"
-      description="Habits, the days you keep them, and the grid they add up to."
+      description="Habits, and the days you keep them."
       contentClassName="gap-4"
       contentSlot={
         <>
@@ -63,35 +65,34 @@ export default function LoginScreen() {
               >
                 {(field) => <field.InputField label="Email" type="email" placeholder="you@example.com" />}
               </form.AppField>
-              <form.SubmitButton createLabel="Send sign-in link" savingLabel="Sending…" />
+              <form.SubmitButton
+                createLabel={isLocalNet ? 'Sign in' : 'Send sign-in link'}
+                savingLabel={isLocalNet ? 'Signing in…' : 'Sending…'}
+              />
             </Form>
           </form.AppForm>
 
+          {configQuery.error ? <Alert variant="destructive" description={describeError(configQuery.error)} /> : null}
           {error ? <Alert variant="destructive" description={describeError(error)} /> : null}
 
-          {hasSentLink ? (
+          {cannotSignIn ? (
+            <Alert
+              variant="destructive"
+              title="Sign-in is not set up"
+              description={
+                <>
+                  This instance has no way to send a sign-in link. Whoever runs it needs to set <Code>SMTP_URL</Code>,
+                  or <Code>SECURE_LOCAL_NET=true</Code> on a private network.
+                </>
+              }
+            />
+          ) : null}
+
+          {sentTo ? (
             <Alert
               iconSlot={<CircleCheck />}
-              title="Sign-in link sent"
-              description={
-                magicLink ? (
-                  <>
-                    This instance has no mail relay, so the link is shown here and printed to the server log.{' '}
-                    <Link href={magicLink} className="break-all text-info text-sm underline">
-                      {magicLink}
-                    </Link>
-                  </>
-                ) : (
-                  /* Not "check your inbox": Ethos ships no mail relay, so nothing
-                     was ever sent anywhere. The link is in the server log, and
-                     saying so is the difference between a reader waiting for an
-                     email that will not come and one who knows where to look. */
-                  <>
-                    This instance sends no mail — the link was written to the server log. Whoever runs it can read it
-                    from there, or set <Code>EXPOSE_MAGIC_LINK=true</Code> to show it on this page.
-                  </>
-                )
-              }
+              title="Check your email"
+              description={`A sign-in link is on its way to ${sentTo}. It works once, and for 15 minutes.`}
             />
           ) : null}
         </>

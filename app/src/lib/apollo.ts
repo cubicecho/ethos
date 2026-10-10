@@ -21,7 +21,7 @@ function devApiUrl(): string {
   if (process.env.NODE_ENV === 'production' || Platform.OS !== 'web') {
     return '';
   }
-  return `${window.location.protocol}//${window.location.hostname}:${process.env.EXPO_PUBLIC_API_PORT ?? '3006'}`;
+  return `${window.location.protocol}//${window.location.hostname}:${process.env.EXPO_PUBLIC_API_PORT ?? '3000'}`;
 }
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? devApiUrl();
