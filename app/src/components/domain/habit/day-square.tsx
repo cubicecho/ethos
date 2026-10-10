@@ -52,7 +52,8 @@ export function DaySquare({
   /** Called with what the day should become — the cycle is this component's. */
   onValueChange: (value: DayStatus) => void;
 }) {
-  const label = `${formatDayLong(day)} — ${describeState(value, isFuture)}`;
+  // The outline is the only other thing that says which square is today, and it cannot be heard.
+  const label = `${formatDayLong(day)}${isToday ? ', today' : ''} — ${describeState(value, isFuture)}`;
 
   return (
     <Tooltip>

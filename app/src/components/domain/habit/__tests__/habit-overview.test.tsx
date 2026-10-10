@@ -100,6 +100,12 @@ describe('HabitOverview', () => {
     expect(onValueChange).toHaveBeenCalledWith('habit-2', '2026-09-15', 'skipped');
   });
 
+  it('says which square is today, and says it of no other', () => {
+    renderOverview([habit()]);
+    expect(within(row('Read')).getAllByRole('button', { name: /, today — / })).toHaveLength(1);
+    expect(square('Read', TODAY).getAttribute('aria-label')).toBe(`${formatDayLong(TODAY)}, today — not kept`);
+  });
+
   it('refuses a day that has not happened', () => {
     renderOverview([habit()]);
     expect(square('Read', '2026-09-18')).toHaveProperty('disabled', true);
