@@ -22,6 +22,8 @@ services:
       SMTP_URL: ${SMTP_URL:-}
       SMTP_FROM: ${SMTP_FROM:-}
       SECURE_LOCAL_NET: ${SECURE_LOCAL_NET:-false}
+      # Serves the queries as read-only MCP tools at /mcp.
+      MCP_ENABLED: ${MCP_ENABLED:-false}
       NODE_ENV: production
       PORT: 3000
     ports:

@@ -67,7 +67,8 @@ ethos/
 │       │   ├── build-schema.ts  # createSchema(db) — buildSchema + extensions
 │       │   ├── schema.ts        # Binds createSchema to the real database
 │       │   ├── write-schema.ts  # Codegen entry: prints the SDL
-│       │   ├── handler.ts       # The /graphql handler (Yoga)
+│       │   ├── handler.ts       # The /graphql handler (Yoga), and the context /mcp shares
+│       │   ├── mcp.ts           # The /mcp handler: the queries as read-only MCP tools
 │       │   ├── logger.ts        # Where Yoga logs, and what a masked error prints
 │       │   ├── tenancy.ts       # Row scope + server-owned columns, as buildSchema config
 │       │   ├── write-guards.ts  # onWrite checks the row scope cannot express
@@ -260,6 +261,14 @@ private" has to be answered from the parsed hostname — loopback, RFC1918,
 unique-local, a dotless service name, and the private-use suffixes (`.lan`,
 `.local`, `.internal`, `.home.arpa`) all being answers of "yes". A dot in a
 hostname says nothing about reach.
+
+**`/mcp` is `/graphql` with a different envelope.** `server/src/graphql/mcp.ts`
+projects the same schema instance as MCP tools, and `createContextFactory` in
+`handler.ts` builds the context for both, so there is one place a request's
+caller is read and no second auth path to keep in step. It is read-only
+(`includeMutations: false`) and off unless `MCP_ENABLED` is set; switched off,
+the route answers its own 404 so the web client's fallback does not hand an MCP
+client a page. Until API keys exist the only credential is a session token.
 
 **Report `NOT_FOUND`, never `FORBIDDEN`.** "You may not touch this" confirms the
 row exists, which is itself something the caller is not entitled to know.
