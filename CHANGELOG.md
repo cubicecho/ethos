@@ -1,3 +1,10 @@
+## [1.1.3](https://github.com/cubicecho/ethos/compare/v1.1.2...v1.1.3) (2026-10-10)
+
+
+### Performance Improvements
+
+* **test:** share one database per test file and run on threads ([baa6247](https://github.com/cubicecho/ethos/commit/baa6247359147a2ef59501f71477396191751356))
+
 ## [1.1.2](https://github.com/cubicecho/ethos/compare/v1.1.1...v1.1.2) (2026-10-07)
 
 
