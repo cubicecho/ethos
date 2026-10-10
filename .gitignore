@@ -8,3 +8,4 @@ __generated__
 .expo/
 **/tsconfig.tsbuildinfo
 .DS_Store
+.claude/worktrees/
