@@ -1,13 +1,15 @@
-import { ApolloServer } from '@apollo/server';
-import { expressMiddleware } from '@as-integrations/express5';
 import type { DB } from '@ethos/db';
-import type { RequestHandler } from 'express';
+import type { Request } from 'express';
+import { NoSchemaIntrospectionCustomRule } from 'graphql';
+import { createYoga, type Plugin } from 'graphql-yoga';
 import type { RateLimiter } from '../auth/rate-limit.ts';
 import { extractUserId } from '../auth/resolvers.ts';
+import { isProduction } from '../core/config.ts';
 import { type Context, UNKNOWN_IP } from '../core/context.ts';
 import { createSchema } from './build-schema.ts';
 import { createLoaders } from './loaders.ts';
-import { operationLimits } from './operation-limits.ts';
+import { graphqlLogger } from './logger.ts';
+import { useOperationLimits } from './operation-limits.ts';
 
 /** What the handler passes on to resolvers. */
 interface GraphQLHandlerDeps {
@@ -15,31 +17,47 @@ interface GraphQLHandlerDeps {
   limiter: RateLimiter;
 }
 
+/** What Express hands Yoga alongside the fetch request. */
+interface ServerContext {
+  req?: Request;
+}
+
 /**
- * Builds and starts Apollo Server over `db`, as Express middleware for /graphql.
+ * Refuses introspection, so a production instance does not hand out its schema.
+ *
+ * @returns The plugin, for `createYoga({ plugins })`.
+ */
+function useNoIntrospection(): Plugin {
+  return {
+    onValidate: ({ addValidationRule }) => {
+      addValidationRule(NoSchemaIntrospectionCustomRule);
+    },
+  };
+}
+
+/**
+ * Builds the Yoga handler for /graphql over `db`.
  *
  * @param deps - The database and the sign-in limiter every resolver is given.
- * @returns The middleware.
+ * @returns The Yoga instance, callable as Express middleware.
  */
-export async function createGraphQLHandler({ db, limiter }: GraphQLHandlerDeps): Promise<RequestHandler> {
+export function createGraphQLHandler({ db, limiter }: GraphQLHandlerDeps) {
   const { schema } = createSchema(db);
-  const apolloServer = new ApolloServer<Context>({
+  return createYoga<ServerContext, Context>({
     schema,
-    // Apollo would install its own SIGTERM handler and race the one in
-    // http/shutdown.ts, which is the one that drains and closes the database.
-    stopOnTerminationSignals: false,
-    plugins: [operationLimits()],
-  });
-  await apolloServer.start();
-
-  return expressMiddleware(apolloServer, {
+    graphqlEndpoint: '/graphql',
+    graphiql: isProduction() === false,
+    // Masked errors are logged here with their real cause.
+    logging: graphqlLogger,
+    plugins: [useOperationLimits(), ...(isProduction() ? [useNoIntrospection()] : [])],
     // Loaders are built per request: their batching is only ever valid within
     // one request, and their cache must not outlive it.
-    context: async ({ req }) => ({
+    context: ({ request, req }): Context => ({
       db,
       limiter,
-      userId: extractUserId(req),
-      ip: req.ip ?? UNKNOWN_IP,
+      userId: extractUserId({ headers: { authorization: request.headers.get('authorization') ?? undefined } }),
+      // Express's view of the caller, which honours TRUST_PROXY.
+      ip: req?.ip ?? UNKNOWN_IP,
       loaders: createLoaders(db),
     }),
   });
