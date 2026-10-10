@@ -8,6 +8,7 @@
     "./schema": "./src/schema.ts",
     "./relations": "./src/relations.ts",
     "./defaults": "./src/defaults.ts",
+    "./ssl": "./src/ssl.ts",
     "./wait": "./src/wait.ts"
   },
   "scripts": {

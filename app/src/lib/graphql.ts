@@ -236,13 +236,23 @@ export const ClearHabitOverviewDocument = graphql(`
   }
 `);
 
-export const RequestMagicLinkDocument = graphql(`
-  mutation RequestMagicLink($email: String!) {
-    requestMagicLink(email: $email) {
-      ok
+export const AuthConfigDocument = graphql(`
+  query AuthConfig {
+    authConfig {
+      secureLocalNet
       magicLink
-      token
-      userId
+    }
+  }
+`);
+
+export const RequestSignInDocument = graphql(`
+  mutation RequestSignIn($email: String!) {
+    requestSignIn(email: $email) {
+      sent
+      session {
+        token
+        userId
+      }
     }
   }
 `);
@@ -253,5 +263,11 @@ export const VerifyMagicLinkDocument = graphql(`
       token
       userId
     }
+  }
+`);
+
+export const SignOutDocument = graphql(`
+  mutation SignOut {
+    signOut
   }
 `);

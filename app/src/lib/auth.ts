@@ -1,8 +1,8 @@
 import { Platform } from 'react-native';
 
-// The session token lives in localStorage rather than a cookie: the API is a
-// Bearer-token GraphQL endpoint with no session table, and the client is a
-// static bundle that may be served from a different origin in development.
+// The session token lives in localStorage rather than a cookie: the API reads
+// it as a Bearer token, and the client is a static bundle that may be served
+// from a different origin in development.
 const TOKEN_KEY = 'ethos_token';
 
 /**
@@ -20,7 +20,7 @@ export function getToken(): string | null {
 /**
  * Stores the session token.
  *
- * @param token - The JWT the server issued.
+ * @param token - The session token the server issued.
  */
 export function setToken(token: string): void {
   if (Platform.OS === 'web') {
@@ -28,7 +28,7 @@ export function setToken(token: string): void {
   }
 }
 
-/** Forgets the session token, which signs the user out. */
+/** Forgets the session token. The session itself is ended by the `signOut` mutation. */
 export function clearToken(): void {
   if (Platform.OS === 'web') {
     window.localStorage.removeItem(TOKEN_KEY);

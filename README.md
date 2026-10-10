@@ -17,7 +17,7 @@ counts the streak. That is the whole product.
 - **Streaks and rates** — counted over periods, and the period in progress never
   breaks one. The grid shows the tally the server counted, not a re-count.
 - **An archive** — stop a habit without erasing having kept it.
-- **Sign-in by magic link**, or no link at all on a private instance.
+- **Sign-in by emailed link**, or by address alone on a private network.
 
 ## Quickstart
 
@@ -38,11 +38,15 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      JWT_SECRET: ${JWT_SECRET:?generate one with `openssl rand -hex 32`}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?generate one with `openssl rand -hex 32`}
       DATABASE_URL: postgres://ethos:${POSTGRES_PASSWORD:?set a database password}@postgres:5432/ethos
-      # The address you actually reach Ethos at. Magic-link URLs are built from
+      # The address you actually reach Ethos at. Sign-in links are built from
       # it, so a link to localhost is useless in an inbox.
       APP_URL: ${APP_URL:-http://localhost:3006}
+      # How people sign in. Set one: a relay to email links through, or
+      # SECURE_LOCAL_NET on a network you trust.
+      SMTP_URL: ${SMTP_URL:-}
+      SECURE_LOCAL_NET: ${SECURE_LOCAL_NET:-false}
       NODE_ENV: production
     ports:
       - "${PORT:-3006}:3006"
@@ -74,22 +78,23 @@ with the same tags, if you would rather pull from there.
 Generate the two secrets it refuses to start without, then bring it up:
 
 ```bash
-printf 'JWT_SECRET=%s\nPOSTGRES_PASSWORD=%s\n' \
+printf 'BETTER_AUTH_SECRET=%s\nPOSTGRES_PASSWORD=%s\nSECURE_LOCAL_NET=true\n' \
   "$(openssl rand -hex 32)" "$(openssl rand -hex 24)" > .env
 
 docker compose up -d
 ```
 
 Ethos is on <http://localhost:3006>. Migrations run at boot, so there is no
-setup step. Sign in with any email address — Ethos ships no mail provider, so
-the magic link goes to the log, and that is the delivery channel:
+setup step. Sign in with any email address: `SECURE_LOCAL_NET=true` makes the
+address the whole credential, which is right on your own machine and wrong
+anywhere else. To email a one-time link instead, drop that line and set
+`SMTP_URL` to a relay:
 
 ```bash
-docker compose logs -f ethos
+SMTP_URL=smtps://user:pass@smtp.example.com:465
 ```
 
-Keep that `.env`. `JWT_SECRET` signs sessions, so changing it signs everyone
-out, and `POSTGRES_PASSWORD` is the database's own. Your data lives in the
+Keep that `.env`. Changing `BETTER_AUTH_SECRET` signs everyone out, and `POSTGRES_PASSWORD` is the database's own. Your data lives in the
 `ethos_pgdata` volume, which survives `docker compose down`; upgrade with
 `docker compose pull && docker compose up -d`.
 
@@ -101,17 +106,19 @@ domain.
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `DATABASE_URL` | — | **Required.** Postgres connection string. There is no embedded fallback. |
-| `JWT_SECRET` | — | **Required in production.** Signs session and magic-link tokens. `openssl rand -hex 32`. |
-| `APP_URL` | `http://localhost:3006` | Public URL; magic-link URLs are built from it, and in production it is the only origin allowed to call the API. |
+| `BETTER_AUTH_SECRET` | — | **Required in production.** What better-auth signs with. `openssl rand -hex 32`. |
+| `APP_URL` | `http://localhost:3006` | Public URL; sign-in links are built from it, and in production it is the only origin allowed to call the API. |
 | `PORT` | `3006` | Port the server listens on. |
 | `TRUST_PROXY` | `false` | How many reverse proxies are in front (`1` behind one). Decides whose address sign-in is throttled by. |
 | `DB_CONNECT_TIMEOUT_MS` | `60000` | How long boot waits for Postgres to start answering. |
-| `AUTH_MAGIC_LINK` | `true` | Set to `false` to sign in with an address alone, no link. |
-| `EXPOSE_MAGIC_LINK` | dev only | Return the magic link in the API response so the login page can show it. |
+| `SMTP_URL` | — | An SMTP relay to email sign-in links through, e.g. `smtps://user:pass@smtp.example.com:465`. |
+| `SMTP_FROM` | `ethos@<APP_URL host>` | The address those emails come from. |
+| `SECURE_LOCAL_NET` | `false` | Sign in with an address alone: no link, no mail. For a private network only. |
 
-Ethos ships no mail provider. With magic links on, the link is written to the
-server log, and that is the delivery channel — pipe the log somewhere you can
-read, or run with `AUTH_MAGIC_LINK=false`.
+Set one of `SMTP_URL` and `SECURE_LOCAL_NET`. With neither, the server starts,
+says so in its log, and nobody can sign in. A sign-in link works once, lasts 15
+minutes, and is never written to the log or returned by the API. Sessions last
+30 days and are rows in the database, so signing out ends one for good.
 
 ## Before you expose it
 
@@ -124,14 +131,13 @@ for an instance on the public internet. Before putting Ethos on a domain:
   sign-in per email address and per client IP, in process. Behind a proxy, set
   `TRUST_PROXY=1` so the client's address is the visitor's and not the proxy's;
   without it every visitor shares one sign-in budget.
-- **Never set `AUTH_MAGIC_LINK=false` on a reachable instance.** It makes an email
+- **Never set `SECURE_LOCAL_NET=true` on a reachable instance.** It makes an email
   address the entire credential: anyone who can load the login page can sign in
-  as anyone.
-- **Never set `EXPOSE_MAGIC_LINK=true` on a reachable instance.** It hands the
-  sign-in token to whoever asked for it, which is the same thing by another route.
-- **Set a real `JWT_SECRET`** and keep it. Changing it signs everyone out; leaking
-  it lets anyone mint a session. The server refuses to boot in production while
-  it is unset, a published default, or shorter than 32 characters.
+  as anyone. The server refuses to start with it when `APP_URL` names a public
+  host, but an instance reached through a proxy on a private name is yours to judge.
+- **Set a real `BETTER_AUTH_SECRET`** and keep it. Changing it signs everyone
+  out. The server refuses to boot in production while it is unset, a published
+  default, or shorter than 32 characters.
 
 ## Development
 
@@ -140,7 +146,8 @@ git clone https://github.com/cubicecho/ethos.git
 cd ethos
 
 cp .env.example .env
-sed -i "s/^JWT_SECRET=.*/JWT_SECRET=$(openssl rand -hex 32)/" .env
+sed -i "s/^BETTER_AUTH_SECRET=.*/BETTER_AUTH_SECRET=$(openssl rand -hex 32)/" .env
+echo SECURE_LOCAL_NET=true >> .env   # sign in with an address alone, on your own machine
 
 npm install
 npm run db:up          # Postgres in Docker, and it prints the DATABASE_URL to use
@@ -179,7 +186,8 @@ pulling it and publishes Postgres on `127.0.0.1:5438` so you can point your own
 tooling at it:
 
 ```bash
-export JWT_SECRET=$(openssl rand -hex 32)
+export BETTER_AUTH_SECRET=$(openssl rand -hex 32)
+export SECURE_LOCAL_NET=true
 docker compose up --build
 ```
 

@@ -2,7 +2,7 @@ import { buildSchema, GraphQLDateTime } from '@vantreeseba/drizzle-graphql';
 import { applyAuthExtension } from '../auth/resolvers.ts';
 import { OPERATION_LIMIT_DEFAULTS } from '../core/defaults.ts';
 import { applyHabitsExtension } from '../habits/resolvers.ts';
-import { contextValues, features, scope } from './tenancy.ts';
+import { contextValues, exclude, features, scope } from './tenancy.ts';
 import { onWrite } from './write-guards.ts';
 
 // The whole CRUD surface is generated from the Drizzle schema — there are no
@@ -53,6 +53,7 @@ export function createSchema(db: AnyDb) {
     // Multi-tenancy lives in the generated SQL, not in resolver wrappers.
     scope,
     contextValues,
+    exclude,
     features,
     mapColumnType: timestampInput,
     // Applies to root lists and to-many relations alike. A `limit` over the
