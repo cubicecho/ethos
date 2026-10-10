@@ -13,7 +13,7 @@ import {
   type TestDb,
 } from '../helpers.ts';
 
-// Recording a day, end to end. The pure rules live in streaks.test.ts; what is
+// Recording a day, end to end. The pure rules live in tallies.test.ts; what is
 // under test here is everything between the request and the row — the day key,
 // the skip cap, ownership, and the `Date` scalar the day comes back as.
 
@@ -124,16 +124,16 @@ describe('markHabit', () => {
     expect(data.habitEntries).toEqual([{ day: today, status: 'skipped', note: 'second' }]);
   });
 
-  it('answers with the streak the write just made, not the one before it', async () => {
+  it('answers with the tally the write just made, not the one before it', async () => {
     // The habit is returned from the same request that wrote the entry, and its
-    // streak is read through a loader that answered once already.
+    // tally is read through a loader that answered once already.
     const data = await mine.expectOk(
       `mutation ($id: ID!, $day: String!, $today: String!) {
-        markHabit(habitId: $id, day: $day) { streak(today: $today) current(today: $today) { done met } }
+        markHabit(habitId: $id, day: $day) { current(today: $today) { done met } }
       }`,
       { id: habitId, day: today, today },
     );
-    expect(data.markHabit).toEqual({ streak: 1, current: { done: 1, met: true } });
+    expect(data.markHabit).toEqual({ current: { done: 1, met: true } });
   });
 
   it('refuses a day that is not one', async () => {
@@ -259,16 +259,15 @@ describe('clearHabit', () => {
     expect(await db.select().from(dbSchema.habitEntries)).toHaveLength(2);
   });
 
-  it('answers with the streak the clear just ended', async () => {
+  it('answers with the tally the clear just left', async () => {
     const data = await mine.expectOk(
       `mutation ($id: ID!, $day: String!, $today: String!) {
-        clearHabit(habitId: $id, day: $day) { streak(today: $today) }
+        clearHabit(habitId: $id, day: $day) { current(today: $today) { done met } }
       }`,
       { id: habitId, day: today, today },
     );
-    // Yesterday is still kept, and today is back to untouched — which is not a
-    // failure yet, so the run through yesterday stands.
-    expect(data.clearHabit.streak).toBe(1);
+    // Yesterday is still kept, but today is its own period and back to untouched.
+    expect(data.clearHabit.current).toEqual({ done: 0, met: false });
   });
 });
 
@@ -305,7 +304,7 @@ describe('the fields the grid reads', () => {
   it('falls back to the server’s own day when the client does not send one', async () => {
     // Only ever a fallback — the client sends its own — but it must not throw.
     const data = await mine.expectOk(
-      `query ($id: UUID!) { habit(where: { id: { eq: $id } }) { streak longestStreak current { start met } history { start } } }`,
+      `query ($id: UUID!) { habit(where: { id: { eq: $id } }) { current { start met } history { start } } }`,
       { id: habitId },
     );
     expect(data.habit.current.start).toBe(today);
@@ -316,16 +315,12 @@ describe('the fields the grid reads', () => {
     const data = await mine.expectOk(
       `query ($id: UUID!, $today: String!) {
         habit(where: { id: { eq: $id } }) {
-          streak(today: $today)
-          longestStreak(today: $today)
-          current(today: $today) { start end done skipped target effectiveTarget met rate }
+          current(today: $today) { start end done skipped target effectiveTarget met }
         }
       }`,
       { id: habitId, today },
     );
     expect(data.habit).toEqual({
-      streak: 1,
-      longestStreak: 1,
       current: {
         start: today,
         end: addDays(today, 1),
@@ -334,7 +329,6 @@ describe('the fields the grid reads', () => {
         target: 1,
         effectiveTarget: 1,
         met: true,
-        rate: 1,
       },
     });
   });

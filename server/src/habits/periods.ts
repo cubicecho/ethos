@@ -7,7 +7,7 @@ import { badInput } from '../core/errors.ts';
 // `new Date('2026-09-17')` is UTC midnight — the sixteenth for most of the
 // Americas. All arithmetic goes through `Date.UTC`, where the offset is zero.
 // `app/src/lib/periods.ts` is the client's copy, kept identical so the grid
-// draws the periods the streak is counted over.
+// draws the periods the tally is counted over.
 
 const DAY_MS = 86_400_000;
 const DAYS_PER_WEEK = 7;

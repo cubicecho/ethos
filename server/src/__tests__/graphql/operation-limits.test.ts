@@ -80,7 +80,7 @@ describe('assertWithinLimits', () => {
   });
 
   it('leaves a missing variable for execution to report', () => {
-    expect(refusalOf('query ($today: String!) { habits { streak(today: $today) } }')).toBeUndefined();
+    expect(refusalOf('query ($today: String!) { habits { current(today: $today) { done } } }')).toBeUndefined();
   });
 
   it('allows a query at the depth limit and refuses one level more', () => {

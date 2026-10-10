@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
-  "description": "Ethos — a self-hostable habit tracker. Habits, the days you keep them, and the streak that follows.",
+  "description": "Ethos — a self-hostable habit tracker. Habits, the days you keep them, and the grid they add up to.",
   "type": "module",
   "workspaces": [
     "app",

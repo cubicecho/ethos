@@ -8,7 +8,7 @@ import { users } from './users.ts';
  * `month` mean `targetCount` days inside the period, whichever days those are.
  *
  * Calendar-aligned on purpose: a rolling seven-day window would make the same
- * habit's streak depend on when you asked. See periods.ts for the boundaries.
+ * habit's tally depend on when you asked. See periods.ts for the boundaries.
  */
 export const Period = { Day: 'day', Week: 'week', Month: 'month' } as const;
 export type Period = (typeof Period)[keyof typeof Period];
@@ -47,7 +47,7 @@ export const habits = pgTable(
     index('idx_habits_user_id').on(table.userId),
     index('idx_habits_archived_at').on(table.archivedAt),
     // An entry is one day, so a daily habit can only ask for one. A stored
-    // `target_count = 3, period = 'day'` would be a rate no day could reach.
+    // `target_count = 3, period = 'day'` would be a target no day could reach.
     check('ck_habits_daily_target', sql`${table.period} <> 'day' or ${table.targetCount} = 1`),
     check('ck_habits_target_positive', sql`${table.targetCount} > 0`),
     check('ck_habits_period', sql`${table.period} in ('day', 'week', 'month')`),

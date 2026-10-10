@@ -22,8 +22,6 @@ const habit = (overrides: Partial<HabitSummary> = {}): HabitSummary => ({
   targetCount: 1,
   position: 0,
   archivedAt: null,
-  streak: 0,
-  longestStreak: 0,
   current: period(TODAY, '2026-09-18'),
   todayEntry: [],
   ...overrides,
@@ -37,7 +35,6 @@ const period = (start: string, end: string, overrides: Partial<HabitPeriodSummar
   target: 3,
   effectiveTarget: 3,
   met: false,
-  rate: 0,
   ...overrides,
 });
 
@@ -113,7 +110,7 @@ describe('HabitGrid for a weekly habit', () => {
 
   it('prints the server’s tally rather than counting the squares', () => {
     // The history says three days were kept; not one entry is passed in. The
-    // grid must still say 3/3 — the counting is streaks.ts's, not the grid's.
+    // grid must still say 3/3 — the counting is tallies.ts's, not the grid's.
     renderGrid({ habit: weekly, history, entries: [] });
     expect(screen.getByText('3/3')).toBeInTheDocument();
     expect(screen.getByText('2/3')).toBeInTheDocument();

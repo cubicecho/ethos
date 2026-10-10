@@ -90,7 +90,6 @@ export function AppSidebar() {
                     // The habit's colour is how it is recognised everywhere else.
                     // A dot, because filled rows would make the sidebar a colour chart.
                     iconSlot={<ColorDot color={habit.color} size="sm" />}
-                    count={habit.streak > 0 ? habit.streak : undefined}
                     active={pathname === habitPath(habit.id)}
                   />
                 </Link>

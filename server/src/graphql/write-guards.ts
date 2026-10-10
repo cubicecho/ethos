@@ -96,7 +96,7 @@ export async function assertForeignKeysOwned(
 /**
  * Whether a day ever counted is `markHabit`'s to decide. A generated write onto
  * `habit_entries` would be a second row for a day that already has one, or a
- * skip past the cap — and every rate in the app is counted off those rows.
+ * skip past the cap — and every tally in the app is counted off those rows.
  *
  * @param args - The mutation's arguments.
  */

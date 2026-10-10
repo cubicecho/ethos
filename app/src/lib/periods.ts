@@ -3,7 +3,7 @@
  *
  * The client's copy of `server/src/habits/periods.ts`, kept identical by hand
  * because Metro must not bundle the server's imports: the grid draws the
- * periods the server counts streaks over. Nothing here constructs a `Date` from
+ * periods the server tallies. Nothing here constructs a `Date` from
  * a day string, since `new Date('2026-09-17')` is UTC midnight — the sixteenth
  * for most of the Americas. `today()` is the one read of the local clock: which
  * day it is for the person holding the device is what the server needs told.

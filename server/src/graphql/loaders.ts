@@ -1,11 +1,11 @@
 import * as dbSchema from '@ethos/db/schema';
 import DataLoader from 'dataloader';
 import { asc, inArray } from 'drizzle-orm';
-import type { EntryLike, HabitLike } from '../habits/streaks.ts';
+import type { EntryLike, HabitLike } from '../habits/tallies.ts';
 
-// Per-request batching. The grid is a list of habits each asking for its own
-// streak, its longest, and a row of periods — three fields over the same rows.
-// One query here rather than three per habit.
+// Per-request batching. The grid is a list of habits each asking for its
+// current period and a row of past ones — two fields over the same rows. One
+// query here rather than two per habit.
 
 // biome-ignore lint/suspicious/noExplicitAny: drizzle-orm 1.0 table/column type compat
 type AnyDb = any;
@@ -15,11 +15,11 @@ const NO_ENTRIES: EntryLike[] = [];
 /**
  * Every entry a habit has, not a window of them.
  *
- * `longestStreak` is defined over the whole history, so a window would have to
- * be as wide as the history anyway, and a personal habit's history is a few
- * thousand rows at the outside — one per day per habit, for as long as it has
- * been kept. Counting them in memory is what lets streaks.ts stay a pure module
- * with tests that need no database at all.
+ * How far back `history` reads is the caller's argument, which a loader keyed
+ * by habit cannot see, and a personal habit's history is a few thousand rows at
+ * the outside — one per day per habit, for as long as it has been kept. Counting
+ * them in memory is what lets tallies.ts stay a pure module with tests that
+ * need no database at all.
  *
  * @param db - The database.
  * @param habitIds - The habits to load for.
@@ -54,11 +54,10 @@ async function findEntries(db: AnyDb, habitIds: readonly string[]): Promise<Map<
  * A habit's cadence, loaded rather than read off the parent row.
  *
  * The generated resolvers select the columns the client asked for, so a query
- * that wants `streak` and not `period` hands the field resolver a row with no
+ * that wants `current` and not `period` hands the field resolver a row with no
  * cadence on it — and `periodOf(undefined, day)` is not an error, it is a
  * monthly period. Every derived field reads the cadence from here instead, so
- * what the streak is counted over does not depend on what else the caller
- * happened to select.
+ * what a period is does not depend on what else the caller happened to select.
  *
  * @param db - The database.
  * @param habitIds - The habits to load for.
@@ -92,8 +91,8 @@ export interface Loaders {
  * Built once per request: a loader's batching window and its cache are only ever
  * valid within one request, and must not outlive it. Inside one they still have
  * to be told: `markHabit` writes an entry and then returns the habit, whose
- * streak is read through this loader, so the mutation clears its habit's key
- * before selecting — otherwise a tick would report the streak from before it.
+ * tally is read through this loader, so the mutation clears its habit's key
+ * before selecting — otherwise a tick would report the tally from before it.
  *
  * @param db - The database.
  * @returns The request's loaders.
