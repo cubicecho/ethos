@@ -9,6 +9,7 @@ import {
   allowedOrigins,
   databaseUrl,
   dbConnectTimeoutMs,
+  mcpEnabled,
   port,
   secureLocalNet,
   smtpConfigured,
@@ -56,6 +57,7 @@ const app = await createApp({
   db,
   allowedOrigins: allowedOrigins(),
   trustProxy: trustProxy(),
+  mcp: mcpEnabled(),
   staticDir: join(__dirname, '../../app/dist'),
 });
 

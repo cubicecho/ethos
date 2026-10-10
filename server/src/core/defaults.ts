@@ -15,8 +15,10 @@ export interface HttpSettings {
    * Express's `trust proxy` accepts. False believes only the socket.
    */
   trustProxy: boolean | number | string;
-  /** The largest request body /graphql reads, as `bytes` writes sizes. Larger is a 413. */
+  /** The largest request body /graphql and /mcp read, as `bytes` writes sizes. Larger is a 413. */
   bodyLimit: string;
+  /** Whether /mcp serves the queries as MCP tools. */
+  mcp: boolean;
 }
 
 export const HTTP_DEFAULTS: Readonly<HttpSettings> = Object.freeze({
@@ -26,6 +28,7 @@ export const HTTP_DEFAULTS: Readonly<HttpSettings> = Object.freeze({
   shutdownDeadlineSeconds: 8,
   trustProxy: false,
   bodyLimit: '1mb',
+  mcp: false,
 });
 
 export interface RateLimitSettings {

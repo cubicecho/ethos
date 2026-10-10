@@ -12,9 +12,11 @@
     "codegen": "node --import=./src/core/preload-env.ts src/graphql/write-schema.ts && graphql-codegen-esm"
   },
   "dependencies": {
+    "@cubicecho/graphql-mcp": "^3.0.0",
     "@escape.tech/graphql-armor-max-aliases": "^2.6.2",
     "@escape.tech/graphql-armor-max-depth": "^2.4.2",
     "@ethos/db": "*",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@vantreeseba/drizzle-graphql": "^13.0.0",
     "better-auth": "^1.7.7",
     "cors": "^2.8.6",

@@ -155,6 +155,19 @@ export function trustProxy(): boolean | number | string {
 }
 
 /**
+ * Whether /mcp serves the queries as MCP tools.
+ *
+ * Off unless asked for: an enabled endpoint lists the schema's queries to
+ * anyone who can reach it, though every call still needs a session.
+ *
+ * @returns `MCP_ENABLED` as a flag, or `HTTP_DEFAULTS.mcp` when unset.
+ */
+export function mcpEnabled(): boolean {
+  const value = process.env.MCP_ENABLED ?? '';
+  return value.trim() === '' ? HTTP_DEFAULTS.mcp : isFlagOn(value);
+}
+
+/**
  * Truthy env-var values: "1", "true", "yes" (case-insensitive).
  *
  * @param value - The raw env value.

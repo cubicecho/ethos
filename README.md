@@ -114,6 +114,7 @@ domain.
 | `SMTP_URL` | — | An SMTP relay to email sign-in links through, e.g. `smtps://user:pass@smtp.example.com:465`. |
 | `SMTP_FROM` | `ethos@<APP_URL host>` | The address those emails come from. |
 | `SECURE_LOCAL_NET` | `false` | Sign in with an address alone: no link, no mail. For a private network only. |
+| `MCP_ENABLED` | `false` | Serve the API's queries as read-only [MCP](https://modelcontextprotocol.io) tools at `/mcp`. |
 
 Set one of `SMTP_URL` and `SECURE_LOCAL_NET`. With neither, the server starts,
 says so in its log, and nobody can sign in. A sign-in link works once, lasts 15

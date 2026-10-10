@@ -1,21 +1,44 @@
 import type { DB } from '@ethos/db';
 import type { Request } from 'express';
-import { NoSchemaIntrospectionCustomRule } from 'graphql';
+import { type GraphQLSchema, NoSchemaIntrospectionCustomRule } from 'graphql';
 import { createYoga, type Plugin } from 'graphql-yoga';
 import { type Auth, sessionUserId } from '../auth/better-auth.ts';
 import type { RateLimiter } from '../auth/rate-limit.ts';
 import { isProduction } from '../core/config.ts';
 import { type Context, UNKNOWN_IP } from '../core/context.ts';
-import { createSchema } from './build-schema.ts';
 import { createLoaders } from './loaders.ts';
 import { graphqlLogger } from './logger.ts';
 import { useOperationLimits } from './operation-limits.ts';
 
-/** What the handler passes on to resolvers. */
-interface GraphQLHandlerDeps {
+/** What every request's context is built from. */
+export interface ContextDeps {
   db: DB;
   auth: Auth;
   limiter: RateLimiter;
+}
+
+/** Builds one request's context from its headers and the caller's address. */
+export type ContextFactory = (headers: Headers, ip?: string) => Promise<Context>;
+
+/**
+ * Builds the context factory /graphql and /mcp share, so both read the caller the same way.
+ *
+ * Loaders are built per call: their batching is only ever valid within one
+ * request, and their cache must not outlive it.
+ *
+ * @param deps - The database, the auth instance and the sign-in limiter every resolver is given.
+ * @returns The factory.
+ */
+export function createContextFactory({ db, auth, limiter }: ContextDeps): ContextFactory {
+  return async (headers, ip = UNKNOWN_IP) => ({
+    db,
+    auth,
+    limiter,
+    userId: await sessionUserId(auth, headers),
+    headers,
+    ip,
+    loaders: createLoaders(db),
+  });
 }
 
 /** What Express hands Yoga alongside the fetch request. */
@@ -37,13 +60,13 @@ function useNoIntrospection(): Plugin {
 }
 
 /**
- * Builds the Yoga handler for /graphql over `db`.
+ * Builds the Yoga handler for /graphql.
  *
- * @param deps - The database, the auth instance and the sign-in limiter every resolver is given.
+ * @param schema - The schema to serve.
+ * @param contextFor - Builds a request's context.
  * @returns The Yoga instance, callable as Express middleware.
  */
-export function createGraphQLHandler({ db, auth, limiter }: GraphQLHandlerDeps) {
-  const { schema } = createSchema(db);
+export function createGraphQLHandler(schema: GraphQLSchema, contextFor: ContextFactory) {
   return createYoga<ServerContext, Context>({
     schema,
     graphqlEndpoint: '/graphql',
@@ -51,17 +74,7 @@ export function createGraphQLHandler({ db, auth, limiter }: GraphQLHandlerDeps) 
     // Masked errors are logged here with their real cause.
     logging: graphqlLogger,
     plugins: [useOperationLimits(), ...(isProduction() ? [useNoIntrospection()] : [])],
-    // Loaders are built per request: their batching is only ever valid within
-    // one request, and their cache must not outlive it.
-    context: async ({ request, req }): Promise<Context> => ({
-      db,
-      auth,
-      limiter,
-      userId: await sessionUserId(auth, request.headers),
-      headers: request.headers,
-      // Express's view of the caller, which honours TRUST_PROXY.
-      ip: req?.ip ?? UNKNOWN_IP,
-      loaders: createLoaders(db),
-    }),
+    // Express's view of the caller, which honours TRUST_PROXY.
+    context: ({ request, req }) => contextFor(request.headers, req?.ip),
   });
 }
