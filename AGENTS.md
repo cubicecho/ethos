@@ -450,6 +450,11 @@ one of these has found a decision, not a mistake.
 - **`DaySquare` is hand-built.** No registry control cycles through three
   states at the size of a grid cell, so `domain/habit/day-square.tsx` is a
   `Pressable` of the app's own.
+- **Component tests are Vitest and jsdom, not Storybook.** The app is bundled
+  by Metro, so Storybook would need NativeWind and the `.web.tsx` resolution
+  rebuilt in Vite to draw one component. The tests sit in `__tests__` beside
+  what they cover, find things by role and accessible name, and share their
+  fixtures through `domain/__tests__/helpers.tsx` (cubicecho/ethos#15).
 
 ## Generated output
 
