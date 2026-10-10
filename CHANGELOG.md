@@ -1,3 +1,17 @@
+# [2.0.0](https://github.com/cubicecho/ethos/compare/v1.2.0...v2.0.0) (2026-10-10)
+
+
+* feat!: serve on port 3000 by default ([e52e565](https://github.com/cubicecho/ethos/commit/e52e5650a28a77615666856a2521fd03594fc66b)), closes [#14](https://github.com/cubicecho/ethos/issues/14)
+
+
+### BREAKING CHANGES
+
+* the image listens on 3000, not 3006. A compose file that
+maps "3006:3006" without setting PORT must either map to 3000
+("3006:3000" keeps the same address) or set PORT=3006 in the service's
+environment. APP_URL's default follows the port, so set APP_URL if the
+instance is reached on any other address.
+
 # [1.2.0](https://github.com/cubicecho/ethos/compare/v1.1.3...v1.2.0) (2026-10-10)
 
 
