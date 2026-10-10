@@ -89,6 +89,18 @@ describe("how long a habit's text may be", () => {
     expect((await mine.expectError(UPDATE, { id, set: { notes } })).code).toBe(ErrorCode.BadUserInput);
     await mine.expectOk(UPDATE, { id, set: { notes: null } });
   });
+
+  it('keeps a cue, refuses one over the maximum, and lets it be cleared', async () => {
+    const CUE = `mutation ($id: UUID!, $set: UpdateHabitInput!) {
+      updateHabit(set: $set, where: { id: { eq: $id } }) { cue }
+    }`;
+    const created = await mine.expectOk(CREATE, { values: { name: 'Run' } });
+    const id = created.createHabit.id;
+    expect((await mine.expectOk(CUE, { id, set: { cue: 'After coffee' } })).updateHabit.cue).toBe('After coffee');
+    const cue = 'c'.repeat(HABIT_DEFAULTS.maxCueLength + 1);
+    expect((await mine.expectError(CUE, { id, set: { cue } })).code).toBe(ErrorCode.BadUserInput);
+    expect((await mine.expectOk(CUE, { id, set: { cue: null } })).updateHabit.cue).toBeNull();
+  });
 });
 
 describe('foreign keys a caller states', () => {

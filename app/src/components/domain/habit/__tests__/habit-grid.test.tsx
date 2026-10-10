@@ -16,6 +16,7 @@ const habit = (overrides: Partial<HabitSummary> = {}): HabitSummary => ({
   id: 'habit-1',
   name: 'Read',
   notes: null,
+  cue: null,
   color: '#7c3aed',
   period: 'day',
   targetCount: 1,

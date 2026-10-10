@@ -78,6 +78,8 @@ export interface HabitSettings {
   maxNameLength: number;
   /** The longest note, on a habit or on one of its days. */
   maxNoteLength: number;
+  /** The longest cue a habit may have: one line, not a second note. */
+  maxCueLength: number;
 }
 
 export const HABIT_DEFAULTS: Readonly<HabitSettings> = Object.freeze({
@@ -86,6 +88,7 @@ export const HABIT_DEFAULTS: Readonly<HabitSettings> = Object.freeze({
   maxHistoryPeriods: 52,
   maxNameLength: 120,
   maxNoteLength: 2_000,
+  maxCueLength: 200,
 });
 
 export interface OperationLimitSettings {
