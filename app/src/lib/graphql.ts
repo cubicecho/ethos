@@ -25,6 +25,7 @@ export const HabitFieldsFragment = graphql(`
     id
     name
     notes
+    cue
     color
     period
     targetCount

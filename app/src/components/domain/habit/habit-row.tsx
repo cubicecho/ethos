@@ -32,6 +32,9 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
   const isDone = status === ENTRY_DONE;
   const isSkipped = status === ENTRY_SKIPPED;
 
+  // A cue is a prompt, so it is shown only while there is something left to prompt.
+  const cue = status === null ? habit.cue : null;
+
   const toggle = (next: EntryStatus) => setDay(habit.id, today, status === next ? null : next);
 
   return (
@@ -39,6 +42,7 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
       <ListItem
         title={habit.name}
         description={joinStats(
+          cue,
           describeCadence(period, habit.targetCount),
           isSkipped ? 'Skipped today' : describeProgress(habit.current.done, habit.current.effectiveTarget, period),
         )}
