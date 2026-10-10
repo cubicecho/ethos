@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/page';
 import { Sidebar, SidebarNavItem, SidebarSection } from '@/components/sidebar';
 import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
-import { Plus, Settings } from '@/components/ui/icons';
+import { Calendar, Plus, Settings } from '@/components/ui/icons';
 import { clearToken } from '@/lib/auth';
 import { HabitsDocument } from '@/lib/graphql';
 import { habitPath, nextPosition } from '@/lib/habits';
@@ -54,6 +54,9 @@ export function AppSidebar() {
               contentSlot={[
                 <Link key="today" href="/" asChild>
                   <SidebarNavItem label="Today" iconSlot={<CalendarCheck />} active={pathname === '/'} />
+                </Link>,
+                <Link key="overview" href="/overview" asChild>
+                  <SidebarNavItem label="Overview" iconSlot={<Calendar />} active={pathname === '/overview'} />
                 </Link>,
               ]}
             />

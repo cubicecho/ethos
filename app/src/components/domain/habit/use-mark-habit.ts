@@ -1,7 +1,14 @@
 import { type TypedDocumentNode, useMutation } from '@apollo/client';
 import { useState } from 'react';
 import { describeError } from '@/lib/errors';
-import { ClearHabitDayDocument, ClearHabitDocument, MarkHabitDayDocument, MarkHabitDocument } from '@/lib/graphql';
+import {
+  ClearHabitDayDocument,
+  ClearHabitDocument,
+  ClearHabitOverviewDocument,
+  MarkHabitDayDocument,
+  MarkHabitDocument,
+  MarkHabitOverviewDocument,
+} from '@/lib/graphql';
 import type { DayStatus } from './types';
 
 /**
@@ -46,22 +53,25 @@ function useAction() {
   return { isPending, error, run };
 }
 
-type DayVariables = { habitId: string; day: string; today: string };
+type DayVariables = { habitId: string; day: string };
+
+/** What every mark on a screen is sent with: the caller's day, and whatever else its selection reads. */
+type SharedVariables = { today: string };
 
 /** The two mutations a screen records a day with. Their results differ; what they are sent does not. */
-interface MarkDocuments {
-  mark: TypedDocumentNode<unknown, DayVariables & { status?: string | null }>;
-  clear: TypedDocumentNode<unknown, DayVariables>;
+interface MarkDocuments<TShared extends SharedVariables> {
+  mark: TypedDocumentNode<unknown, DayVariables & TShared & { status?: string | null }>;
+  clear: TypedDocumentNode<unknown, DayVariables & TShared>;
 }
 
 /**
  * Builds a marker over a pair of mutations.
  *
  * @param documents - The mark and clear mutations to send.
- * @param today - The caller's day.
+ * @param shared - The variables both are sent beside the habit and the day.
  * @returns The marker.
  */
-function useMarker(documents: MarkDocuments, today: string): Marker {
+function useMarker<TShared extends SharedVariables>(documents: MarkDocuments<TShared>, shared: TShared): Marker {
   const [mark] = useMutation(documents.mark);
   const [clear] = useMutation(documents.clear);
   const { isPending, error, run } = useAction();
@@ -72,8 +82,8 @@ function useMarker(documents: MarkDocuments, today: string): Marker {
     setDay: (habitId, day, status) =>
       run(() =>
         status === null
-          ? clear({ variables: { habitId, day, today } })
-          : mark({ variables: { habitId, day, status, today } }),
+          ? clear({ variables: { habitId, day, ...shared } })
+          : mark({ variables: { habitId, day, status, ...shared } }),
       ),
   };
 }
@@ -85,7 +95,7 @@ function useMarker(documents: MarkDocuments, today: string): Marker {
  * @returns The marker.
  */
 export function useMarkHabit(today: string): Marker {
-  return useMarker({ mark: MarkHabitDocument, clear: ClearHabitDocument }, today);
+  return useMarker({ mark: MarkHabitDocument, clear: ClearHabitDocument }, { today });
 }
 
 /**
@@ -97,5 +107,25 @@ export function useMarkHabit(today: string): Marker {
  * @returns The marker.
  */
 export function useMarkHabitDay(today: string): Marker {
-  return useMarker({ mark: MarkHabitDayDocument, clear: ClearHabitDayDocument }, today);
+  return useMarker({ mark: MarkHabitDayDocument, clear: ClearHabitDayDocument }, { today });
+}
+
+/** The caller's day and the span the overview is drawing, as its documents name them. */
+export interface OverviewVariables {
+  today: string;
+  /** The span's first day. */
+  from: string;
+  /** The day after the span's last: exclusive. */
+  to: string;
+}
+
+/**
+ * For the overview. The same two mutations again, selecting the span's days so
+ * a mark lands in the row that is already on screen.
+ *
+ * @param variables - The caller's day and the span being drawn.
+ * @returns The marker.
+ */
+export function useMarkHabitOverview(variables: OverviewVariables): Marker {
+  return useMarker({ mark: MarkHabitOverviewDocument, clear: ClearHabitOverviewDocument }, variables);
 }

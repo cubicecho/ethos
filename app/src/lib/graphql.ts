@@ -76,6 +76,23 @@ export const HabitHistoryFieldsFragment = graphql(`
   }
 `);
 
+/**
+ * What the overview adds: the days marked inside the span it is drawing.
+ *
+ * The bounds are variables, unlike `HabitHistoryFields`, because the span moves
+ * and a list of habits each holding 400 days costs more than a query may. The
+ * overview's mutations take the same `$from` and `$to`, so a mark lands on the
+ * key the query filled. No span is longer than a month, hence the limit.
+ */
+export const HabitOverviewFieldsFragment = graphql(`
+  fragment HabitOverviewFields on Habit {
+    id
+    rangeEntries: entries(where: { day: { gte: $from, lt: $to } }, limit: 31) {
+      ...HabitEntryFields
+    }
+  }
+`);
+
 export const HabitsDocument = graphql(`
   query Habits($today: String!) {
     habits(
@@ -83,6 +100,18 @@ export const HabitsDocument = graphql(`
       orderBy: { position: { direction: asc, priority: 1 }, createdAt: { direction: asc, priority: 2 } }
     ) {
       ...HabitFields
+    }
+  }
+`);
+
+export const HabitsOverviewDocument = graphql(`
+  query HabitsOverview($today: String!, $from: String!, $to: String!) {
+    habits(
+      where: { archivedAt: { isNull: true } }
+      orderBy: { position: { direction: asc, priority: 1 }, createdAt: { direction: asc, priority: 2 } }
+    ) {
+      ...HabitFields
+      ...HabitOverviewFields
     }
   }
 `);
@@ -142,7 +171,7 @@ export const DeleteHabitDocument = graphql(`
   }
 `);
 
-// Two shapes of the same two mutations, and the duplication is the point: the
+// Three shapes of the same two mutations, and the duplication is the point: the
 // list screens hold no history, so asking for it on every tick would fetch a
 // grid nothing is showing, and the detail screen holds one, so *not* asking
 // would leave its squares a period behind the streak above them. Each screen
@@ -178,6 +207,31 @@ export const ClearHabitDayDocument = graphql(`
     clearHabit(habitId: $habitId, day: $day) {
       ...HabitFields
       ...HabitHistoryFields
+    }
+  }
+`);
+
+export const MarkHabitOverviewDocument = graphql(`
+  mutation MarkHabitOverview(
+    $habitId: ID!
+    $day: String!
+    $status: String
+    $today: String!
+    $from: String!
+    $to: String!
+  ) {
+    markHabit(habitId: $habitId, day: $day, status: $status) {
+      ...HabitFields
+      ...HabitOverviewFields
+    }
+  }
+`);
+
+export const ClearHabitOverviewDocument = graphql(`
+  mutation ClearHabitOverview($habitId: ID!, $day: String!, $today: String!, $from: String!, $to: String!) {
+    clearHabit(habitId: $habitId, day: $day) {
+      ...HabitFields
+      ...HabitOverviewFields
     }
   }
 `);
