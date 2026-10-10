@@ -1,4 +1,9 @@
-import type { HabitEntryFieldsFragment, HabitFieldsFragment, HabitPeriodFieldsFragment } from '@/__generated__/graphql';
+import type {
+  HabitEntryFieldsFragment,
+  HabitFieldsFragment,
+  HabitOverviewFieldsFragment,
+  HabitPeriodFieldsFragment,
+} from '@/__generated__/graphql';
 
 /**
  * What the screens pass around.
@@ -12,6 +17,8 @@ import type { HabitEntryFieldsFragment, HabitFieldsFragment, HabitPeriodFieldsFr
 export type HabitSummary = HabitFieldsFragment;
 export type HabitPeriodSummary = HabitPeriodFieldsFragment;
 export type HabitEntrySummary = HabitEntryFieldsFragment;
+/** A habit as the overview holds it: the summary, and the days marked inside the span on screen. */
+export type HabitOverviewSummary = HabitFieldsFragment & HabitOverviewFieldsFragment;
 
 export const ENTRY_DONE = 'done';
 export const ENTRY_SKIPPED = 'skipped';

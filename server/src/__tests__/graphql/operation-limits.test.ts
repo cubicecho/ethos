@@ -53,6 +53,8 @@ const isOperation = (value: unknown): value is DocumentNode =>
 const VARIABLES = {
   today: '2026-10-06',
   day: '2026-10-06',
+  from: '2026-10-01',
+  to: '2026-11-01',
   id: '00000000-0000-4000-8000-000000000000',
   habitId: '00000000-0000-4000-8000-000000000000',
   values: { name: 'Run' },

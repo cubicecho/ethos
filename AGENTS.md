@@ -31,6 +31,7 @@ ethos/
 │   │   ├── auth/verify.tsx  # Magic-link landing page
 │   │   └── (app)/           # Authenticated group (redirects to /login)
 │   │       ├── index.tsx    # Today — every habit, and today's square
+│   │       ├── overview.tsx # Every habit against the days of one week or month
 │   │       ├── habits/[id].tsx     # One habit: its history and its grid
 │   │       ├── archive.tsx         # Archived habits, read-only
 │   │       └── settings/index.tsx  # Theme + account
@@ -286,6 +287,15 @@ the query that fills the cache and the mutation that updates it land on the same
 key by construction. A selection that omits a field the query reads leaves that
 field stale, so widen the fragment rather than the document.
 
+**The overview's span is part of its cache key.** `HabitOverviewFields` asks for
+`entries` between `$from` and `$to`, and the overview's own pair of mutations
+takes the same two variables so a mark lands in the row on screen. A mark made
+on any other screen returns no such field, which is why the overview's query is
+`cache-and-network`. A row prints the server's `current` tally only when the
+span is that habit's own current period; otherwise it counts kept squares and
+offers no rate, because a "5/7" for a span the habit is not counted over is a
+number nobody can reproduce.
+
 **Nothing marks a day optimistically.** Every other write in the app edits the
 cache before the request leaves; a tick does not, because what it changes is the
 streak, and answering that on the client would mean reimplementing
@@ -371,7 +381,8 @@ a value it failed to read.
   `form.SubmitButton` for the disabled state. Not `useState` and a
   hand-computed `canSubmit`.
 - Every screen in `(app)` is a cubeui `PageLayout`: title, description and
-  actions in its header, `width="prose"`. The `(app)` shell's main does not
+  actions in its header, `width="prose"` — except the overview, which is
+  `width="page"` because a month of squares is wider than the reading column. The `(app)` shell's main does not
   scroll; the `PageLayout` body does, so the header stays put. A habit's header
   is `HabitPage` in `domain/habit/habit-page.tsx`. A screen whose whole content
   is "nothing here" or "that failed" is `EmptyState` (from `page.tsx`), not a

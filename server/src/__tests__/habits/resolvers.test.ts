@@ -307,4 +307,18 @@ describe('the fields the grid reads', () => {
     const data = await theirs.expectOk(`query { habits { id entries { day } } habitEntries { day } }`);
     expect(data).toEqual({ habits: [], habitEntries: [] });
   });
+
+  it('hands a mark back inside the span of days the caller asked for, and not outside it', async () => {
+    // What the overview sends: one week or month of a habit, its end exclusive.
+    const MARK_IN_SPAN = `mutation ($id: ID!, $day: String!, $from: String!, $to: String!) {
+      markHabit(habitId: $id, day: $day) {
+        rangeEntries: entries(where: { day: { gte: $from, lt: $to } }, limit: 31) { day }
+      }
+    }`;
+    const span = { from: addDays(today, -2), to: today };
+    // Today is already marked, and is the span's exclusive end.
+    await mine.expectOk(MARK, { id: habitId, day: addDays(today, -3) });
+    const data = await mine.expectOk(MARK_IN_SPAN, { id: habitId, day: yesterday, ...span });
+    expect(data.markHabit.rangeEntries).toEqual([{ day: yesterday }]);
+  });
 });
