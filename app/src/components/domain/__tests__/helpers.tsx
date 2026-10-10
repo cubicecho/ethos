@@ -41,6 +41,7 @@ export const entry = (day: string, status: string): HabitEntrySummary => ({
   day,
   status,
   note: null,
+  partial: false,
 });
 
 /**
@@ -54,6 +55,7 @@ export const habit = (overrides: Partial<HabitSummary> = {}): HabitSummary => ({
   id: 'habit-1',
   name: 'Read',
   notes: null,
+  cue: null,
   color: '#7c3aed',
   period: 'day',
   targetCount: 1,

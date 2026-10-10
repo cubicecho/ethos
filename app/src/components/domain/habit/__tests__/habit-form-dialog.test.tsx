@@ -106,6 +106,7 @@ describe('HabitFormDialog creating a habit', () => {
         id: expect.stringMatching(UUID),
         name: 'Run',
         notes: null,
+        cue: null,
         color: PALETTE[0],
         period: 'day',
         targetCount: 1,
@@ -279,7 +280,7 @@ describe('HabitFormDialog editing a habit', () => {
     expect(await sentTo(result)).toEqual({
       id: 'habit-1',
       today: TODAY,
-      set: { name: 'Read more', notes: 'Twenty pages.', color: PALETTE[1], period: 'week', targetCount: 3 },
+      set: { name: 'Read more', notes: 'Twenty pages.', cue: null, color: PALETTE[1], period: 'week', targetCount: 3 },
     });
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledExactlyOnceWith(false));
   });
