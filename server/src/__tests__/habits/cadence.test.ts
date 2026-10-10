@@ -1,15 +1,21 @@
 import * as dbSchema from '@ethos/db/schema';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ErrorCode } from '../../core/errors.ts';
 import { assertTargetsFitPeriods, describeCadenceLimit, maxTargetFor } from '../../habits/cadence.ts';
-import { createTestDb, createUser, type TestDb } from '../helpers.ts';
+import { closeTestDb, createTestDb, createUser, resetTestDb, type TestDb } from '../helpers.ts';
 
 let db: TestDb;
 let mine: string;
 let theirs: string;
 
-beforeEach(async () => {
+beforeAll(async () => {
   db = await createTestDb();
+});
+
+afterAll(() => closeTestDb(db));
+
+beforeEach(async () => {
+  await resetTestDb(db);
   mine = await createUser(db, 'mine@example.com');
   theirs = await createUser(db, 'theirs@example.com');
 });

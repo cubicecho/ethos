@@ -1,9 +1,17 @@
 import * as dbSchema from '@ethos/db/schema';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { HABIT_DEFAULTS } from '../../core/defaults.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { addDays, periodBefore } from '../../habits/periods.ts';
-import { createClient, createTestDb, createUser, type TestClient, type TestDb } from '../helpers.ts';
+import {
+  closeTestDb,
+  createClient,
+  createTestDb,
+  createUser,
+  resetTestDb,
+  type TestClient,
+  type TestDb,
+} from '../helpers.ts';
 
 // Recording a day, end to end. The pure rules live in streaks.test.ts; what is
 // under test here is everything between the request and the row — the day key,
@@ -31,8 +39,14 @@ let habitId: string;
 const createHabit = async (client: TestClient, values: Record<string, unknown>): Promise<string> =>
   (await client.expectOk(CREATE, { values })).createHabit.id;
 
-beforeEach(async () => {
+beforeAll(async () => {
   db = await createTestDb();
+});
+
+afterAll(() => closeTestDb(db));
+
+beforeEach(async () => {
+  await resetTestDb(db);
   mine = createClient(db, await createUser(db, 'mine@example.com'));
   theirs = createClient(db, await createUser(db, 'theirs@example.com'));
   anonymous = createClient(db, null);

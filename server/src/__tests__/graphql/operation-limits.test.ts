@@ -1,5 +1,5 @@
 import { type DocumentNode, type GraphQLSchema, Kind, parse } from 'graphql';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 // The documents the web client really sends, as its codegen wrote them. A copy
 // kept here would go on passing after the client changed.
 import * as appDocuments from '../../../../app/src/__generated__/graphql.ts';
@@ -7,7 +7,7 @@ import { OPERATION_LIMIT_DEFAULTS } from '../../core/defaults.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { createSchema } from '../../graphql/build-schema.ts';
 import { assertWithinLimits } from '../../graphql/operation-limits.ts';
-import { createClient, createTestDb, createUser, type TestDb } from '../helpers.ts';
+import { closeTestDb, createClient, createTestDb, createUser, type TestDb } from '../helpers.ts';
 
 const { maxAliases, maxDepth, maxPageSize } = OPERATION_LIMIT_DEFAULTS;
 
@@ -18,6 +18,8 @@ beforeAll(async () => {
   db = await createTestDb();
   schema = createSchema(db).schema;
 });
+
+afterAll(() => closeTestDb(db));
 
 /** The `extensions.code` `assertWithinLimits` throws for `query`, or undefined when it passes. */
 function refusalOf(query: string): unknown {
