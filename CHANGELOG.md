@@ -1,3 +1,10 @@
+## [3.3.1](https://github.com/cubicecho/ethos/compare/v3.3.0...v3.3.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* **app:** say which square is today in its label ([39ef7ec](https://github.com/cubicecho/ethos/commit/39ef7ec3417a523286eba21d3137eda393b4963e))
+
 # [3.3.0](https://github.com/cubicecho/ethos/compare/v3.2.0...v3.3.0) (2026-10-10)
 
 
