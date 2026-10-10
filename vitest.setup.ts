@@ -39,6 +39,15 @@ if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
 
+// Removing the focused element makes jsdom blur the window on the next focus.
+// react-native-web's responder does not know that target as `window` here and
+// throws on it, so the blur stops before the responder's listener sees it.
+window.addEventListener('blur', (event) => {
+  if (event.target instanceof Node === false) {
+    event.stopImmediatePropagation();
+  }
+});
+
 // Explicit rather than relying on the auto-cleanup that only runs when the
 // globals are injected: the two must not be able to drift apart.
 afterEach(() => {
