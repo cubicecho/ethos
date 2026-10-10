@@ -42,14 +42,14 @@ services:
       DATABASE_URL: postgres://ethos:${POSTGRES_PASSWORD:?set a database password}@postgres:5432/ethos
       # The address you actually reach Ethos at. Sign-in links are built from
       # it, so a link to localhost is useless in an inbox.
-      APP_URL: ${APP_URL:-http://localhost:3006}
+      APP_URL: ${APP_URL:-http://localhost:3000}
       # How people sign in. Set one: a relay to email links through, or
       # SECURE_LOCAL_NET on a network you trust.
       SMTP_URL: ${SMTP_URL:-}
       SECURE_LOCAL_NET: ${SECURE_LOCAL_NET:-false}
       NODE_ENV: production
     ports:
-      - "${PORT:-3006}:3006"
+      - "${PORT:-3000}:3000"
 
   postgres:
     image: postgres:17-alpine
@@ -84,7 +84,7 @@ printf 'BETTER_AUTH_SECRET=%s\nPOSTGRES_PASSWORD=%s\nSECURE_LOCAL_NET=true\n' \
 docker compose up -d
 ```
 
-Ethos is on <http://localhost:3006>. Migrations run at boot, so there is no
+Ethos is on <http://localhost:3000>. Migrations run at boot, so there is no
 setup step. Sign in with any email address: `SECURE_LOCAL_NET=true` makes the
 address the whole credential, which is right on your own machine and wrong
 anywhere else. To email a one-time link instead, drop that line and set
@@ -107,8 +107,8 @@ domain.
 | --- | --- | --- |
 | `DATABASE_URL` | — | **Required.** Postgres connection string. There is no embedded fallback. |
 | `BETTER_AUTH_SECRET` | — | **Required in production.** What better-auth signs with. `openssl rand -hex 32`. |
-| `APP_URL` | `http://localhost:3006` | Public URL; sign-in links are built from it, and in production it is the only origin allowed to call the API. |
-| `PORT` | `3006` | Port the server listens on. |
+| `APP_URL` | `http://localhost:3000` | Public URL; sign-in links are built from it, and in production it is the only origin allowed to call the API. |
+| `PORT` | `3000` | Port the server listens on. |
 | `TRUST_PROXY` | `false` | How many reverse proxies are in front (`1` behind one). Decides whose address sign-in is throttled by. |
 | `DB_CONNECT_TIMEOUT_MS` | `60000` | How long boot waits for Postgres to start answering. |
 | `SMTP_URL` | — | An SMTP relay to email sign-in links through, e.g. `smtps://user:pass@smtp.example.com:465`. |
@@ -153,7 +153,7 @@ npm install
 npm run db:up          # Postgres in Docker, and it prints the DATABASE_URL to use
 npm run db:migrate
 npm run codegen
-npm run dev            # API on 3006, app on http://localhost:3000
+npm run dev            # API on 3000, app on http://localhost:8081
 ```
 
 `npm run check` runs codegen, Biome and `tsc --noEmit` across all three
@@ -175,7 +175,7 @@ Docker daemon is docker.lan, not this machine — publishing Postgres on 0.0.0.0
 ```
 
 Do that on a network you trust — the dev database has a throwaway password and
-no TLS. Everything else runs here: the API on 3006, the app on 3000, both
+no TLS. Everything else runs here: the API on 3000, the app on 8081, both
 talking to that Postgres. If the server still says `Cannot reach Postgres`, the
 hostname in `DATABASE_URL` is the thing to check first.
 

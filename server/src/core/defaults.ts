@@ -20,7 +20,7 @@ export interface HttpSettings {
 }
 
 export const HTTP_DEFAULTS: Readonly<HttpSettings> = Object.freeze({
-  port: 3006,
+  port: 3000,
   immutableCacheSeconds: 31_536_000,
   drainSeconds: 5,
   shutdownDeadlineSeconds: 8,
