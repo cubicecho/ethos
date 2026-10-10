@@ -1,3 +1,18 @@
+# [3.0.0](https://github.com/cubicecho/ethos/compare/v2.0.0...v3.0.0) (2026-10-10)
+
+
+* feat!: sign in with better-auth ([5dc2d10](https://github.com/cubicecho/ethos/commit/5dc2d102dd8991f637acf4a17dc4de10c0661666)), closes [#13](https://github.com/cubicecho/ethos/issues/13)
+
+
+### BREAKING CHANGES
+
+* JWT_SECRET is replaced by BETTER_AUTH_SECRET.
+AUTH_MAGIC_LINK and EXPOSE_MAGIC_LINK are removed: set SMTP_URL to email
+sign-in links, or SECURE_LOCAL_NET=true on a private network. The
+requestMagicLink mutation is replaced by requestSignIn, and
+verifyMagicLink no longer accepts the old tokens. Existing sessions are
+not carried over, so everyone signs in once more.
+
 # [2.0.0](https://github.com/cubicecho/ethos/compare/v1.2.0...v2.0.0) (2026-10-10)
 
 
