@@ -16,7 +16,6 @@ export const HabitPeriodFieldsFragment = graphql(`
     target
     effectiveTarget
     met
-    rate
   }
 `);
 
@@ -30,8 +29,6 @@ export const HabitFieldsFragment = graphql(`
     targetCount
     position
     archivedAt
-    streak(today: $today)
-    longestStreak(today: $today)
     current(today: $today) {
       ...HabitPeriodFields
     }
@@ -54,7 +51,7 @@ export const HabitEntryFieldsFragment = graphql(`
 `);
 
 /**
- * What the detail screen adds: the periods the streak was counted over, and the
+ * What the detail screen adds: the periods the habit was counted over, and the
  * days inside them.
  *
  * Both bounds are literals in the document rather than variables, so there is
@@ -174,7 +171,7 @@ export const DeleteHabitDocument = graphql(`
 // Three shapes of the same two mutations, and the duplication is the point: the
 // list screens hold no history, so asking for it on every tick would fetch a
 // grid nothing is showing, and the detail screen holds one, so *not* asking
-// would leave its squares a period behind the streak above them. Each screen
+// would leave its squares a tick behind the tally above them. Each screen
 // sends the version whose selection matches what it is displaying.
 
 export const MarkHabitDocument = graphql(`

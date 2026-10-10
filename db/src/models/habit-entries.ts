@@ -4,7 +4,7 @@ import { check, date, index, pgTable, text, timestamp, unique, uuid } from 'driz
 import { habits } from './habits.ts';
 import { users } from './users.ts';
 
-/** What a day says. A skip is not a miss — see streaks.ts. */
+/** What a day says. A skip is not a miss — see tallies.ts. */
 export const ENTRY_DONE = 'done';
 export const ENTRY_SKIPPED = 'skipped';
 export type EntryStatus = typeof ENTRY_DONE | typeof ENTRY_SKIPPED;

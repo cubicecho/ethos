@@ -14,11 +14,11 @@ import type { DayStatus } from './types';
 /**
  * Recording a day, and what it costs to get wrong.
  *
- * Nothing here answers optimistically. A tick changes the streak, the tally and
- * whether the period was met, all derived by the server from rows the client
- * does not hold. A streak the client invented and the server then corrected is
- * worse than one that arrives a moment late, so `isPending` says the control is
- * working instead.
+ * Nothing here answers optimistically. A tick changes the period's tally and
+ * whether it was met, and a skip can be refused at the cap, all decided by the
+ * server from rows the client does not hold. A tally the client invented and the
+ * server then corrected is worse than one that arrives a moment late, so
+ * `isPending` says the control is working instead.
  */
 export interface Marker {
   /** `null` clears the day, leaving it untouched rather than missed. */

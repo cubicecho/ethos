@@ -24,7 +24,6 @@ const tally = (start: string, end: string, overrides: Partial<HabitPeriodSummary
   target: 3,
   effectiveTarget: 3,
   met: false,
-  rate: 0,
   ...overrides,
 });
 
@@ -37,8 +36,6 @@ const habit = (overrides: Partial<HabitOverviewSummary> = {}): HabitOverviewSumm
   targetCount: 1,
   position: 0,
   archivedAt: null,
-  streak: 0,
-  longestStreak: 0,
   current: tally(TODAY, '2026-09-18'),
   todayEntry: [],
   rangeEntries: [],

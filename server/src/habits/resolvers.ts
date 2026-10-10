@@ -9,7 +9,7 @@ import { badInput, notFound } from '../core/errors.ts';
 import { parseOrThrow } from '../core/validation.ts';
 import { entryNote } from './input.ts';
 import { assertDay, daysBetween, periodOf } from './periods.ts';
-import { currentStreak, type EntryLike, type HabitLike, longestStreak, tallyPeriod, tallyRecent } from './streaks.ts';
+import { type EntryLike, type HabitLike, tallyPeriod, tallyRecent } from './tallies.ts';
 
 // What generated CRUD cannot express: the derived fields the grid reads, and the
 // one state transition that carries rules — recording a day, which the day key
@@ -35,15 +35,9 @@ const HABITS_SDL = parse(`
     effectiveTarget: Int!
     "Whether the period was kept. A period skipped down to nothing owed was."
     met: Boolean!
-    "done / effectiveTarget, clamped to 1."
-    rate: Float!
   }
 
   extend type Habit {
-    "Periods kept in an unbroken run up to now. The period in progress cannot break it."
-    streak(today: String): Int!
-    "The longest run of kept periods there has ever been."
-    longestStreak(today: String): Int!
     "The last \`periods\` periods, oldest first — the order the grid is read in."
     history(periods: Int = 12, today: String): [HabitPeriod!]!
     "The period today falls in."
@@ -126,7 +120,7 @@ function parseStatus(value: string | null | undefined): EntryStatus {
  * One day of slack, not none: the caller's `day` is their local one, and while
  * it is the 17th in UTC someone in Auckland is honestly on the 18th. Past that
  * there is no zone that explains it, and a habit marked kept for next month is a
- * streak nobody earned.
+ * period nobody kept.
  *
  * @param day - The day being marked.
  */
@@ -161,7 +155,7 @@ function assertSkipAllowed(habit: AnyRow, entries: readonly { day: string; statu
 }
 
 /**
- * The periods field resolvers share: the habit's entries, as streaks.ts reads them.
+ * The periods field resolvers share: the habit's entries, as tallies.ts reads them.
  *
  * @param parent - The habit's row.
  * @param context - The request context, for its loaders.
@@ -175,9 +169,9 @@ function entriesOf(parent: AnyRow, context: Context): Promise<EntryLike[]> {
  * The cadence the derived fields are counted over.
  *
  * Loaded rather than read off `parent`: the generated resolvers select the
- * columns the client asked for, so `{ streak }` with no `period` alongside it
+ * columns the client asked for, so `{ current }` with no `period` alongside it
  * arrives here as a row with no cadence — and `periodOf(undefined, day)` does
- * not fail, it silently answers with a month. What a streak means must not
+ * not fail, it silently answers with a month. What a period is must not
  * depend on what else the caller happened to select.
  *
  * @param parent - The habit's row.
@@ -204,7 +198,7 @@ async function readingOf(parent: AnyRow, context: Context): Promise<[HabitLike, 
 }
 
 /**
- * Adds what the generated schema cannot derive: streaks, history, and the two mutations that record a day.
+ * Adds what the generated schema cannot derive: history, the current period, and the two mutations that record a day.
  *
  * @param schema - The generated schema.
  * @returns The schema with the habit fields, `markHabit` and `clearHabit` on it.
@@ -213,16 +207,6 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
   const extendedSchema = extendSchema(schema, HABITS_SDL);
 
   const habitFields = assertObjectType(extendedSchema.getType('Habit')).getFields();
-
-  habitFields.streak.resolve = async (parent: AnyRow, args: { today: string | null }, context: Context) => {
-    const [habit, entries] = await readingOf(parent, context);
-    return currentStreak(habit, entries, assertDay(args.today ?? serverToday()));
-  };
-
-  habitFields.longestStreak.resolve = async (parent: AnyRow, args: { today: string | null }, context: Context) => {
-    const [habit, entries] = await readingOf(parent, context);
-    return longestStreak(habit, entries, assertDay(args.today ?? serverToday()));
-  };
 
   habitFields.history.resolve = async (
     parent: AnyRow,
@@ -277,7 +261,7 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
       });
 
     // The loader's answer predates this write, and the request is not over: the
-    // habit returned here is about to be asked for its streak.
+    // habit returned here is about to be asked for its current period.
     context.loaders.entries.clear(habit.id);
     return habit;
   };

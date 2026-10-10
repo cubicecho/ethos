@@ -4,7 +4,7 @@
 
 Ethos is a self-hostable habit tracker. It is *just* habits: a habit has a name,
 a colour and a cadence, and every day you keep it is one row. Everything else —
-the grid, the streak, the completion rate — is counted off those rows. One
+the grid, and each period's tally — is counted off those rows. One
 monorepo (npm workspaces) with three packages — `app/` (frontend), `server/`
 (GraphQL API), `db/` (schema and connection) — and one container serves all of it.
 
@@ -76,7 +76,7 @@ ethos/
 │       ├── habits/          # The habit domain
 │       │   ├── resolvers.ts     # SDL extension for what CRUD cannot express
 │       │   ├── periods.ts       # Where the period boundaries are drawn
-│       │   ├── streaks.ts       # What a run of kept days is worth
+│       │   ├── tallies.ts       # What one period came to
 │       │   └── cadence.ts       # What a period can be asked for
 │       └── __tests__/       # Server tests, in the same folders; helpers.ts at the root
 ├── db/
@@ -162,26 +162,23 @@ double-click, two open tabs and a retried request are all the same tick.
 declined comes off what the period asked for; an untouched day is the miss. That
 is right — an instance you declined was never owed — and is exactly why it is
 capped at `HABIT_DEFAULTS.maxSkipsPerPeriod` in `server/src/core/defaults.ts`: a habit that can be
-skipped without limit has no completion rate left to read, because every period
+skipped without limit has no tally left to read, because every period
 can be skipped down to owing nothing and reported as kept. The cap is counted
 over the period's *other* days, so a period at the cap can still change its mind
 about which days it declined.
 
-**A streak counts periods, not days, and the period in progress cannot break
-one.** "3× a week" is kept or not kept by the week; counting consecutive days
-would break that habit's streak every Tuesday, which is the app calling a success
-a failure. A week with one of three done is not a failed week, it is Tuesday — it
-joins the streak once it is met and is stepped over otherwise, but only for the
-period containing today. Any earlier period is finished, and a finished period
-that fell short is where the streak ends. All three rules live in
-`server/src/habits/streaks.ts`, which is pure and has no database in its tests; anything
-the app reports about a habit is one of them applied.
+**A habit is counted by the period, and one period at a time.** "3× a week" is
+kept or not kept by the week, whichever days those were, so a tally is `done`,
+`skipped`, `target`, `effectiveTarget` and `met` for one period and nothing
+carries from one period into the next. `server/src/habits/tallies.ts` is where
+that is counted; it is pure and has no database in its tests, and anything the
+app reports about a habit is a tally from it.
 
 **Recording a day has no generated mutations.** `features` in `tenancy.ts` turns
 off insert/update/delete for `habitEntries` so every day goes through `markHabit`
 and `clearHabit`, which is where the day key and the skip cap live. A generated
 insert would write a second row for a day that already has one, or a fifty-first
-skip in a week, and every rate and streak in the app is counted off those rows.
+skip in a week, and every tally in the app is counted off those rows.
 
 **A cadence has to fit its period.** The database refuses what is true of every
 row that will ever exist — `target_count > 0`, and a daily habit asking for more
@@ -202,8 +199,8 @@ is what the rest of the world writes and what puts a weekend at one end of a row
 instead of splitting it across two.
 
 **`app/src/lib/periods.ts` is a deliberate copy of `server/src/habits/periods.ts`.** The
-grid draws the periods the streak is counted over, so if the two disagree the app
-shows a streak nobody can reproduce by counting squares. They are separate
+grid draws the periods the tally is counted over, so if the two disagree the app
+shows a tally nobody can reproduce by counting squares. They are separate
 packages — the app is bundled by Metro and must not pull the server's Drizzle
 imports into a browser — so the rule is kept by the files being twins rather than
 by an import. Change one, change both; the two `periods.test.ts` suites assert
@@ -213,7 +210,7 @@ an impossible target while it is still being typed, but the server's copy is the
 one that decides.
 
 **The client sends its own `today`.** Every field whose answer depends on which
-period is the current one — `streak`, `longestStreak`, `history`, `current` —
+period is the current one — `history` and `current` —
 takes a `today` argument, and `useToday()` in `app/src/lib/use-today.ts` is where
 it comes from. A server in Berlin has no business telling someone in Auckland
 that their Monday has not started. The server's own UTC day is a fallback and
@@ -223,10 +220,10 @@ midnight would otherwise keep yesterday's grid.
 
 **A derived field loads the cadence rather than reading it off the parent.** The
 generated resolvers select the columns the client asked for, so a query for
-`{ streak }` with no `period` alongside it hands the field resolver a row with no
+`{ current }` with no `period` alongside it hands the field resolver a row with no
 cadence on it — and `periodOf(undefined, day)` does not fail, it silently answers
 with a month. `loaders.cadence` in `server/src/graphql/loaders.ts` is where the derived
-fields get `period` and `targetCount`, so what a streak means never depends on
+fields get `period` and `targetCount`, so what a period is never depends on
 what else the caller happened to select.
 
 **An archived habit is a record, not a practice.** Archiving sets `archivedAt`
@@ -278,7 +275,7 @@ item.) That HTML file is also Expo's own template with a script added:
 
 **A write returns the habit, not the row it wrote.** `markHabit` and `clearHabit`
 write a `habit_entries` row and return the `Habit`, because the habit is what the
-screen reads — its `streak`, its `current`, its `history`. Apollo normalizes by
+screen reads — its `current`, its `history`. Apollo normalizes by
 id, so one full selection settles every list and screen already holding that
 habit and nothing has to refetch to find out what the write did. The catch is
 that a field's *arguments* are part of the key it is cached under: `history` and
@@ -298,8 +295,10 @@ number nobody can reproduce.
 
 **Nothing marks a day optimistically.** Every other write in the app edits the
 cache before the request leaves; a tick does not, because what it changes is the
-streak, and answering that on the client would mean reimplementing
-`server/src/habits/streaks.ts` in the browser and keeping the two in step. The controls
+period's tally, and whether a skip is allowed at all is the cap's to say. Both
+are decided by the server from entries the list screens do not hold, and
+answering on the client would mean reimplementing `server/src/habits/tallies.ts`
+and the skip cap in the browser and keeping them in step. The controls
 disable while the mutation is in flight instead. A create is still optimistic —
 what a new habit's fields are is not in question.
 
@@ -418,6 +417,10 @@ one of these has found a decision, not a mistake.
   send it.
 - **`archivedAt` is the soft delete.** A habit has no `deletedAt`: archiving is
   the reversible removal, and a delete really deletes.
+- **No streak, and no all-time percentage.** Ethos shows each period's tally
+  and the grid, and nothing that runs across periods: a visibly broken run
+  reduces engagement, and a period counted on its own is a fresh start
+  (cubicecho/ethos#5).
 - **`DaySquare` is hand-built.** No registry control cycles through three
   states at the size of a grid cell, so `domain/habit/day-square.tsx` is a
   `Pressable` of the app's own.

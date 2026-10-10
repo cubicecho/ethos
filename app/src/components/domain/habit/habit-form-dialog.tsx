@@ -105,8 +105,6 @@ export function HabitFormDialog({
               ...values,
               position: nextPosition,
               archivedAt: null,
-              streak: 0,
-              longestStreak: 0,
               current: {
                 __typename: 'HabitPeriod',
                 start: range.start,
@@ -116,7 +114,6 @@ export function HabitFormDialog({
                 target: values.targetCount,
                 effectiveTarget: values.targetCount,
                 met: false,
-                rate: 0,
               },
               todayEntry: [],
             },

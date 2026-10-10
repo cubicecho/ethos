@@ -1,7 +1,7 @@
 import { useMutation } from '@apollo/client';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
 import { ActionButton } from '@/components/action-button';
 import { Archive, ArchiveRestore } from '@/components/app-icons';
 import { ConfirmButton } from '@/components/confirm-button';
@@ -21,8 +21,8 @@ import { HabitFormDialog } from './habit-form-dialog';
 import type { HabitSummary } from './types';
 
 /**
- * A habit's own screen: its name, cadence and actions in the page header, the
- * three numbers under it, and whatever the route puts below them.
+ * A habit's own screen: its name, cadence and actions in the page header, this
+ * period's tally under it, and whatever the route puts below that.
  */
 export function HabitPage({
   habit,
@@ -121,20 +121,15 @@ export function HabitPage({
           <>
             {habit.notes ? <Text className="text-foreground text-sm">{habit.notes}</Text> : null}
 
-            <View className="flex-row flex-wrap gap-3">
-              <StatTile className="min-w-32 flex-1" label="Streak" value={habit.streak} hint={`${period}s in a row`} />
-              <StatTile className="min-w-32 flex-1" label="Best" value={habit.longestStreak} />
-              <StatTile
-                className="min-w-32 flex-1"
-                label={THIS_PERIOD[period]}
-                value={`${habit.current.done}/${habit.current.effectiveTarget}`}
-                hint={
-                  habit.current.skipped > 0
-                    ? `${habit.current.skipped} skipped, and skips come off the target`
-                    : undefined
-                }
-              />
-            </View>
+            <StatTile
+              label={THIS_PERIOD[period]}
+              value={`${habit.current.done}/${habit.current.effectiveTarget}`}
+              hint={
+                habit.current.skipped > 0
+                  ? `${habit.current.skipped} skipped, and skips come off the target`
+                  : undefined
+              }
+            />
 
             {actionError ? <Alert variant="destructive" description={actionError} /> : null}
 

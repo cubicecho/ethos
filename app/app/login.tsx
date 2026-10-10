@@ -51,7 +51,7 @@ export default function LoginScreen() {
       className="bg-background"
       level={1}
       title="Ethos"
-      description="Habits, the days you keep them, and the streak that follows."
+      description="Habits, the days you keep them, and the grid they add up to."
       contentClassName="gap-4"
       contentSlot={
         <>

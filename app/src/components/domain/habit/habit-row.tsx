@@ -1,9 +1,8 @@
 import { useRouter } from 'expo-router';
 import { ActionButton } from '@/components/action-button';
-import { Flame, SkipForward } from '@/components/app-icons';
+import { SkipForward } from '@/components/app-icons';
 import { ListItem } from '@/components/list-item';
 import { Alert } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Check } from '@/components/ui/icons';
 import { asPeriod, describeCadence, describeProgress } from '@/lib/cadence';
@@ -64,14 +63,6 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
               />
             }
           />
-        }
-        meta={
-          habit.streak > 0 ? (
-            <Badge variant="secondary" label={`${habit.streak} ${period}s in a row`}>
-              <Flame />
-              {habit.streak}
-            </Badge>
-          ) : undefined
         }
         actionSlot={
           <ActionButton

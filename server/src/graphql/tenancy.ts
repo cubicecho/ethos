@@ -63,8 +63,8 @@ export const contextValues: NonNullable<BuildSchemaConfig['contextValues']> = Ob
  * `users` is the auth flow's (auth/resolvers.ts): an account exists because a
  * sign-in created it. `habitEntries` is `markHabit`'s — a generated insert would
  * let a client write a second row for a day that already has one, or a
- * fifty-first skip in a week, and every rate and streak in the app is counted
- * off those rows. One day, one row, one way in.
+ * fifty-first skip in a week, and every tally in the app is counted off those
+ * rows. One day, one row, one way in.
  */
 const WRITES_RESERVED = new Set<string>(['users', 'habitEntries']);
 

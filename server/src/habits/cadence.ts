@@ -7,7 +7,7 @@ import { periodLength } from './periods.ts';
 // A period cannot ask for more days than it has.
 //
 // The database cannot say this itself: the ceiling depends on the month, and a
-// habit over it drags every rate and streak to zero with nothing to show why.
+// habit over it can never be met, with nothing to show why.
 // Checked after the write, because a write that changes only `period` would
 // pass a check that reads the arguments.
 

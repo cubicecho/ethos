@@ -4,18 +4,19 @@ A self-hostable habit tracker that is *just* habits.
 
 A habit is a name, a colour and a cadence — every day, three times a week, ten
 times a month — and a grid of the days you kept it. You tick the squares; Ethos
-counts the streak. That is the whole product.
+counts each period. That is the whole product.
 
-- **Habits** — a list of them, each with today's square and the streak so far.
+- **Habits** — a list of them, each with today's square and how this period stands.
 - **A day at a time** — click a square once to keep the day, again to skip it,
   again to clear it. Nothing else to fill in.
 - **Cadences** — daily, weekly or monthly, with a target count. A weekly habit is
-  kept or missed by the week, so a quiet Tuesday is not a broken streak.
+  kept or missed by the week, so a quiet Tuesday is not a miss.
 - **Skips** — a day you deliberately declined comes off what the period asked
   for instead of counting against you. Two of them per period, so the number
   still means something.
-- **Streaks and rates** — counted over periods, and the period in progress never
-  breaks one. The grid shows the tally the server counted, not a re-count.
+- **Tallies, not streaks** — each period is counted on its own, and the grid
+  shows the tally the server counted, not a re-count. There is no streak and no
+  all-time percentage: every period is a fresh start.
 - **An archive** — stop a habit without erasing having kept it.
 - **Sign-in by magic link**, or no link at all on a private instance.
 
