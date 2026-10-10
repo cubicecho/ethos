@@ -101,6 +101,12 @@ describe('HabitOverview', () => {
     expect(onValueChange).toHaveBeenCalledWith('habit-2', '2026-09-15', 'skipped');
   });
 
+  it('says which square is today, and says it of no other', () => {
+    renderOverview([habit()]);
+    expect(within(row('Read')).getAllByRole('button', { name: /, today — / })).toHaveLength(1);
+    expect(square('Read', TODAY).getAttribute('aria-label')).toBe(`${formatDayLong(TODAY)}, today — not kept`);
+  });
+
   it('says a smaller version in the label, and draws it as kept', () => {
     const smaller = { ...entry('2026-09-15', 'done'), partial: true, note: 'One page' };
     renderOverview([habit({ rangeEntries: [smaller, entry('2026-09-16', 'done')] })]);

@@ -363,7 +363,7 @@ is secure-context-only and Ethos runs on plain http.
 is the habit's own colour, so kept, skipped and untouched are also a fill, a
 dashed outline and a plain one — a reader who cannot tell two colours apart would
 otherwise have no way back. Today is *outlined* rather than filled, so "today"
-and "kept" are readable at once. Every square carries its day and its state in
+and "kept" are readable at once. Every square carries its day, whether that day is today, and its state in
 its label, which is what a screen reader reads and what the pointer shows on
 hover.
 
