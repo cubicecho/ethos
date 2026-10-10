@@ -5,7 +5,7 @@ import { AUTH_DEFAULTS, HTTP_DEFAULTS } from './defaults.ts';
 /** What `version()` answers when the root package.json cannot be read. */
 const UNKNOWN_VERSION = 'unknown';
 
-/** What signs tokens when `JWT_SECRET` is unset. Preflight refuses it in production. */
+/** What signs sessions when `BETTER_AUTH_SECRET` is unset. Preflight refuses it in production. */
 export const DEV_SECRET = 'dev-secret-change-in-production';
 
 /** The value `.env.example` ships. Public, so as good as no secret at all. */
@@ -14,10 +14,10 @@ export const PLACEHOLDER_SECRET = 'change-me-to-a-long-random-string';
 /**
  * Why `secret` must not sign production tokens, or undefined when it may.
  *
- * Session tokens are signed with this and nothing else, so a secret that is
- * published or short enough to guess lets anyone mint a token for any account.
+ * better-auth signs with this and nothing else, so a secret that is published
+ * or short enough to guess lets anyone forge what it signs.
  *
- * @param secret - `JWT_SECRET` as set.
+ * @param secret - `BETTER_AUTH_SECRET` as set.
  * @returns The reason, as the end of a sentence ("is not set").
  */
 export function describeWeakSecret(secret: string | undefined): string | undefined {
@@ -61,21 +61,21 @@ export function dbConnectTimeoutMs(): number {
 }
 
 /**
- * `JWT_SECRET` exactly as set, for preflight to judge.
+ * `BETTER_AUTH_SECRET` exactly as set, for preflight to judge.
  *
  * @returns The secret, or undefined when unset.
  */
-export function configuredJwtSecret(): string | undefined {
-  return process.env.JWT_SECRET;
+export function configuredAuthSecret(): string | undefined {
+  return process.env.BETTER_AUTH_SECRET;
 }
 
 /**
- * What signs tokens. Read at call time so a test — or a reload — sees the current environment.
+ * What better-auth signs with. Read at call time so a test — or a reload — sees the current environment.
  *
- * @returns `JWT_SECRET`, or the development secret when unset.
+ * @returns `BETTER_AUTH_SECRET`, or the development secret when unset.
  */
-export function jwtSecret(): string {
-  return configuredJwtSecret() ?? DEV_SECRET;
+export function authSecret(): string {
+  return configuredAuthSecret() || DEV_SECRET;
 }
 
 /**
@@ -106,7 +106,7 @@ export function port(): number {
 }
 
 /**
- * Where magic links point. In production the server serves the client itself,
+ * Where sign-in links point. In production the server serves the client itself,
  * so its own origin is the right default — but only for someone browsing from
  * this machine. Set APP_URL to the address users actually type; a link to
  * `localhost` is useless in an inbox.
@@ -155,6 +155,19 @@ export function trustProxy(): boolean | number | string {
 }
 
 /**
+ * Whether /mcp serves the queries as MCP tools.
+ *
+ * Off unless asked for: an enabled endpoint lists the schema's queries to
+ * anyone who can reach it, though every call still needs a session.
+ *
+ * @returns `MCP_ENABLED` as a flag, or `HTTP_DEFAULTS.mcp` when unset.
+ */
+export function mcpEnabled(): boolean {
+  const value = process.env.MCP_ENABLED ?? '';
+  return value.trim() === '' ? HTTP_DEFAULTS.mcp : isFlagOn(value);
+}
+
+/**
  * Truthy env-var values: "1", "true", "yes" (case-insensitive).
  *
  * @param value - The raw env value.
@@ -175,31 +188,51 @@ function envDisabled(value: string | undefined): boolean {
 }
 
 /**
- * Whether signing in requires following a magic link at all.
+ * Whether typing an email address signs in, with no link to follow.
  *
- * With `AUTH_MAGIC_LINK=false`, `requestMagicLink` hands back a live session for
- * whatever address it is given: there is no second factor and no link to follow.
- * That is a deliberate convenience for a self-hosted instance on a private
- * network. Anyone who can reach the port can then sign in as anyone, so it must
- * never be set on an instance exposed to the internet.
+ * The network is then the credential: anyone who can reach the port can sign in
+ * as anyone. On only where nothing hostile can reach it, which preflight checks
+ * against `APP_URL`.
  *
- * @returns false only when `AUTH_MAGIC_LINK` is set to a falsy value.
+ * @returns `SECURE_LOCAL_NET` as a flag, or `AUTH_DEFAULTS.secureLocalNet` when unset.
  */
-export function isMagicLinkRequired(): boolean {
-  return !envDisabled(process.env.AUTH_MAGIC_LINK);
+export function secureLocalNet(): boolean {
+  const value = process.env.SECURE_LOCAL_NET ?? '';
+  return value.trim() === '' ? AUTH_DEFAULTS.secureLocalNet : isFlagOn(value);
 }
 
 /**
- * Whether the magic link is returned in the API response rather than only being
- * logged server-side.
+ * Whether a public `APP_URL` is accepted alongside `SECURE_LOCAL_NET`.
  *
- * On outside production, or anywhere `EXPOSE_MAGIC_LINK` is set — which is what
- * a self-hosted instance with no mail provider wants, since the link has nowhere
- * else to go. Same warning as above: on a public deployment this lets anyone who
- * knows an address sign in as its owner.
- *
- * @returns true outside production, or when `EXPOSE_MAGIC_LINK` is on.
+ * @returns `I_KNOW_SECURE_LOCAL_NET_IS_PUBLIC` as a flag, off when unset.
  */
-export function isMagicLinkExposed(): boolean {
-  return isProduction() === false || isFlagOn(process.env.EXPOSE_MAGIC_LINK);
+export function allowsPublicLocalNet(): boolean {
+  return isFlagOn(process.env.I_KNOW_SECURE_LOCAL_NET_IS_PUBLIC);
+}
+
+/**
+ * Where email is sent through.
+ *
+ * @returns `SMTP_URL`, or an empty string when unset.
+ */
+export function smtpUrl(): string {
+  return process.env.SMTP_URL ?? '';
+}
+
+/**
+ * The address sign-in email comes from.
+ *
+ * @returns `SMTP_FROM`, or `ethos@` the host of `APP_URL`.
+ */
+export function smtpFrom(): string {
+  return process.env.SMTP_FROM || `ethos@${new URL(appUrl()).hostname}`;
+}
+
+/**
+ * Whether sign-in links can be emailed.
+ *
+ * @returns true when `SMTP_URL` is set.
+ */
+export function smtpConfigured(): boolean {
+  return smtpUrl() !== '';
 }

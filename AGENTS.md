@@ -14,7 +14,8 @@ monorepo (npm workspaces) with three packages — `app/` (frontend), `server/`
 | -------- | -------------------------------------------------------- |
 | Frontend | React 19, Expo Router (web target), Apollo Client        |
 | UI       | React Native primitives, NativeWind 5 + Tailwind 4, cubeui (native registry) |
-| API      | Apollo Server 5 on Express 5, GraphQL                    |
+| API      | graphql-yoga 5 on Express 5, GraphQL                     |
+| Auth     | better-auth (magic link + bearer), sessions in Postgres  |
 | Database | Drizzle ORM + PostgreSQL (`postgres-js`)                 |
 | Testing  | Vitest, PGlite as an in-memory Postgres fixture          |
 | Linting  | Biome (formatter + linter)                               |
@@ -28,7 +29,7 @@ ethos/
 │   ├── app/                 # File-based routes — the router reads THIS directory
 │   │   ├── _layout.tsx      # Root layout (ApolloProvider + Stack)
 │   │   ├── login.tsx        # Unauthenticated routes live at the top level
-│   │   ├── auth/verify.tsx  # Magic-link landing page
+│   │   ├── auth/verify.tsx  # Sign-in link landing page
 │   │   └── (app)/           # Authenticated group (redirects to /login)
 │   │       ├── index.tsx    # Today — every habit, and today's square
 │   │       ├── overview.tsx # Every habit against the days of one week or month
@@ -51,7 +52,7 @@ ethos/
 │   ├── global.css           # Imports the tokens; page background and border colour
 │   ├── metro.config.cjs
 │   └── postcss.config.mjs   # Tailwind 4, through `@tailwindcss/postcss`
-├── server/                  # GraphQL API (port 3006)
+├── server/                  # GraphQL API (port 3000)
 │   ├── __generated__/       # Generated SDL + resolver types (not committed)
 │   └── src/
 │       ├── index.ts         # Entry point: migrate, mount /graphql, serve the SPA
@@ -66,12 +67,17 @@ ethos/
 │       │   ├── build-schema.ts  # createSchema(db) — buildSchema + extensions
 │       │   ├── schema.ts        # Binds createSchema to the real database
 │       │   ├── write-schema.ts  # Codegen entry: prints the SDL
-│       │   ├── handler.ts       # The /graphql router
+│       │   ├── handler.ts       # The /graphql handler (Yoga), and the context /mcp shares
+│       │   ├── mcp.ts           # The /mcp handler: the queries as read-only MCP tools
+│       │   ├── logger.ts        # Where Yoga logs, and what a masked error prints
 │       │   ├── tenancy.ts       # Row scope + server-owned columns, as buildSchema config
 │       │   ├── write-guards.ts  # onWrite checks the row scope cannot express
 │       │   └── loaders.ts       # Per-request DataLoaders
 │       ├── auth/            # Signing in, and who a request is
-│       │   ├── resolvers.ts     # Magic-link SDL extension, tokens, extractUserId
+│       │   ├── better-auth.ts   # The better-auth instance, and who a request's session belongs to
+│       │   ├── resolvers.ts     # SDL extension: authConfig, requestSignIn, verifyMagicLink, signOut
+│       │   ├── email.ts         # Sends a sign-in link through SMTP_URL
+│       │   ├── throttle.ts      # Which sign-in flows are limited, and by what key
 │       │   └── rate-limit.ts    # In-process limiter for sign-in requests
 │       ├── habits/          # The habit domain
 │       │   ├── resolvers.ts     # SDL extension for what CRUD cannot express
@@ -95,7 +101,7 @@ ethos/
 ## Commands
 
 ```bash
-npm run dev              # API (3006) + app on http://localhost:3000
+npm run dev              # API (3000) + app on http://localhost:8081
 npm run db:up            # Postgres in Docker, bind and host following the active context
 npm run db:generate      # new migration from a schema change
 npm run db:migrate       # apply migrations
@@ -166,6 +172,14 @@ skipped without limit has no completion rate left to read, because every period
 can be skipped down to owing nothing and reported as kept. The cap is counted
 over the period's *other* days, so a period at the cap can still change its mind
 about which days it declined.
+
+**A smaller version is a kept day.** `habit_entries.partial` marks a day the
+keeper did less than they meant to and says so in `note`; the row is still
+`done`, so the tally, the rate and the streak count it whole and none of
+`streaks.ts` knows the column exists. It is a diary, not a discount: a square
+for it is filled like any kept day and only its label says "smaller version".
+`ck_habit_entries_partial` refuses it on a skip, and `markHabit` resets it on
+every write, so a plain tick over a smaller version is a plain kept day again.
 
 **A streak counts periods, not days, and the period in progress cannot break
 one.** "3× a week" is kept or not kept by the week; counting consecutive days
@@ -247,6 +261,14 @@ private" has to be answered from the parsed hostname — loopback, RFC1918,
 unique-local, a dotless service name, and the private-use suffixes (`.lan`,
 `.local`, `.internal`, `.home.arpa`) all being answers of "yes". A dot in a
 hostname says nothing about reach.
+
+**`/mcp` is `/graphql` with a different envelope.** `server/src/graphql/mcp.ts`
+projects the same schema instance as MCP tools, and `createContextFactory` in
+`handler.ts` builds the context for both, so there is one place a request's
+caller is read and no second auth path to keep in step. It is read-only
+(`includeMutations: false`) and off unless `MCP_ENABLED` is set; switched off,
+the route answers its own 404 so the web client's fallback does not hand an MCP
+client a page. Until API keys exist the only credential is a session token.
 
 **Report `NOT_FOUND`, never `FORBIDDEN`.** "You may not touch this" confirms the
 row exists, which is itself something the caller is not entitled to know.
@@ -412,10 +434,14 @@ one of these has found a decision, not a mistake.
   only, so `use-today.ts`, `hotkeys.ts`, the sign-out in `app-sidebar.tsx` and
   the root `ErrorBoundary` reach for them directly. `auth.ts` and `apollo.ts`
   check `Platform.OS` because they run at import time.
-- **Magic links go to the server's log.** There is no mail provider: the link
-  is printed by `auth/resolvers.ts`, and returned in the response when
-  `isMagicLinkExposed()` says so. A self-hosted instance has nowhere else to
-  send it.
+- **Sign-in is link-only, and the link is only ever emailed.** There is no
+  password. `auth/email.ts` sends the link through `SMTP_URL`; it is never
+  logged and never in a response. `SECURE_LOCAL_NET` is the one way in without
+  mail, and preflight refuses it when `APP_URL` names a public host.
+- **better-auth is called, not mounted.** Its REST routes are not served: the
+  GraphQL resolvers call `auth.api.*`, so sign-in keeps one transport, one
+  throttle and one error vocabulary. Its three tables are in `exclude` in
+  `tenancy.ts`, which is why they need no `scope`.
 - **`archivedAt` is the soft delete.** A habit has no `deletedAt`: archiving is
   the reversible removal, and a delete really deletes.
 - **`DaySquare` is hand-built.** No registry control cycles through three

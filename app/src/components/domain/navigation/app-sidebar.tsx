@@ -1,4 +1,4 @@
-import { useQuery } from '@apollo/client';
+import { useMutation, useQuery } from '@apollo/client';
 import { Link, usePathname } from 'expo-router';
 import { useState } from 'react';
 import { Archive, CalendarCheck, LogOut } from '@/components/app-icons';
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
 import { Calendar, Plus, Settings } from '@/components/ui/icons';
 import { clearToken } from '@/lib/auth';
-import { HabitsDocument } from '@/lib/graphql';
+import { HabitsDocument, SignOutDocument } from '@/lib/graphql';
 import { habitPath, nextPosition } from '@/lib/habits';
 import { useToday } from '@/lib/use-today';
 
@@ -22,7 +22,14 @@ export function AppSidebar() {
   const [isCreating, setIsCreating] = useState(false);
   const habits = habitsQuery.data?.habits ?? [];
 
-  function signOut() {
+  const [endSession] = useMutation(SignOutDocument);
+
+  async function signOut() {
+    try {
+      await endSession();
+    } catch {
+      // Leaving must not depend on the server answering: the token is dropped either way.
+    }
     clearToken();
     window.location.replace('/login');
   }

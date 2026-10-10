@@ -14,13 +14,17 @@ const STATE_OF = {
  *
  * @param status - What the day is.
  * @param isFuture - Whether the day has not happened yet.
+ * @param isSmaller - Whether the day was kept as a smaller version.
  * @returns The words.
  */
-function describeState(status: DayStatus, isFuture: boolean): string {
+function describeState(status: DayStatus, isFuture: boolean, isSmaller: boolean): string {
   if (isFuture) {
     return 'to come';
   }
-  return status === null ? 'not kept' : STATE_OF[status];
+  if (status === null) {
+    return 'not kept';
+  }
+  return isSmaller ? `${STATE_OF[status]}, smaller version` : STATE_OF[status];
 }
 
 /**
@@ -38,6 +42,7 @@ export function DaySquare({
   color,
   isToday,
   isFuture,
+  isSmaller = false,
   disabled,
   onValueChange,
 }: {
@@ -48,12 +53,14 @@ export function DaySquare({
   isToday: boolean;
   /** A day that has not happened yet: drawn, so the period keeps its shape, but not pressable. */
   isFuture: boolean;
+  /** A kept day that was a smaller version. Said in the label only: it counts whole, so it is drawn whole. */
+  isSmaller?: boolean;
   disabled?: boolean;
   /** Called with what the day should become — the cycle is this component's. */
   onValueChange: (value: DayStatus) => void;
 }) {
   // The outline is the only other thing that says which square is today, and it cannot be heard.
-  const label = `${formatDayLong(day)}${isToday ? ', today' : ''} — ${describeState(value, isFuture)}`;
+  const label = `${formatDayLong(day)}${isToday ? ', today' : ''} — ${describeState(value, isFuture, isSmaller)}`;
 
   return (
     <Tooltip>

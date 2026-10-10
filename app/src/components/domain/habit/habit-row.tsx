@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { View } from 'react-native';
 import { ActionButton } from '@/components/action-button';
-import { Flame, SkipForward } from '@/components/app-icons';
+import { Flame, Minimize2, SkipForward } from '@/components/app-icons';
 import { ListItem } from '@/components/list-item';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -11,11 +13,12 @@ import { joinStats } from '@/lib/format';
 import { habitPath } from '@/lib/habits';
 import { readableTextColor } from '@/lib/readable-text-color';
 import { cn } from '@/lib/utils';
+import { SmallerVersionDialog } from './smaller-version-dialog';
 import { asStatus, ENTRY_DONE, ENTRY_SKIPPED, type EntryStatus, type HabitSummary } from './types';
 import { useMarkHabit } from './use-mark-habit';
 
 /**
- * A habit as today sees it: one tick, one skip, and enough numbers to know
+ * A habit as today sees it: a tick, a smaller version, a skip, and enough numbers to know
  * whether the tick is owed.
  *
  * The two controls are separate rather than a cycle — the grid cycles, because a
@@ -26,11 +29,17 @@ import { useMarkHabit } from './use-mark-habit';
  */
 export function HabitRow({ habit, today }: { habit: HabitSummary; today: string }) {
   const router = useRouter();
-  const { setDay, isPending, error } = useMarkHabit(today);
-  const status = asStatus(habit.todayEntry[0]?.status);
+  const { setDay, markSmaller, isPending, error } = useMarkHabit(today);
+  const [isNoting, setIsNoting] = useState(false);
+  const entry = habit.todayEntry[0];
+  const status = asStatus(entry?.status);
   const period = asPeriod(habit.period);
   const isDone = status === ENTRY_DONE;
   const isSkipped = status === ENTRY_SKIPPED;
+  const isSmaller = isDone && entry?.partial === true;
+
+  // A cue is a prompt, so it is shown only while there is something left to prompt.
+  const cue = status === null ? habit.cue : null;
 
   const toggle = (next: EntryStatus) => setDay(habit.id, today, status === next ? null : next);
 
@@ -39,6 +48,8 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
       <ListItem
         title={habit.name}
         description={joinStats(
+          cue,
+          isSmaller ? `Smaller version${entry?.note ? `: ${entry.note}` : ''}` : null,
           describeCadence(period, habit.targetCount),
           isSkipped ? 'Skipped today' : describeProgress(habit.current.done, habit.current.effectiveTarget, period),
         )}
@@ -74,21 +85,49 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
           ) : undefined
         }
         actionSlot={
-          <ActionButton
-            label={isSkipped ? `Un-skip ${habit.name} today` : `Skip ${habit.name} today`}
-            aria-pressed={isSkipped}
-            disabled={isPending}
-            variant={isSkipped ? 'secondary' : 'outline'}
-            size="icon-sm"
-            onPress={() => toggle(ENTRY_SKIPPED)}
-            iconSlot={<SkipForward />}
-          />
+          <View className="flex-row items-center gap-1">
+            {/* A second way of keeping the day, not a third state: it opens a
+                note, and the tick beside the name is still what undoes it. */}
+            <ActionButton
+              label={
+                isSmaller
+                  ? `Reword the smaller version of ${habit.name} today`
+                  : `Did a smaller version of ${habit.name} today`
+              }
+              aria-pressed={isSmaller}
+              disabled={isPending}
+              variant={isSmaller ? 'secondary' : 'outline'}
+              size="icon-sm"
+              onPress={() => setIsNoting(true)}
+              iconSlot={<Minimize2 />}
+            />
+            <ActionButton
+              label={isSkipped ? `Un-skip ${habit.name} today` : `Skip ${habit.name} today`}
+              aria-pressed={isSkipped}
+              disabled={isPending}
+              variant={isSkipped ? 'secondary' : 'outline'}
+              size="icon-sm"
+              onPress={() => toggle(ENTRY_SKIPPED)}
+              iconSlot={<SkipForward />}
+            />
+          </View>
         }
       />
 
       {/* Beside the control that caused it: a refused skip is worth reading,
           and a toast in a corner is not where the click was. */}
-      {error ? <Alert variant="destructive" className="mx-3 mb-3 w-auto" description={error} /> : null}
+      {error && isNoting === false ? (
+        <Alert variant="destructive" className="mx-3 mb-3 w-auto" description={error} />
+      ) : null}
+
+      <SmallerVersionDialog
+        open={isNoting}
+        onOpenChange={setIsNoting}
+        habitName={habit.name}
+        note={isSmaller ? (entry?.note ?? null) : null}
+        error={error}
+        onSubmit={(note) => markSmaller(habit.id, today, note)}
+      />
     </Card>
   );
 }

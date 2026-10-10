@@ -9,9 +9,10 @@ import {
   allowedOrigins,
   databaseUrl,
   dbConnectTimeoutMs,
-  isMagicLinkExposed,
-  isMagicLinkRequired,
+  mcpEnabled,
   port,
+  secureLocalNet,
+  smtpConfigured,
   trustProxy,
 } from './core/config.ts';
 import { createApp } from './http/app.ts';
@@ -56,16 +57,19 @@ const app = await createApp({
   db,
   allowedOrigins: allowedOrigins(),
   trustProxy: trustProxy(),
+  mcp: mcpEnabled(),
   staticDir: join(__dirname, '../../app/dist'),
 });
 
 const server = app.listen(port(), LISTEN_HOST, () => {
   console.log(`[boot] Ethos ready at http://localhost:${port()}`);
   console.log(`[boot] GraphQL at http://localhost:${port()}/graphql`);
-  if (isMagicLinkRequired() === false) {
-    console.warn('[auth] AUTH_MAGIC_LINK is off: any email address signs in without a link. Private networks only.');
-  } else if (isMagicLinkExposed()) {
-    console.warn('[auth] EXPOSE_MAGIC_LINK is on: sign-in links are returned in API responses. Private networks only.');
+  if (secureLocalNet()) {
+    console.warn('[auth] SECURE_LOCAL_NET is on: any email address signs in without a link. Private networks only.');
+  } else if (smtpConfigured() === false) {
+    console.warn(
+      '[auth] Nobody can sign in: set SMTP_URL to email sign-in links, or SECURE_LOCAL_NET on a private network.',
+    );
   }
 });
 

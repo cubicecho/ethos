@@ -119,6 +119,12 @@ export function HabitPage({
         contentClassName="gap-6 py-6"
         contentSlot={
           <>
+            {habit.cue ? (
+              <Text className="text-foreground text-sm">
+                <Text className="text-foreground/60">Cue </Text>
+                {habit.cue}
+              </Text>
+            ) : null}
             {habit.notes ? <Text className="text-foreground text-sm">{habit.notes}</Text> : null}
 
             <View className="flex-row flex-wrap gap-3">

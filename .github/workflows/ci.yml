@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Preflight refuses a short or published secret in production. CI-only, never deployed.
-      JWT_SECRET: ci-only-0123456789abcdef0123456789abcdef
+      BETTER_AUTH_SECRET: ci-only-0123456789abcdef0123456789abcdef
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
@@ -105,7 +105,7 @@ jobs:
         run: docker compose up -d --no-build --wait --wait-timeout 180
 
       - name: /healthz answers
-        run: curl -fsS http://127.0.0.1:3006/healthz
+        run: curl -fsS http://127.0.0.1:3000/healthz
 
       - name: Logs
         if: failure()

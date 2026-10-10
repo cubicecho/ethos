@@ -3,6 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { BackToTodayLink } from '@/components/domain/habit/back-to-today-link';
 import { HabitGrid } from '@/components/domain/habit/habit-grid';
 import { HabitPage } from '@/components/domain/habit/habit-page';
+import { SmallerVersions } from '@/components/domain/habit/smaller-versions';
 import { useMarkHabitDay } from '@/components/domain/habit/use-mark-habit';
 import { LoadState } from '@/components/domain/query/load-state';
 import { EmptyState } from '@/components/page';
@@ -54,23 +55,33 @@ export default function HabitScreen() {
       habit={habit}
       today={today}
       contentSlot={
-        <Section
-          title="History"
-          description="Press a day: kept, skipped, then neither."
-          contentSlot={
-            <>
-              <HabitGrid
-                habit={habit}
-                history={habit.history}
-                entries={habit.entries}
-                today={today}
-                disabled={isPending}
-                onValueChange={(day, value) => setDay(habit.id, day, value)}
-              />
-              {markError ? <Alert variant="destructive" className="mt-3" description={markError} /> : null}
-            </>
-          }
-        />
+        <>
+          <Section
+            title="History"
+            description="Press a day: kept, skipped, then neither."
+            contentSlot={
+              <>
+                <HabitGrid
+                  habit={habit}
+                  history={habit.history}
+                  entries={habit.entries}
+                  today={today}
+                  disabled={isPending}
+                  onValueChange={(day, value) => setDay(habit.id, day, value)}
+                />
+                {markError ? <Alert variant="destructive" className="mt-3" description={markError} /> : null}
+              </>
+            }
+          />
+          {/* Drawn only once there is one: most habits never have a smaller version. */}
+          {habit.entries.some((entry) => entry.partial) ? (
+            <Section
+              title="Smaller versions"
+              description="Days you kept it, but not all of it. They count the same."
+              contentSlot={<SmallerVersions entries={habit.entries} />}
+            />
+          ) : null}
+        </>
       }
     />
   );

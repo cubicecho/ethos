@@ -6,7 +6,14 @@ import { HISTORY_DEFAULTS } from '@/lib/defaults';
 import { daysOf, Period, periodLabel, recentPeriods, weekdayInitial } from '@/lib/periods';
 import { cn } from '@/lib/utils';
 import { DaySquare } from './day-square';
-import { asStatus, type DayStatus, type HabitEntrySummary, type HabitPeriodSummary, type HabitSummary } from './types';
+import {
+  asStatus,
+  type DayStatus,
+  type HabitEntrySummary,
+  type HabitPeriodSummary,
+  type HabitSummary,
+  smallerDays,
+} from './types';
 
 interface GridRow {
   key: string;
@@ -74,6 +81,7 @@ export function HabitGrid({
   const period = asPeriod(habit.period);
   const rows = buildRows(period, history, today);
   const status = new Map<string, DayStatus>(entries.map((entry) => [entry.day, asStatus(entry.status)]));
+  const smaller = smallerDays(entries);
   // Weeks all start on Monday, so the columns are worth naming once at the top.
   // A month's rows start on whatever weekday the first falls on.
   const weekdays = period === Period.Month ? null : rows[0]?.days;
@@ -107,6 +115,7 @@ export function HabitGrid({
                   color={habit.color}
                   isToday={day === today}
                   isFuture={day > today}
+                  isSmaller={smaller.has(day)}
                   disabled={disabled}
                   onValueChange={(value) => onValueChange(day, value)}
                 />
