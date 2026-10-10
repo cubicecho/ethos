@@ -2,9 +2,10 @@ import type { Server } from 'node:http';
 import { PGlite } from '@electric-sql/pglite';
 import { relations } from '@ethos/db/relations';
 import * as dbSchema from '@ethos/db/schema';
-import { pushSchema } from 'drizzle-kit/api-postgres';
+import { getTableName, is, sql, Table } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/pglite';
-import { type ExecutionResult, graphql } from 'graphql';
+import { type ExecutionResult, type GraphQLSchema, graphql } from 'graphql';
+import { inject } from 'vitest';
 import { createRateLimiter, type RateLimiter } from '../auth/rate-limit.ts';
 import type { Context } from '../core/context.ts';
 import { createSchema } from '../graphql/build-schema.ts';
@@ -17,12 +18,52 @@ import { createLoaders } from '../graphql/loaders.ts';
 // biome-ignore lint/suspicious/noExplicitAny: db type varies by driver
 export type TestDb = any;
 
+declare module 'vitest' {
+  interface ProvidedContext {
+    /** The DDL for the current models, worked out once per run by `global-setup.ts`. */
+    schemaSql: string[];
+  }
+}
+
+/** Every table in the schema, quoted for a statement that names them all. */
+const TABLE_LIST = Object.values(dbSchema)
+  .flatMap((value) => (is(value, Table) ? [`"${getTableName(value)}"`] : []))
+  .join(', ');
+
+/** One schema per database: building it is most of what a client costs, and only `db` shapes it. */
+const schemas = new WeakMap<object, GraphQLSchema>();
+
+/**
+ * Builds a fresh in-memory Postgres with the models' schema in it. Booting one is the
+ * expensive part of a suite, so a file makes it in `beforeAll`, empties it with
+ * `resetTestDb` between tests, and hands it to `closeTestDb` when it is done.
+ *
+ * @returns The database.
+ */
 export async function createTestDb(): Promise<TestDb> {
   const client = new PGlite('memory://');
-  const db = drizzle({ client, relations });
-  const { apply } = await pushSchema(dbSchema, db);
-  await apply();
-  return db;
+  for (const statement of inject('schemaSql')) {
+    await client.exec(statement);
+  }
+  return drizzle({ client, relations });
+}
+
+/**
+ * Empties every table, so the next test starts from the database `createTestDb` returned.
+ *
+ * @param db - A database from `createTestDb`.
+ */
+export async function resetTestDb(db: TestDb): Promise<void> {
+  await db.execute(sql.raw(`TRUNCATE TABLE ${TABLE_LIST} RESTART IDENTITY CASCADE`));
+}
+
+/**
+ * Shuts a test database down. An instance left open holds its whole Postgres in memory until the worker exits.
+ *
+ * @param db - A database from `createTestDb`.
+ */
+export async function closeTestDb(db: TestDb): Promise<void> {
+  await db.$client.close();
 }
 
 /** A user row created straight through Drizzle — signup is not what is under test. */
@@ -57,7 +98,8 @@ export const TEST_IP = '127.0.0.1';
 
 export function createClient(db: TestDb, userId: string | null, deps: ClientDeps = {}): TestClient {
   const { limiter = createRateLimiter(), ip = TEST_IP } = deps;
-  const { schema } = createSchema(db);
+  const schema = schemas.get(db) ?? createSchema(db).schema;
+  schemas.set(db, schema);
 
   const run = async (query: string, variables?: Record<string, unknown>) => {
     const contextValue: Context = { db, userId, ip, limiter, loaders: createLoaders(db) };

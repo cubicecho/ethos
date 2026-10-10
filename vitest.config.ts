@@ -19,12 +19,17 @@ export default defineConfig({
     // A test that forgets to build its own throwaway database gets an empty URL
     // and fails loudly, rather than quietly writing to the developer's Postgres.
     env: { DATABASE_URL: '' },
+    // Threads share one process, where a fork per file each loads its own copy
+    // of everything.
+    pool: 'threads',
     projects: [
       {
         extends: true,
         test: {
           name: 'node',
           environment: 'node',
+          // Diffs the models once per run, so no test file has to load drizzle-kit.
+          globalSetup: ['./server/src/__tests__/global-setup.ts'],
           include: ['db/**/*.test.ts', 'server/**/*.test.ts', 'app/src/lib/**/*.test.ts'],
         },
       },

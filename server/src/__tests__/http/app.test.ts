@@ -10,7 +10,7 @@ import { OPERATION_LIMIT_DEFAULTS } from '../../core/defaults.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { HttpStatus } from '../../core/wire.ts';
 import { createApp } from '../../http/app.ts';
-import { createTestDb, createUser, portOf } from '../helpers.ts';
+import { closeTestDb, createTestDb, createUser, portOf, type TestDb } from '../helpers.ts';
 
 // The app production runs, against PGlite, over a real socket. Everything else
 // calls `graphql()` in-process, so this is the one place routing order and the
@@ -28,11 +28,12 @@ let staticDir: string;
 let server: Server;
 let base: string;
 let aliceId: string;
+let db: TestDb;
 
 beforeAll(async () => {
   staticDir = mkdtempSync(join(tmpdir(), 'ethos-app-'));
   writeFileSync(join(staticDir, 'index.html'), INDEX);
-  const db = await createTestDb();
+  db = await createTestDb();
   aliceId = await createUser(db, EMAIL);
   const app = await createApp({ db, staticDir, allowedOrigins: [APP_ORIGIN] });
   server = app.listen(0);
@@ -42,6 +43,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
+  await closeTestDb(db);
   rmSync(staticDir, { recursive: true, force: true });
 });
 
@@ -135,6 +137,7 @@ describe('app whose database does not answer', () => {
     await new Promise<void>((resolve) => sick.once('listening', resolve));
     const response = await fetch(`http://127.0.0.1:${portOf(sick)}/healthz`);
     await new Promise<void>((resolve) => sick.close(() => resolve()));
+    await closeTestDb(db);
     expect(response.status).toBe(HttpStatus.ServiceUnavailable);
     expect(await response.json()).toEqual({ ok: false, version: version(), error: 'connection refused' });
   });
@@ -156,12 +159,16 @@ describe('app behind a proxy', () => {
 
   async function served(trustProxy: number | false): Promise<{ origin: string; close: () => Promise<void> }> {
     const limiter = createRateLimiter({ maxAttempts: 1 });
-    const app = await createApp({ db: await createTestDb(), limiter, trustProxy });
+    const db = await createTestDb();
+    const app = await createApp({ db, limiter, trustProxy });
     const proxied = app.listen(0);
     await new Promise<void>((resolve) => proxied.once('listening', resolve));
     return {
       origin: `http://127.0.0.1:${portOf(proxied)}`,
-      close: () => new Promise<void>((resolve) => proxied.close(() => resolve())),
+      close: async () => {
+        await new Promise<void>((resolve) => proxied.close(() => resolve()));
+        await closeTestDb(db);
+      },
     };
   }
 
@@ -189,11 +196,13 @@ describe('app behind a proxy', () => {
 
 describe('app without a web client', () => {
   it('answers 404 for a path it does not know', async () => {
-    const app = await createApp({ db: await createTestDb() });
+    const db = await createTestDb();
+    const app = await createApp({ db });
     const bare = app.listen(0);
     await new Promise<void>((resolve) => bare.once('listening', resolve));
     const response = await fetch(`http://127.0.0.1:${portOf(bare)}/habits/some-id`);
     await new Promise<void>((resolve) => bare.close(() => resolve()));
+    await closeTestDb(db);
     expect(response.status).toBe(HttpStatus.NotFound);
   });
 });

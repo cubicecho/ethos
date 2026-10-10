@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createRateLimiter, type RateLimiter } from '../../auth/rate-limit.ts';
 import { signMagicToken } from '../../auth/resolvers.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { MS_PER_SECOND, SECONDS_PER_MINUTE } from '../../core/wire.ts';
-import { createClient, createTestDb, TEST_IP, type TestDb } from '../helpers.ts';
+import { closeTestDb, createClient, createTestDb, resetTestDb, TEST_IP, type TestDb } from '../helpers.ts';
 
 const REQUEST = `mutation ($email: String!) { requestMagicLink(email: $email) { ok } }`;
 const VERIFY = `mutation ($token: String!) { verifyMagicLink(token: $token) { userId } }`;
@@ -90,8 +90,14 @@ describe('sign-in throttling', () => {
   let addresses = 0;
   const nextEmail = () => `throttled${++addresses}@example.com`;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     db = await createTestDb();
+  });
+
+  afterAll(() => closeTestDb(db));
+
+  beforeEach(async () => {
+    await resetTestDb(db);
   });
 
   it('limits one address, whichever machine asks', async () => {

@@ -1,7 +1,15 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { signMagicToken, signToken, verifyMagicToken, verifyToken } from '../../auth/resolvers.ts';
 import { ErrorCode } from '../../core/errors.ts';
-import { createClient, createTestDb, createUser, type TestClient, type TestDb } from '../helpers.ts';
+import {
+  closeTestDb,
+  createClient,
+  createTestDb,
+  createUser,
+  resetTestDb,
+  type TestClient,
+  type TestDb,
+} from '../helpers.ts';
 
 const REQUEST = `mutation ($email: String!) { requestMagicLink(email: $email) { ok magicLink token userId } }`;
 const VERIFY = `mutation ($token: String!) { verifyMagicLink(token: $token) { token userId } }`;
@@ -15,8 +23,14 @@ const nextEmail = () => `user${++addresses}@example.com`;
 
 const originalEnv = { ...process.env };
 
-beforeEach(async () => {
+beforeAll(async () => {
   db = await createTestDb();
+});
+
+afterAll(() => closeTestDb(db));
+
+beforeEach(async () => {
+  await resetTestDb(db);
   anonymous = createClient(db, null);
   process.env.JWT_SECRET = 'test-secret';
 });

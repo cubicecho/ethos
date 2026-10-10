@@ -1,10 +1,18 @@
 import * as dbSchema from '@ethos/db/schema';
 import { eq } from 'drizzle-orm';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { HABIT_DEFAULTS } from '../../core/defaults.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { assertForeignKeysOwned, writtenRows } from '../../graphql/write-guards.ts';
-import { createClient, createTestDb, createUser, type TestClient, type TestDb } from '../helpers.ts';
+import {
+  closeTestDb,
+  createClient,
+  createTestDb,
+  createUser,
+  resetTestDb,
+  type TestClient,
+  type TestDb,
+} from '../helpers.ts';
 
 // `scope` confines reads, updates and deletes, but it cannot reach a plain
 // insert, and it says nothing about the rows a foreign key points at. These are
@@ -19,8 +27,14 @@ let myUserId: string;
 let theirUserId: string;
 let theirHabitId: string;
 
-beforeEach(async () => {
+beforeAll(async () => {
   db = await createTestDb();
+});
+
+afterAll(() => closeTestDb(db));
+
+beforeEach(async () => {
+  await resetTestDb(db);
   myUserId = await createUser(db, 'mine@example.com');
   theirUserId = await createUser(db, 'theirs@example.com');
   mine = createClient(db, myUserId);
