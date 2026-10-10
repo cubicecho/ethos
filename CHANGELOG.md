@@ -1,3 +1,15 @@
+# [1.2.0](https://github.com/cubicecho/ethos/compare/v1.1.3...v1.2.0) (2026-10-10)
+
+
+### Bug Fixes
+
+* **app:** load the root .env for the Expo dev server ([6d755a0](https://github.com/cubicecho/ethos/commit/6d755a0eef8a4d8ca918f4894f59f3392eebda57))
+
+
+### Features
+
+* **app:** add a week and month overview of every habit ([3b76dcd](https://github.com/cubicecho/ethos/commit/3b76dcd661a4fb3a5d01896ee6a0dcd9a6f95fa5))
+
 ## [1.1.3](https://github.com/cubicecho/ethos/compare/v1.1.2...v1.1.3) (2026-10-10)
 
 
