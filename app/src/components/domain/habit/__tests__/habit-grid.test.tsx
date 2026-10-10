@@ -46,6 +46,7 @@ const entry = (day: string, status: string): HabitEntrySummary => ({
   day,
   status,
   note: null,
+  partial: false,
 });
 
 /**

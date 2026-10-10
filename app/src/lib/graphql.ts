@@ -51,6 +51,7 @@ export const HabitEntryFieldsFragment = graphql(`
     day
     status
     note
+    partial
   }
 `);
 
@@ -179,8 +180,8 @@ export const DeleteHabitDocument = graphql(`
 // sends the version whose selection matches what it is displaying.
 
 export const MarkHabitDocument = graphql(`
-  mutation MarkHabit($habitId: ID!, $day: String!, $status: String, $today: String!) {
-    markHabit(habitId: $habitId, day: $day, status: $status) {
+  mutation MarkHabit($habitId: ID!, $day: String!, $status: String, $note: String, $partial: Boolean, $today: String!) {
+    markHabit(habitId: $habitId, day: $day, status: $status, note: $note, partial: $partial) {
       ...HabitFields
     }
   }
@@ -195,8 +196,8 @@ export const ClearHabitDocument = graphql(`
 `);
 
 export const MarkHabitDayDocument = graphql(`
-  mutation MarkHabitDay($habitId: ID!, $day: String!, $status: String, $today: String!) {
-    markHabit(habitId: $habitId, day: $day, status: $status) {
+  mutation MarkHabitDay($habitId: ID!, $day: String!, $status: String, $note: String, $partial: Boolean, $today: String!) {
+    markHabit(habitId: $habitId, day: $day, status: $status, note: $note, partial: $partial) {
       ...HabitFields
       ...HabitHistoryFields
     }
@@ -217,11 +218,13 @@ export const MarkHabitOverviewDocument = graphql(`
     $habitId: ID!
     $day: String!
     $status: String
+    $note: String
+    $partial: Boolean
     $today: String!
     $from: String!
     $to: String!
   ) {
-    markHabit(habitId: $habitId, day: $day, status: $status) {
+    markHabit(habitId: $habitId, day: $day, status: $status, note: $note, partial: $partial) {
       ...HabitFields
       ...HabitOverviewFields
     }
