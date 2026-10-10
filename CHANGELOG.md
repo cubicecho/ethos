@@ -1,3 +1,10 @@
+# [3.1.0](https://github.com/cubicecho/ethos/compare/v3.0.0...v3.1.0) (2026-10-10)
+
+
+### Features
+
+* give a habit an optional cue ([8095992](https://github.com/cubicecho/ethos/commit/80959922681efaa5e39bb168ef3dd61b90b8e770)), closes [#4](https://github.com/cubicecho/ethos/issues/4)
+
 # [3.0.0](https://github.com/cubicecho/ethos/compare/v2.0.0...v3.0.0) (2026-10-10)
 
 
