@@ -2,8 +2,8 @@ import type { DB } from '@ethos/db';
 import type { Request } from 'express';
 import { NoSchemaIntrospectionCustomRule } from 'graphql';
 import { createYoga, type Plugin } from 'graphql-yoga';
+import { type Auth, sessionUserId } from '../auth/better-auth.ts';
 import type { RateLimiter } from '../auth/rate-limit.ts';
-import { extractUserId } from '../auth/resolvers.ts';
 import { isProduction } from '../core/config.ts';
 import { type Context, UNKNOWN_IP } from '../core/context.ts';
 import { createSchema } from './build-schema.ts';
@@ -14,6 +14,7 @@ import { useOperationLimits } from './operation-limits.ts';
 /** What the handler passes on to resolvers. */
 interface GraphQLHandlerDeps {
   db: DB;
+  auth: Auth;
   limiter: RateLimiter;
 }
 
@@ -38,10 +39,10 @@ function useNoIntrospection(): Plugin {
 /**
  * Builds the Yoga handler for /graphql over `db`.
  *
- * @param deps - The database and the sign-in limiter every resolver is given.
+ * @param deps - The database, the auth instance and the sign-in limiter every resolver is given.
  * @returns The Yoga instance, callable as Express middleware.
  */
-export function createGraphQLHandler({ db, limiter }: GraphQLHandlerDeps) {
+export function createGraphQLHandler({ db, auth, limiter }: GraphQLHandlerDeps) {
   const { schema } = createSchema(db);
   return createYoga<ServerContext, Context>({
     schema,
@@ -52,10 +53,12 @@ export function createGraphQLHandler({ db, limiter }: GraphQLHandlerDeps) {
     plugins: [useOperationLimits(), ...(isProduction() ? [useNoIntrospection()] : [])],
     // Loaders are built per request: their batching is only ever valid within
     // one request, and their cache must not outlive it.
-    context: ({ request, req }): Context => ({
+    context: async ({ request, req }): Promise<Context> => ({
       db,
+      auth,
       limiter,
-      userId: extractUserId({ headers: { authorization: request.headers.get('authorization') ?? undefined } }),
+      userId: await sessionUserId(auth, request.headers),
+      headers: request.headers,
       // Express's view of the caller, which honours TRUST_PROXY.
       ip: req?.ip ?? UNKNOWN_IP,
       loaders: createLoaders(db),

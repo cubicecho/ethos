@@ -15,6 +15,7 @@ monorepo (npm workspaces) with three packages — `app/` (frontend), `server/`
 | Frontend | React 19, Expo Router (web target), Apollo Client        |
 | UI       | React Native primitives, NativeWind 5 + Tailwind 4, cubeui (native registry) |
 | API      | graphql-yoga 5 on Express 5, GraphQL                     |
+| Auth     | better-auth (magic link + bearer), sessions in Postgres  |
 | Database | Drizzle ORM + PostgreSQL (`postgres-js`)                 |
 | Testing  | Vitest, PGlite as an in-memory Postgres fixture          |
 | Linting  | Biome (formatter + linter)                               |
@@ -28,7 +29,7 @@ ethos/
 │   ├── app/                 # File-based routes — the router reads THIS directory
 │   │   ├── _layout.tsx      # Root layout (ApolloProvider + Stack)
 │   │   ├── login.tsx        # Unauthenticated routes live at the top level
-│   │   ├── auth/verify.tsx  # Magic-link landing page
+│   │   ├── auth/verify.tsx  # Sign-in link landing page
 │   │   └── (app)/           # Authenticated group (redirects to /login)
 │   │       ├── index.tsx    # Today — every habit, and today's square
 │   │       ├── overview.tsx # Every habit against the days of one week or month
@@ -72,7 +73,10 @@ ethos/
 │       │   ├── write-guards.ts  # onWrite checks the row scope cannot express
 │       │   └── loaders.ts       # Per-request DataLoaders
 │       ├── auth/            # Signing in, and who a request is
-│       │   ├── resolvers.ts     # Magic-link SDL extension, tokens, extractUserId
+│       │   ├── better-auth.ts   # The better-auth instance, and who a request's session belongs to
+│       │   ├── resolvers.ts     # SDL extension: authConfig, requestSignIn, verifyMagicLink, signOut
+│       │   ├── email.ts         # Sends a sign-in link through SMTP_URL
+│       │   ├── throttle.ts      # Which sign-in flows are limited, and by what key
 │       │   └── rate-limit.ts    # In-process limiter for sign-in requests
 │       ├── habits/          # The habit domain
 │       │   ├── resolvers.ts     # SDL extension for what CRUD cannot express
@@ -413,10 +417,14 @@ one of these has found a decision, not a mistake.
   only, so `use-today.ts`, `hotkeys.ts`, the sign-out in `app-sidebar.tsx` and
   the root `ErrorBoundary` reach for them directly. `auth.ts` and `apollo.ts`
   check `Platform.OS` because they run at import time.
-- **Magic links go to the server's log.** There is no mail provider: the link
-  is printed by `auth/resolvers.ts`, and returned in the response when
-  `isMagicLinkExposed()` says so. A self-hosted instance has nowhere else to
-  send it.
+- **Sign-in is link-only, and the link is only ever emailed.** There is no
+  password. `auth/email.ts` sends the link through `SMTP_URL`; it is never
+  logged and never in a response. `SECURE_LOCAL_NET` is the one way in without
+  mail, and preflight refuses it when `APP_URL` names a public host.
+- **better-auth is called, not mounted.** Its REST routes are not served: the
+  GraphQL resolvers call `auth.api.*`, so sign-in keeps one transport, one
+  throttle and one error vocabulary. Its three tables are in `exclude` in
+  `tenancy.ts`, which is why they need no `scope`.
 - **`archivedAt` is the soft delete.** A habit has no `deletedAt`: archiving is
   the reversible removal, and a delete really deletes.
 - **`DaySquare` is hand-built.** No registry control cycles through three

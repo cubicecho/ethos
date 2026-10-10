@@ -44,18 +44,21 @@ export const RATE_LIMIT_DEFAULTS: Readonly<RateLimitSettings> = Object.freeze({
 });
 
 export interface AuthSettings {
-  /** How long a session token is good for. Long: there is no refresh flow. */
+  /** How long a session lasts after it was last used. Long: there is no second sign-in step to fall back on. */
   sessionTtlDays: number;
   /** How long a sign-in link is good for. Short: it travels by mail. */
   magicLinkTtlMinutes: number;
-  /** The shortest `JWT_SECRET` production accepts. `openssl rand -hex 32` gives twice this. */
+  /** The shortest `BETTER_AUTH_SECRET` production accepts. `openssl rand -hex 32` gives twice this. */
   minSecretLength: number;
+  /** Whether an email address alone signs in, when `SECURE_LOCAL_NET` is unset. */
+  secureLocalNet: boolean;
 }
 
 export const AUTH_DEFAULTS: Readonly<AuthSettings> = Object.freeze({
   sessionTtlDays: 30,
   magicLinkTtlMinutes: 15,
   minSecretLength: 32,
+  secureLocalNet: false,
 });
 
 export interface HabitSettings {

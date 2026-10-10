@@ -1,11 +1,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createRateLimiter, type RateLimiter } from '../../auth/rate-limit.ts';
-import { signMagicToken } from '../../auth/resolvers.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { MS_PER_SECOND, SECONDS_PER_MINUTE } from '../../core/wire.ts';
 import { closeTestDb, createClient, createTestDb, resetTestDb, TEST_IP, type TestDb } from '../helpers.ts';
 
-const REQUEST = `mutation ($email: String!) { requestMagicLink(email: $email) { ok } }`;
+const REQUEST = `mutation ($email: String!) { requestSignIn(email: $email) { sent } }`;
 const VERIFY = `mutation ($token: String!) { verifyMagicLink(token: $token) { userId } }`;
 
 const SETTINGS = { maxAttempts: 2, windowMinutes: 1 };
@@ -128,9 +127,9 @@ describe('sign-in throttling', () => {
 
   it('limits verifying a link, valid or not', async () => {
     const client = createClient(db, null, { limiter });
-    await client.expectError(VERIFY, { token: 'not-a-jwt' });
-    await client.expectOk(VERIFY, { token: signMagicToken(nextEmail()) });
-    const error = await client.expectError(VERIFY, { token: signMagicToken(nextEmail()) });
+    expect((await client.expectError(VERIFY, { token: 'not-a-token' })).code).toBe(ErrorCode.BadUserInput);
+    expect((await client.expectError(VERIFY, { token: 'nor-this' })).code).toBe(ErrorCode.BadUserInput);
+    const error = await client.expectError(VERIFY, { token: 'a-third' });
     expect(error.code).toBe(ErrorCode.TooManyRequests);
   });
 
@@ -138,6 +137,7 @@ describe('sign-in throttling', () => {
     const client = createClient(db, null, { limiter });
     await client.expectOk(REQUEST, { email: nextEmail() });
     await client.expectOk(REQUEST, { email: nextEmail() });
-    await client.expectOk(VERIFY, { token: signMagicToken(nextEmail()) });
+    const error = await client.expectError(VERIFY, { token: 'not-a-token' });
+    expect(error.code).toBe(ErrorCode.BadUserInput);
   });
 });

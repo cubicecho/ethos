@@ -41,16 +41,49 @@ function hostnameOf(url: string): string | null {
 }
 
 /**
+ * Whether a host is this machine or on a private network.
+ *
+ * "Private" is wider than loopback, because self-hosting is: a compose service
+ * and a box on the LAN are both names nothing outside can reach.
+ *
+ * @param hostname - The host from a URL, lowercased and without IPv6 brackets.
+ * @returns true for localhost, a dotless name, a private-use suffix or a private address.
+ */
+export function isPrivateHost(hostname: string): boolean {
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    return true;
+  }
+  // A name with no dots is a container or LAN hostname, not a public address.
+  if (hostname.includes('.') === false && hostname.includes(':') === false) {
+    return true;
+  }
+  // Nor is a name under a private-use suffix: the router or mDNS resolves it,
+  // and the dot in it says nothing about reach.
+  if (PRIVATE_SUFFIXES.some((suffix) => hostname.endsWith(suffix))) {
+    return true;
+  }
+
+  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
+  if (ipv4) {
+    const [firstOctet, secondOctet] = ipv4.slice(1).map(Number);
+    return PRIVATE_IPV4.some(
+      (range) => range.first === firstOctet && secondOctet >= range.low && secondOctet <= range.high,
+    );
+  }
+
+  // Loopback, unique-local fc00::/7, then link-local fe80::/10.
+  return hostname === '::1' || /^f[cd]/.test(hostname) || /^fe[89ab]/.test(hostname);
+}
+
+/**
  * Whether to insist on TLS for a connection string.
  *
  * Read from the parsed hostname, never the raw string: a URL carrying
- * credentials puts the userinfo where a prefix match looks for the host.
- * "Local" is wider than loopback, because self-hosting is: a compose service or
- * a box on the LAN speaks no TLS by default, and demanding it breaks the
- * connection. Only an address that could route off a private network gets it.
+ * credentials puts the userinfo where a prefix match looks for the host. A
+ * private host speaks no TLS by default, and demanding it breaks the connection.
  *
  * @param url - The connection string.
- * @returns false for a local host, and when the URL sets its own `sslmode`.
+ * @returns false for a private host, and when the URL sets its own `sslmode`.
  */
 export function requiresSsl(url: string): boolean {
   // An explicit sslmode is the operator's decision; postgres-js reads it itself.
@@ -62,43 +95,5 @@ export function requiresSsl(url: string): boolean {
   if (hostname === null) {
     return false;
   }
-
-  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
-    return false;
-  }
-  // A name with no dots is a container or LAN hostname, not a public address.
-  if (hostname.includes('.') === false && hostname.includes(':') === false) {
-    return false;
-  }
-  // Nor is a name under a private-use suffix: the router or mDNS resolves it,
-  // and the dot in it says nothing about reach.
-  if (PRIVATE_SUFFIXES.some((suffix) => hostname.endsWith(suffix))) {
-    return false;
-  }
-
-  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
-  if (ipv4) {
-    const [firstOctet, secondOctet] = ipv4.slice(1).map(Number);
-    return (
-      PRIVATE_IPV4.some(
-        (range) => range.first === firstOctet && secondOctet >= range.low && secondOctet <= range.high,
-      ) === false
-    );
-  }
-
-  if (hostname.includes(':')) {
-    // Loopback, unique-local fc00::/7, then link-local fe80::/10.
-    if (hostname === '::1') {
-      return false;
-    }
-    if (/^f[cd]/.test(hostname)) {
-      return false;
-    }
-    if (/^fe[89ab]/.test(hostname)) {
-      return false;
-    }
-    return true;
-  }
-
-  return true;
+  return isPrivateHost(hostname) === false;
 }
