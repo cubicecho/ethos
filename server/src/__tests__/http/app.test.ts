@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import type { Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createRateLimiter } from '../../auth/rate-limit.ts';
 import { signToken } from '../../auth/resolvers.ts';
 import { version } from '../../core/config.ts';
@@ -140,6 +140,58 @@ describe('app whose database does not answer', () => {
     await closeTestDb(db);
     expect(response.status).toBe(HttpStatus.ServiceUnavailable);
     expect(await response.json()).toEqual({ ok: false, version: version(), error: 'connection refused' });
+  });
+});
+
+describe('app when a resolver fails unexpectedly', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('masks the cause from the caller and logs it', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const db = await createTestDb();
+    const token = signToken(await createUser(db, 'masked@example.com'));
+    const app = await createApp({ db });
+    const broken = app.listen(0);
+    await new Promise<void>((resolve) => broken.once('listening', resolve));
+    // A closed database throws a plain Error, which is not the caller's to read.
+    await closeTestDb(db);
+    const response = await fetch(`http://127.0.0.1:${portOf(broken)}/graphql`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ query: HABITS }),
+    });
+    const body: AnyBody = await response.json();
+    await new Promise<void>((resolve) => broken.close(() => resolve()));
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0].message).toBe('Unexpected error.');
+    expect(JSON.stringify(body)).not.toMatch(/PGlite|closed|stack/i);
+    expect(logged).toHaveBeenCalled();
+  });
+});
+
+describe('app in production', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('refuses introspection', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const db = await createTestDb();
+    const app = await createApp({ db });
+    const live = app.listen(0);
+    await new Promise<void>((resolve) => live.once('listening', resolve));
+    const response = await fetch(`http://127.0.0.1:${portOf(live)}/graphql`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query: '{ __schema { types { name } } }' }),
+    });
+    const body: AnyBody = await response.json();
+    await new Promise<void>((resolve) => live.close(() => resolve()));
+    await closeTestDb(db);
+    expect(body.data).toBeUndefined();
+    expect(body.errors[0].message).toContain('introspection');
   });
 });
 

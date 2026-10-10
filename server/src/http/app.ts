@@ -25,7 +25,7 @@ export interface AppDeps {
  * Builds the Express app: /graphql, /healthz and the web client.
  *
  * It does not listen, migrate or read the environment, so a test can build the
- * app production runs. Async only because Apollo Server has to start.
+ * app production runs.
  *
  * @param deps - The database, and what the environment would otherwise decide.
  * @returns The app.
@@ -42,7 +42,10 @@ export async function createApp({
   // Decides what `request.ip` is, and the sign-in throttle is keyed by it.
   app.set('trust proxy', trustProxy);
   app.use(cors({ origin: allowedOrigins }));
-  app.use('/graphql', express.json({ limit: HTTP_DEFAULTS.bodyLimit }), await createGraphQLHandler({ db, limiter }));
+  const graphql = createGraphQLHandler({ db, limiter });
+  app.use(graphql.graphqlEndpoint, express.json({ limit: HTTP_DEFAULTS.bodyLimit }));
+  // `all`, not `use`: a mounted `use` strips the path, and Yoga matches graphqlEndpoint itself.
+  app.all(graphql.graphqlEndpoint, (request, response) => graphql(request, response));
   app.get('/healthz', async (_request, response) => {
     const health = await checkHealth(db);
     response.status(health.ok ? HttpStatus.Ok : HttpStatus.ServiceUnavailable).json(health);

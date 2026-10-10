@@ -12,8 +12,6 @@
     "codegen": "node --import=./src/core/preload-env.ts src/graphql/write-schema.ts && graphql-codegen-esm"
   },
   "dependencies": {
-    "@apollo/server": "^5.5.1",
-    "@as-integrations/express5": "^1.1.2",
     "@escape.tech/graphql-armor-max-aliases": "^2.6.2",
     "@escape.tech/graphql-armor-max-depth": "^2.4.2",
     "@ethos/db": "*",
@@ -26,6 +24,7 @@
     "graphql-parse-resolve-info": "^4.14.1",
     "graphql-query-complexity": "^2.0.0",
     "graphql-scalars": "^2.0.0",
+    "graphql-yoga": "^5.24.4",
     "jsonwebtoken": "^9.0.3",
     "zod": "^4.6.5"
   },

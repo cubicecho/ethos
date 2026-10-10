@@ -14,7 +14,7 @@ monorepo (npm workspaces) with three packages — `app/` (frontend), `server/`
 | -------- | -------------------------------------------------------- |
 | Frontend | React 19, Expo Router (web target), Apollo Client        |
 | UI       | React Native primitives, NativeWind 5 + Tailwind 4, cubeui (native registry) |
-| API      | Apollo Server 5 on Express 5, GraphQL                    |
+| API      | graphql-yoga 5 on Express 5, GraphQL                     |
 | Database | Drizzle ORM + PostgreSQL (`postgres-js`)                 |
 | Testing  | Vitest, PGlite as an in-memory Postgres fixture          |
 | Linting  | Biome (formatter + linter)                               |
@@ -66,7 +66,8 @@ ethos/
 │       │   ├── build-schema.ts  # createSchema(db) — buildSchema + extensions
 │       │   ├── schema.ts        # Binds createSchema to the real database
 │       │   ├── write-schema.ts  # Codegen entry: prints the SDL
-│       │   ├── handler.ts       # The /graphql router
+│       │   ├── handler.ts       # The /graphql handler (Yoga)
+│       │   ├── logger.ts        # Where Yoga logs, and what a masked error prints
 │       │   ├── tenancy.ts       # Row scope + server-owned columns, as buildSchema config
 │       │   ├── write-guards.ts  # onWrite checks the row scope cannot express
 │       │   └── loaders.ts       # Per-request DataLoaders
