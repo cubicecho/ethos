@@ -55,3 +55,13 @@ export function nextStatus(current: DayStatus): DayStatus {
   }
   return current === ENTRY_DONE ? ENTRY_SKIPPED : null;
 }
+
+/**
+ * The days kept as a smaller version of the habit.
+ *
+ * @param entries - The entries to look through.
+ * @returns Their days.
+ */
+export function smallerDays(entries: readonly HabitEntrySummary[]): Set<string> {
+  return new Set(entries.filter((entry) => entry.partial).map((entry) => entry.day));
+}

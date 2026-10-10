@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { check, date, index, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { boolean, check, date, index, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
 import { habits } from './habits.ts';
 import { users } from './users.ts';
@@ -31,6 +31,9 @@ export const habitEntries = pgTable(
     day: date('day', { mode: 'string' }).notNull(),
     status: text('status').notNull().$type<EntryStatus>().default(ENTRY_DONE),
     note: text('note'),
+    // A smaller version of the habit than was meant. Still `done`, so every tally
+    // counts it whole: this is for the keeper to read back, not for the arithmetic.
+    partial: boolean('partial').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()
@@ -45,6 +48,7 @@ export const habitEntries = pgTable(
     index('idx_habit_entries_habit_id').on(table.habitId),
     index('idx_habit_entries_day').on(table.day),
     check('ck_habit_entries_status', sql`${table.status} in ('done', 'skipped')`),
+    check('ck_habit_entries_partial', sql`${table.partial} = false or ${table.status} = 'done'`),
   ],
 );
 

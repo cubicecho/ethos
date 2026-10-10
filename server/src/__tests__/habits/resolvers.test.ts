@@ -69,6 +69,42 @@ describe('markHabit', () => {
     expect(await db.select().from(dbSchema.habitEntries)).toHaveLength(0);
   });
 
+  it('records a smaller version as a kept day, counted whole', async () => {
+    const data = await mine.expectOk(
+      `mutation ($id: ID!, $day: String!, $today: String!) {
+        markHabit(habitId: $id, day: $day, partial: true, note: "One page") {
+          current(today: $today) { done met }
+          entries { status partial note }
+        }
+      }`,
+      { id: habitId, day: today, today },
+    );
+    expect(data.markHabit.current).toEqual({ done: 1, met: true });
+    expect(data.markHabit.entries).toEqual([{ status: 'done', partial: true, note: 'One page' }]);
+  });
+
+  it('forgets the smaller version when the day is marked again without it', async () => {
+    await mine.expectOk(
+      `mutation ($id: ID!, $day: String!) { markHabit(habitId: $id, day: $day, partial: true) { id } }`,
+      {
+        id: habitId,
+        day: today,
+      },
+    );
+    await mine.expectOk(MARK, { id: habitId, day: today });
+    const data = await mine.expectOk('{ habitEntries { partial } }');
+    expect(data.habitEntries).toEqual([{ partial: false }]);
+  });
+
+  it('refuses a skip that claims to be a smaller version, and records nothing', async () => {
+    const error = await mine.expectError(
+      `mutation ($id: ID!, $day: String!) { markHabit(habitId: $id, day: $day, status: "skipped", partial: true) { id } }`,
+      { id: habitId, day: today },
+    );
+    expect(error.code).toBe(ErrorCode.BadUserInput);
+    expect((await mine.expectOk(ENTRIES)).habitEntries).toEqual([]);
+  });
+
   it('stores the day verbatim, with no zone left to shift it', async () => {
     await mine.expectOk(MARK, { id: habitId, day: yesterday });
     const [row] = await db.select().from(dbSchema.habitEntries);

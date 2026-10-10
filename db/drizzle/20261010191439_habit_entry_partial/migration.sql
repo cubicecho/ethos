@@ -1,0 +1,2 @@
+ALTER TABLE "habit_entries" ADD COLUMN "partial" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "habit_entries" ADD CONSTRAINT "ck_habit_entries_partial" CHECK ("partial" = false or "status" = 'done');

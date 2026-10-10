@@ -172,6 +172,14 @@ can be skipped down to owing nothing and reported as kept. The cap is counted
 over the period's *other* days, so a period at the cap can still change its mind
 about which days it declined.
 
+**A smaller version is a kept day.** `habit_entries.partial` marks a day the
+keeper did less than they meant to and says so in `note`; the row is still
+`done`, so the tally, the rate and the streak count it whole and none of
+`streaks.ts` knows the column exists. It is a diary, not a discount: a square
+for it is filled like any kept day and only its label says "smaller version".
+`ck_habit_entries_partial` refuses it on a skip, and `markHabit` resets it on
+every write, so a plain tick over a smaller version is a plain kept day again.
+
 **A streak counts periods, not days, and the period in progress cannot break
 one.** "3× a week" is kept or not kept by the week; counting consecutive days
 would break that habit's streak every Tuesday, which is the app calling a success

@@ -46,7 +46,7 @@ const habit = (overrides: Partial<HabitOverviewSummary> = {}): HabitOverviewSumm
   ...overrides,
 });
 
-const entry = (day: string, status: string) => ({ id: `entry-${day}`, day, status, note: null });
+const entry = (day: string, status: string) => ({ id: `entry-${day}`, day, status, note: null, partial: false });
 
 const row = (name: string) => screen.getByRole('listitem', { name });
 const square = (name: string, day: string) =>
@@ -99,6 +99,15 @@ describe('HabitOverview', () => {
     ]);
     await userEvent.click(square('Run', '2026-09-15'));
     expect(onValueChange).toHaveBeenCalledWith('habit-2', '2026-09-15', 'skipped');
+  });
+
+  it('says a smaller version in the label, and draws it as kept', () => {
+    const smaller = { ...entry('2026-09-15', 'done'), partial: true, note: 'One page' };
+    renderOverview([habit({ rangeEntries: [smaller, entry('2026-09-16', 'done')] })]);
+    expect(square('Read', '2026-09-15').getAttribute('aria-label')).toMatch(/— kept, smaller version$/);
+    expect(square('Read', '2026-09-16').getAttribute('aria-label')).toMatch(/— kept$/);
+    // Counted whole: two kept days, not one and a half.
+    expect(within(row('Read')).getByLabelText('2 days kept')).toBeTruthy();
   });
 
   it('refuses a day that has not happened', () => {
