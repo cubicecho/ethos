@@ -24,6 +24,9 @@ export const habits = pgTable(
     // Why the habit is worth keeping. Nullable rather than defaulted to '', so
     // "no note" and "an empty note" cannot both be stored.
     notes: text('notes'),
+    // The moment that sets the habit off: "after morning coffee". One, because a
+    // single consistent cue is what builds the habit, and optional.
+    cue: text('cue'),
     // The habit's colour on the grid, chosen by the user, so no theme token can
     // be trusted to read on it — see readable-text-color.ts.
     color: text('color').notNull().default('#71717a'),

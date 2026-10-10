@@ -9,7 +9,7 @@ import {
   MarkHabitDocument,
   MarkHabitOverviewDocument,
 } from '@/lib/graphql';
-import type { DayStatus } from './types';
+import { type DayStatus, ENTRY_DONE } from './types';
 
 /**
  * Recording a day, and what it costs to get wrong.
@@ -23,6 +23,8 @@ import type { DayStatus } from './types';
 export interface Marker {
   /** `null` clears the day, leaving it untouched rather than missed. */
   setDay: (habitId: string, day: string, status: DayStatus) => Promise<void>;
+  /** Keeps the day as a smaller version, with what was done instead. Resolves to whether it was recorded. */
+  markSmaller: (habitId: string, day: string, note: string | null) => Promise<boolean>;
   isPending: boolean;
   error: string | null;
 }
@@ -38,13 +40,15 @@ function useAction() {
 
   // Caught rather than rethrown: every caller is a button, and the server's
   // refusals — a third skip, a day that has not happened — are worth reading.
-  async function run(action: () => Promise<unknown>): Promise<void> {
+  async function run(action: () => Promise<unknown>): Promise<boolean> {
     setIsPending(true);
     setError(null);
     try {
       await action();
+      return true;
     } catch (cause) {
       setError(describeError(cause));
+      return false;
     } finally {
       setIsPending(false);
     }
@@ -58,9 +62,12 @@ type DayVariables = { habitId: string; day: string };
 /** What every mark on a screen is sent with: the caller's day, and whatever else its selection reads. */
 type SharedVariables = { today: string };
 
+/** What a mark says about the day beyond which day it is. */
+type MarkVariables = { status?: string | null; note?: string | null; partial?: boolean | null };
+
 /** The two mutations a screen records a day with. Their results differ; what they are sent does not. */
 interface MarkDocuments<TShared extends SharedVariables> {
-  mark: TypedDocumentNode<unknown, DayVariables & TShared & { status?: string | null }>;
+  mark: TypedDocumentNode<unknown, DayVariables & TShared & MarkVariables>;
   clear: TypedDocumentNode<unknown, DayVariables & TShared>;
 }
 
@@ -79,12 +86,15 @@ function useMarker<TShared extends SharedVariables>(documents: MarkDocuments<TSh
   return {
     isPending,
     error,
-    setDay: (habitId, day, status) =>
-      run(() =>
+    setDay: async (habitId, day, status) => {
+      await run(() =>
         status === null
           ? clear({ variables: { habitId, day, ...shared } })
           : mark({ variables: { habitId, day, status, ...shared } }),
-      ),
+      );
+    },
+    markSmaller: (habitId, day, note) =>
+      run(() => mark({ variables: { habitId, day, status: ENTRY_DONE, note, partial: true, ...shared } })),
   };
 }
 

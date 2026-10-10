@@ -23,6 +23,7 @@ const CADENCES: readonly RadioOption[] = [
 type HabitValues = {
   name: string;
   notes: string;
+  cue: string;
   color: string;
   period: Period;
   /** `null` while the box is empty: a number field that has been cleared holds no number. */
@@ -38,6 +39,7 @@ type HabitValues = {
 const valuesOf = (habit: HabitSummary | undefined): HabitValues => ({
   name: habit?.name ?? '',
   notes: habit?.notes ?? '',
+  cue: habit?.cue ?? '',
   color: habit?.color ?? PALETTE[0],
   period: habit ? asPeriod(habit.period) : Period.Day,
   targetCount: habit?.targetCount ?? 1,
@@ -75,13 +77,14 @@ export function HabitFormDialog({
     form.reset(valuesOf(habit));
   }, [open, habit, form]);
 
-  async function save({ name, notes, color, period, targetCount }: HabitValues) {
+  async function save({ name, notes, cue, color, period, targetCount }: HabitValues) {
     if (isCreating || isUpdating) {
       return;
     }
     const values = {
       name: name.trim(),
       notes: notes.trim() === '' ? null : notes.trim(),
+      cue: cue.trim() === '' ? null : cue.trim(),
       color,
       period,
       // The field's validator has already refused an empty box.
@@ -149,6 +152,18 @@ export function HabitFormDialog({
             validators={{ onChange: ({ value }) => (value.trim() === '' ? 'Give the habit a name.' : undefined) }}
           >
             {(field) => <field.InputField label="Name" autoFocus placeholder="Run" />}
+          </form.AppField>
+
+          {/* Asked for with the name, and never required: a cue is a plan for
+              when, and a habit without one is still a habit. */}
+          <form.AppField name="cue">
+            {(field) => (
+              <field.InputField
+                label="Cue"
+                placeholder="After morning coffee"
+                description="Optional. The moment that sets it off — shown on Today until the day is marked."
+              />
+            )}
           </form.AppField>
 
           <RadioGroupField

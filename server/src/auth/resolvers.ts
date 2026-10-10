@@ -1,106 +1,52 @@
-import * as dbSchema from '@ethos/db/schema';
-import { eq } from 'drizzle-orm';
 import { assertObjectType, extendSchema, type GraphQLSchema, parse } from 'graphql';
-import jwt from 'jsonwebtoken';
-import { appUrl, isMagicLinkExposed, isMagicLinkRequired, jwtSecret } from '../core/config.ts';
+import { z } from 'zod';
+import { secureLocalNet } from '../core/config.ts';
 import type { Context } from '../core/context.ts';
-import { AUTH_DEFAULTS } from '../core/defaults.ts';
 import { badInput, unauthenticated } from '../core/errors.ts';
+import { parseOrThrow } from '../core/validation.ts';
+import { sendsMagicLinks, sessionUserId } from './better-auth.ts';
 import { AuthFlow, throttle } from './throttle.ts';
 
-/** What an `Authorization` header starts with when it carries a session token. */
-const BEARER_PREFIX = 'Bearer ';
+/** How an account made by a SECURE_LOCAL_NET sign-in is labelled in better-auth's hooks. */
+const LOCAL_NET_METHOD = 'secure-local-net';
+
+/** What a link that cannot be spent is told, whichever way it is wrong. */
+const BAD_LINK = 'Invalid or expired sign-in link.';
 
 const AUTH_SDL = parse(`
-  """
-  The outcome of a sign-in request. When the instance runs with
-  AUTH_MAGIC_LINK=false there is no link to follow, so a live session comes back
-  immediately in \`token\`/\`userId\`. When magic links are on, \`magicLink\` is
-  filled in only where exposing it is enabled.
-  """
-  type RequestMagicLinkResult {
-    ok: Boolean!
-    magicLink: String
-    token: String
-    userId: ID
+  """Which ways of signing in this instance offers, so the sign-in page shows only those."""
+  type AuthConfig {
+    """Any email address signs in at once, with no link. Private networks only."""
+    secureLocalNet: Boolean!
+    """The instance can email sign-in links."""
+    magicLink: Boolean!
   }
 
-  type AuthPayload {
+  type AuthSession {
+    """Sent back as \`Authorization: Bearer\`."""
     token: String!
     userId: ID!
   }
 
+  type SignInResult {
+    """A sign-in link was emailed."""
+    sent: Boolean!
+    """Set when the instance signs the caller in at once."""
+    session: AuthSession
+  }
+
+  extend type Query {
+    authConfig: AuthConfig!
+  }
+
   extend type Mutation {
-    requestMagicLink(email: String!): RequestMagicLinkResult!
-    verifyMagicLink(token: String!): AuthPayload!
+    requestSignIn(email: String!): SignInResult!
+    verifyMagicLink(token: String!): AuthSession!
+    signOut: Boolean!
   }
 `);
 
-/**
- * A session token. Long-lived: there is no refresh flow and no session table.
- *
- * @param userId - The user the token signs in.
- * @returns The signed JWT.
- */
-export function signToken(userId: string): string {
-  return jwt.sign({ userId }, jwtSecret(), { expiresIn: `${AUTH_DEFAULTS.sessionTtlDays}d` });
-}
-
-/**
- * A single-use-in-practice sign-in token, short-lived because it travels by mail.
- *
- * @param email - The address the link was asked for.
- * @returns The signed JWT.
- */
-export function signMagicToken(email: string): string {
-  return jwt.sign({ email }, jwtSecret(), { expiresIn: `${AUTH_DEFAULTS.magicLinkTtlMinutes}m` });
-}
-
-/**
- * Reads a session token.
- *
- * @param token - The JWT as sent.
- * @returns The user it names, or null when it is forged, expired or not a session token.
- */
-export function verifyToken(token: string): { userId: string } | null {
-  try {
-    const payload = jwt.verify(token, jwtSecret());
-    const isSession = typeof payload === 'object' && typeof payload.userId === 'string';
-    return isSession ? { userId: payload.userId } : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Reads a sign-in token.
- *
- * @param token - The JWT from the link.
- * @returns The address it names, or null when it is forged, expired or names none.
- */
-export function verifyMagicToken(token: string): { email: string } | null {
-  try {
-    const payload = jwt.verify(token, jwtSecret());
-    const hasEmail = typeof payload === 'object' && typeof payload.email === 'string' && payload.email !== '';
-    return hasEmail ? { email: payload.email } : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Read the authenticated userId from a request's Bearer token, if any.
- *
- * @param request - The incoming request; only its `Authorization` header is read.
- * @returns The user id, or null when there is no valid Bearer token.
- */
-export function extractUserId(request: { headers: { authorization?: string } }): string | null {
-  const auth = request.headers.authorization;
-  if (auth === undefined || auth.startsWith(BEARER_PREFIX) === false) {
-    return null;
-  }
-  return verifyToken(auth.slice(BEARER_PREFIX.length))?.userId ?? null;
-}
+const emailInput = z.email('Enter a valid email address.');
 
 /**
  * The caller's user id, or a thrown UNAUTHENTICATED.
@@ -126,72 +72,99 @@ function normalizeEmail(email: string): string {
 }
 
 /**
- * Registration is open: completing a sign-in for an address that has never been
- * seen creates the account. Self-hosting is the deployment model, so the person
- * who can reach the instance is the person who is meant to have an account.
+ * What a new account is called until its owner says otherwise.
  *
- * @param db - The database.
- * @param email - The address, already normalized.
- * @returns The user's id.
+ * @param email - The account's address, already normalized.
+ * @returns The part of the address before the `@`.
  */
-// biome-ignore lint/suspicious/noExplicitAny: drizzle-orm 1.0 column type compat
-export async function findOrCreateUser(db: any, email: string): Promise<string> {
-  const existing = await db
-    .select({ id: dbSchema.users.id })
-    .from(dbSchema.users)
-    .where(eq(dbSchema.users.email, email));
-  if (existing.length > 0) {
-    return existing[0].id;
-  }
-
-  const [created] = await db.insert(dbSchema.users).values({ email }).returning({ id: dbSchema.users.id });
-  // Not a caller's mistake, so not a coded error: the server reports it as its own failure.
-  if (!created) {
-    throw new Error('The users insert returned no row.');
-  }
-  return created.id;
+function nameFor(email: string): string {
+  return email.split('@')[0] ?? email;
 }
 
 /**
- * Adds the sign-in mutations to the generated schema.
+ * Signs an address in on the strength of the network alone, creating the account when there is none.
+ *
+ * Registration is open either way: self-hosting is the deployment model, so
+ * whoever can reach the instance is who is meant to have an account.
+ *
+ * @param context - The request context.
+ * @param email - The address, already normalized.
+ * @returns The session, as `AuthSession` serves it.
+ */
+async function signInOnLocalNet(context: Context, email: string): Promise<{ token: string; userId: string }> {
+  const { internalAdapter } = await context.auth.$context;
+  const existing = await internalAdapter.findUserByEmail(email);
+  const user =
+    existing?.user ??
+    (await internalAdapter.createUser(
+      { email, name: nameFor(email), emailVerified: false },
+      { method: LOCAL_NET_METHOD },
+    ));
+  const session = await internalAdapter.createSession(user.id);
+  return { token: session.token, userId: user.id };
+}
+
+/**
+ * Adds signing in, signing out and `authConfig` to the generated schema.
  *
  * @param schema - The generated schema.
- * @returns The schema with `requestMagicLink` and `verifyMagicLink` on it.
+ * @returns The schema with the auth fields on it.
  */
 export function applyAuthExtension(schema: GraphQLSchema): GraphQLSchema {
   const extendedSchema = extendSchema(schema, AUTH_SDL);
-  const mutationType = assertObjectType(extendedSchema.getType('Mutation'));
-  const fields = mutationType.getFields();
+  const queries = assertObjectType(extendedSchema.getType('Query')).getFields();
+  const mutations = assertObjectType(extendedSchema.getType('Mutation')).getFields();
 
-  fields.requestMagicLink.resolve = async (_parent: unknown, args: { email: string }, context: Context) => {
-    const email = normalizeEmail(args.email);
+  queries.authConfig.resolve = (_parent: unknown, _args: unknown, context: Context) => ({
+    secureLocalNet: secureLocalNet(),
+    magicLink: sendsMagicLinks(context.auth),
+  });
+
+  mutations.requestSignIn.resolve = async (_parent: unknown, args: { email: string }, context: Context) => {
+    const normalized = normalizeEmail(args.email);
     // Unauthenticated, so without the limiter anyone who can reach the port can
-    // mint magic tokens at will.
-    throttle(context, AuthFlow.RequestMagicLink, email);
+    // bury an inbox in links, or walk through addresses.
+    throttle(context, AuthFlow.RequestSignIn, normalized);
+    const email = parseOrThrow(emailInput, normalized);
 
-    // No-link mode: the address alone is the credential. Private instances
-    // only — see the README's "Before you expose it".
-    if (isMagicLinkRequired() === false) {
-      const userId = await findOrCreateUser(context.db, email);
-      console.log(`[auth] Magic links are off; signed ${email} in directly.`);
-      return { ok: true, magicLink: null, token: signToken(userId), userId };
+    // SECURE_LOCAL_NET: the network is the credential, so the address alone opens the account.
+    if (secureLocalNet()) {
+      return { sent: false, session: await signInOnLocalNet(context, email) };
     }
 
-    const magicLink = `${appUrl()}/auth/verify?token=${signMagicToken(email)}`;
-    // Ethos ships no mail provider, so the console is the delivery channel.
-    console.log(`\n[auth] Magic link for ${email}:\n${magicLink}\n`);
-    return { ok: true, magicLink: isMagicLinkExposed() ? magicLink : null, token: null, userId: null };
+    if (sendsMagicLinks(context.auth) === false) {
+      throw badInput(
+        'This instance cannot email sign-in links. Whoever runs it needs to set SMTP_URL, or SECURE_LOCAL_NET on a private network.',
+      );
+    }
+    await context.auth.api.signInMagicLink({ body: { email, name: nameFor(email) }, headers: new Headers() });
+    return { sent: true, session: null };
   };
 
-  fields.verifyMagicLink.resolve = async (_parent: unknown, args: { token: string }, context: Context) => {
+  mutations.verifyMagicLink.resolve = async (_parent: unknown, args: { token: string }, context: Context) => {
     // By IP alone: until the token verifies there is no address to count against.
     throttle(context, AuthFlow.VerifyMagicLink);
-    const payload = verifyMagicToken(args.token);
-    if (!payload) {
-      throw badInput('Invalid or expired magic link');
+    // BAD_USER_INPUT, not UNAUTHENTICATED: that one is what the client drops its
+    // session on, and a bad link must not sign anyone out.
+    if (sendsMagicLinks(context.auth) === false) {
+      throw badInput(BAD_LINK);
     }
-    const userId = await findOrCreateUser(context.db, normalizeEmail(payload.email));
-    return { token: signToken(userId), userId };
+    try {
+      const result = await context.auth.api.magicLinkVerify({ query: { token: args.token }, headers: new Headers() });
+      return { token: result.token, userId: result.user.id };
+    } catch {
+      // Expired, used and unknown tokens answer the same.
+      throw badInput(BAD_LINK);
+    }
+  };
+
+  mutations.signOut.resolve = async (_parent: unknown, _args: unknown, context: Context) => {
+    const userId = await sessionUserId(context.auth, context.headers);
+    if (userId === null) {
+      return false;
+    }
+    await context.auth.api.signOut({ headers: context.headers });
+    return true;
   };
 
   return extendedSchema;

@@ -61,6 +61,7 @@ const VARIABLES = {
   set: { name: 'Run' },
   status: 'done',
   note: null,
+  partial: false,
   email: 'someone@example.com',
   token: 'a-token',
 };

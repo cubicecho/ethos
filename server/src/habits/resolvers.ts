@@ -48,8 +48,9 @@ const HABITS_SDL = parse(`
     """
     Records one day of one habit. \`day\` is the keeper's own \`YYYY-MM-DD\`, and the
     day is the key: marking the same day twice rewrites the one row it has.
+    \`partial\` says a smaller version was done. It is still a kept day, counted whole.
     """
-    markHabit(habitId: ID!, day: String!, status: String = "done", note: String): Habit!
+    markHabit(habitId: ID!, day: String!, status: String = "done", note: String, partial: Boolean = false): Habit!
     "Removes a day's entry, leaving it untouched rather than missed."
     clearHabit(habitId: ID!, day: String!): Habit!
   }
@@ -231,7 +232,7 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
 
   mutations.markHabit.resolve = async (
     _parent: unknown,
-    args: { habitId: string; day: string; status: string | null; note: string | null },
+    args: { habitId: string; day: string; status: string | null; note: string | null; partial: boolean | null },
     context: Context,
   ) => {
     const userId = requireAuth(context);
@@ -240,6 +241,11 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
     assertNotFuture(day);
     const status = parseStatus(args.status);
     parseOrThrow(entryNote, args.note);
+    const partial = args.partial ?? false;
+    if (partial && status !== ENTRY_DONE) {
+      // A smaller version is a way of having kept the day. A skip has no size.
+      throw badInput('Only a kept day can be a smaller version.');
+    }
 
     if (habit.archivedAt != null) {
       // An archived habit is a record, not a practice. Silently accepting the
@@ -254,10 +260,10 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
     // are the same tick, and the unique index makes that true with no transaction.
     await context.db
       .insert(dbSchema.habitEntries)
-      .values({ userId, habitId: habit.id, day, status, note: args.note ?? null })
+      .values({ userId, habitId: habit.id, day, status, note: args.note ?? null, partial })
       .onConflictDoUpdate({
         target: [dbSchema.habitEntries.habitId, dbSchema.habitEntries.day],
-        set: { status, note: args.note ?? null, updatedAt: new Date() },
+        set: { status, note: args.note ?? null, partial, updatedAt: new Date() },
       });
 
     // The loader's answer predates this write, and the request is not over: the

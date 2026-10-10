@@ -24,6 +24,12 @@ export const USER_OWNED_TABLES = ['habits', 'habitEntries'] as const;
 /** Every table drizzle-graphql will generate fields for. */
 export const ALL_TABLES = ['users', ...USER_OWNED_TABLES] as const;
 
+/** better-auth's tables: sessions, provider accounts and pending sign-in links. */
+export const AUTH_TABLES = ['sessions', 'accounts', 'verifications'] as const;
+
+/** Auth tables never cross the API: not readable, not filterable, not reachable as a relation. */
+export const exclude: NonNullable<BuildSchemaConfig['exclude']> = { tables: [...AUTH_TABLES] };
+
 /**
  * Limits a table to the rows whose `userId` is the caller's.
  *

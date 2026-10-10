@@ -1,3 +1,60 @@
+## [3.3.1](https://github.com/cubicecho/ethos/compare/v3.3.0...v3.3.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* **app:** say which square is today in its label ([39ef7ec](https://github.com/cubicecho/ethos/commit/39ef7ec3417a523286eba21d3137eda393b4963e))
+
+# [3.3.0](https://github.com/cubicecho/ethos/compare/v3.2.0...v3.3.0) (2026-10-10)
+
+
+### Features
+
+* serve a read-only MCP endpoint ([5439d72](https://github.com/cubicecho/ethos/commit/5439d7252c64fcfef7392177f58f6c83a8977895)), closes [#8](https://github.com/cubicecho/ethos/issues/8)
+
+# [3.2.0](https://github.com/cubicecho/ethos/compare/v3.1.0...v3.2.0) (2026-10-10)
+
+
+### Features
+
+* keep a day as a smaller version ([736d24e](https://github.com/cubicecho/ethos/commit/736d24e0f8132954e6ea1f0dae79f969ae66d714))
+
+# [3.1.0](https://github.com/cubicecho/ethos/compare/v3.0.0...v3.1.0) (2026-10-10)
+
+
+### Features
+
+* give a habit an optional cue ([8095992](https://github.com/cubicecho/ethos/commit/80959922681efaa5e39bb168ef3dd61b90b8e770)), closes [#4](https://github.com/cubicecho/ethos/issues/4)
+
+# [3.0.0](https://github.com/cubicecho/ethos/compare/v2.0.0...v3.0.0) (2026-10-10)
+
+
+* feat!: sign in with better-auth ([5dc2d10](https://github.com/cubicecho/ethos/commit/5dc2d102dd8991f637acf4a17dc4de10c0661666)), closes [#13](https://github.com/cubicecho/ethos/issues/13)
+
+
+### BREAKING CHANGES
+
+* JWT_SECRET is replaced by BETTER_AUTH_SECRET.
+AUTH_MAGIC_LINK and EXPOSE_MAGIC_LINK are removed: set SMTP_URL to email
+sign-in links, or SECURE_LOCAL_NET=true on a private network. The
+requestMagicLink mutation is replaced by requestSignIn, and
+verifyMagicLink no longer accepts the old tokens. Existing sessions are
+not carried over, so everyone signs in once more.
+
+# [2.0.0](https://github.com/cubicecho/ethos/compare/v1.2.0...v2.0.0) (2026-10-10)
+
+
+* feat!: serve on port 3000 by default ([e52e565](https://github.com/cubicecho/ethos/commit/e52e5650a28a77615666856a2521fd03594fc66b)), closes [#14](https://github.com/cubicecho/ethos/issues/14)
+
+
+### BREAKING CHANGES
+
+* the image listens on 3000, not 3006. A compose file that
+maps "3006:3006" without setting PORT must either map to 3000
+("3006:3000" keeps the same address) or set PORT=3006 in the service's
+environment. APP_URL's default follows the port, so set APP_URL if the
+instance is reached on any other address.
+
 # [1.2.0](https://github.com/cubicecho/ethos/compare/v1.1.3...v1.2.0) (2026-10-10)
 
 

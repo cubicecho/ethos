@@ -6,6 +6,7 @@ import { getTableName, is, sql, Table } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/pglite';
 import { type ExecutionResult, type GraphQLSchema, graphql } from 'graphql';
 import { inject } from 'vitest';
+import { type Auth, createAuth, type MagicLink } from '../auth/better-auth.ts';
 import { createRateLimiter, type RateLimiter } from '../auth/rate-limit.ts';
 import type { Context } from '../core/context.ts';
 import { createSchema } from '../graphql/build-schema.ts';
@@ -32,6 +33,52 @@ const TABLE_LIST = Object.values(dbSchema)
 
 /** One schema per database: building it is most of what a client costs, and only `db` shapes it. */
 const schemas = new WeakMap<object, GraphQLSchema>();
+
+/** One auth instance per database, for the clients that do not bring their own. */
+const auths = new WeakMap<object, Auth>();
+
+/** Long enough for better-auth, and never a real secret. */
+export const TEST_SECRET = 'test-secret-0123456789abcdef0123456789';
+
+/**
+ * Builds an auth instance that captures sign-in links where production would email them.
+ *
+ * @param db - A database from `createTestDb`.
+ * @returns The auth instance, and the links it was asked to deliver, oldest first.
+ */
+export function createTestAuth(db: TestDb): { auth: Auth; links: MagicLink[] } {
+  const links: MagicLink[] = [];
+  const auth = createAuth(db, {
+    secret: TEST_SECRET,
+    sendMagicLink: async (link) => {
+      links.push(link);
+    },
+  });
+  return { auth, links };
+}
+
+/**
+ * Builds an auth instance with no way to deliver a link, as an instance without SMTP has.
+ *
+ * @param db - A database from `createTestDb`.
+ * @returns The auth instance.
+ */
+export function createLinklessAuth(db: TestDb): Auth {
+  return createAuth(db, { secret: TEST_SECRET });
+}
+
+/**
+ * Signs a user in without a link, the way SECURE_LOCAL_NET does.
+ *
+ * @param auth - The auth instance the session is made on.
+ * @param userId - The user to sign in.
+ * @returns The session token, to send as `Authorization: Bearer`.
+ */
+export async function createSessionToken(auth: Auth, userId: string): Promise<string> {
+  const { internalAdapter } = await auth.$context;
+  const session = await internalAdapter.createSession(userId);
+  return session.token;
+}
 
 /**
  * Builds a fresh in-memory Postgres with the models' schema in it. Booting one is the
@@ -87,6 +134,10 @@ export interface TestClient {
 
 /** Collaborators a test shares between clients, or swaps for its own. */
 export interface ClientDeps {
+  /** The auth instance. The default is one per database that captures its links and shows them to nobody. */
+  auth?: Auth;
+  /** The request's headers, for a resolver that reads the session itself. The default is none. */
+  headers?: Headers;
   /** Pass a small one to reach the budget. The default is `createRateLimiter()`. */
   limiter?: RateLimiter;
   /** The address the request is taken to come from. The default is `TEST_IP`. */
@@ -97,12 +148,16 @@ export interface ClientDeps {
 export const TEST_IP = '127.0.0.1';
 
 export function createClient(db: TestDb, userId: string | null, deps: ClientDeps = {}): TestClient {
-  const { limiter = createRateLimiter(), ip = TEST_IP } = deps;
+  const { limiter = createRateLimiter(), ip = TEST_IP, headers = new Headers() } = deps;
   const schema = schemas.get(db) ?? createSchema(db).schema;
   schemas.set(db, schema);
+  const auth = deps.auth ?? auths.get(db) ?? createTestAuth(db).auth;
+  if (deps.auth === undefined) {
+    auths.set(db, auth);
+  }
 
   const run = async (query: string, variables?: Record<string, unknown>) => {
-    const contextValue: Context = { db, userId, ip, limiter, loaders: createLoaders(db) };
+    const contextValue: Context = { db, auth, userId, headers, ip, limiter, loaders: createLoaders(db) };
     return graphql({ schema, source: query, contextValue, variableValues: variables });
   };
 

@@ -15,17 +15,20 @@ export interface HttpSettings {
    * Express's `trust proxy` accepts. False believes only the socket.
    */
   trustProxy: boolean | number | string;
-  /** The largest request body /graphql reads, as `bytes` writes sizes. Larger is a 413. */
+  /** The largest request body /graphql and /mcp read, as `bytes` writes sizes. Larger is a 413. */
   bodyLimit: string;
+  /** Whether /mcp serves the queries as MCP tools. */
+  mcp: boolean;
 }
 
 export const HTTP_DEFAULTS: Readonly<HttpSettings> = Object.freeze({
-  port: 3006,
+  port: 3000,
   immutableCacheSeconds: 31_536_000,
   drainSeconds: 5,
   shutdownDeadlineSeconds: 8,
   trustProxy: false,
   bodyLimit: '1mb',
+  mcp: false,
 });
 
 export interface RateLimitSettings {
@@ -44,18 +47,21 @@ export const RATE_LIMIT_DEFAULTS: Readonly<RateLimitSettings> = Object.freeze({
 });
 
 export interface AuthSettings {
-  /** How long a session token is good for. Long: there is no refresh flow. */
+  /** How long a session lasts after it was last used. Long: there is no second sign-in step to fall back on. */
   sessionTtlDays: number;
   /** How long a sign-in link is good for. Short: it travels by mail. */
   magicLinkTtlMinutes: number;
-  /** The shortest `JWT_SECRET` production accepts. `openssl rand -hex 32` gives twice this. */
+  /** The shortest `BETTER_AUTH_SECRET` production accepts. `openssl rand -hex 32` gives twice this. */
   minSecretLength: number;
+  /** Whether an email address alone signs in, when `SECURE_LOCAL_NET` is unset. */
+  secureLocalNet: boolean;
 }
 
 export const AUTH_DEFAULTS: Readonly<AuthSettings> = Object.freeze({
   sessionTtlDays: 30,
   magicLinkTtlMinutes: 15,
   minSecretLength: 32,
+  secureLocalNet: false,
 });
 
 export interface HabitSettings {
@@ -75,6 +81,8 @@ export interface HabitSettings {
   maxNameLength: number;
   /** The longest note, on a habit or on one of its days. */
   maxNoteLength: number;
+  /** The longest cue a habit may have: one line, not a second note. */
+  maxCueLength: number;
 }
 
 export const HABIT_DEFAULTS: Readonly<HabitSettings> = Object.freeze({
@@ -83,6 +91,7 @@ export const HABIT_DEFAULTS: Readonly<HabitSettings> = Object.freeze({
   maxHistoryPeriods: 52,
   maxNameLength: 120,
   maxNoteLength: 2_000,
+  maxCueLength: 200,
 });
 
 export interface OperationLimitSettings {

@@ -2,15 +2,22 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import type { Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createRateLimiter } from '../../auth/rate-limit.ts';
-import { signToken } from '../../auth/resolvers.ts';
 import { version } from '../../core/config.ts';
 import { OPERATION_LIMIT_DEFAULTS } from '../../core/defaults.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { HttpStatus } from '../../core/wire.ts';
 import { createApp } from '../../http/app.ts';
-import { closeTestDb, createTestDb, createUser, portOf, type TestDb } from '../helpers.ts';
+import {
+  closeTestDb,
+  createSessionToken,
+  createTestAuth,
+  createTestDb,
+  createUser,
+  portOf,
+  type TestDb,
+} from '../helpers.ts';
 
 // The app production runs, against PGlite, over a real socket. Everything else
 // calls `graphql()` in-process, so this is the one place routing order and the
@@ -28,6 +35,7 @@ let staticDir: string;
 let server: Server;
 let base: string;
 let aliceId: string;
+let aliceToken: string;
 let db: TestDb;
 
 beforeAll(async () => {
@@ -35,7 +43,9 @@ beforeAll(async () => {
   writeFileSync(join(staticDir, 'index.html'), INDEX);
   db = await createTestDb();
   aliceId = await createUser(db, EMAIL);
-  const app = await createApp({ db, staticDir, allowedOrigins: [APP_ORIGIN] });
+  const { auth } = createTestAuth(db);
+  aliceToken = await createSessionToken(auth, aliceId);
+  const app = await createApp({ db, auth, staticDir, allowedOrigins: [APP_ORIGIN] });
   server = app.listen(0);
   await new Promise<void>((resolve) => server.once('listening', resolve));
   base = `http://127.0.0.1:${portOf(server)}`;
@@ -79,7 +89,7 @@ describe('app', () => {
   });
 
   it('reads the caller from a Bearer token', async () => {
-    const body = await ask(HABITS, `Bearer ${signToken(aliceId)}`);
+    const body = await ask(HABITS, `Bearer ${aliceToken}`);
     expect(body.errors).toBeUndefined();
     expect(body.data.habits).toEqual([]);
   });
@@ -98,7 +108,7 @@ describe('app', () => {
     const { maxPageSize } = OPERATION_LIMIT_DEFAULTS;
     const response = await post(
       `{ habits(limit: ${maxPageSize}) { entries(limit: ${maxPageSize}) { id } } }`,
-      `Bearer ${signToken(aliceId)}`,
+      `Bearer ${aliceToken}`,
     );
     const body: AnyBody = await response.json();
     expect(response.status).toBe(HttpStatus.BadRequest);
@@ -143,8 +153,61 @@ describe('app whose database does not answer', () => {
   });
 });
 
+describe('app when a resolver fails unexpectedly', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('masks the cause from the caller and logs it', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const db = await createTestDb();
+    const { auth } = createTestAuth(db);
+    const token = await createSessionToken(auth, await createUser(db, 'masked@example.com'));
+    const app = await createApp({ db, auth });
+    const broken = app.listen(0);
+    await new Promise<void>((resolve) => broken.once('listening', resolve));
+    // A closed database throws a plain Error, which is not the caller's to read.
+    await closeTestDb(db);
+    const response = await fetch(`http://127.0.0.1:${portOf(broken)}/graphql`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ query: HABITS }),
+    });
+    const body: AnyBody = await response.json();
+    await new Promise<void>((resolve) => broken.close(() => resolve()));
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0].message).toBe('Unexpected error.');
+    expect(JSON.stringify(body)).not.toMatch(/PGlite|closed|stack/i);
+    expect(logged).toHaveBeenCalled();
+  });
+});
+
+describe('app in production', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('refuses introspection', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const db = await createTestDb();
+    const app = await createApp({ db });
+    const live = app.listen(0);
+    await new Promise<void>((resolve) => live.once('listening', resolve));
+    const response = await fetch(`http://127.0.0.1:${portOf(live)}/graphql`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query: '{ __schema { types { name } } }' }),
+    });
+    const body: AnyBody = await response.json();
+    await new Promise<void>((resolve) => live.close(() => resolve()));
+    await closeTestDb(db);
+    expect(body.data).toBeUndefined();
+    expect(body.errors[0].message).toContain('introspection');
+  });
+});
+
 describe('app behind a proxy', () => {
-  const REQUEST = 'mutation ($email: String!) { requestMagicLink(email: $email) { ok } }';
+  const REQUEST = 'mutation ($email: String!) { requestSignIn(email: $email) { sent } }';
   let addresses = 0;
 
   /** Asks for a sign-in link for a fresh address, as the proxy would forward it for `client`. */
@@ -160,7 +223,7 @@ describe('app behind a proxy', () => {
   async function served(trustProxy: number | false): Promise<{ origin: string; close: () => Promise<void> }> {
     const limiter = createRateLimiter({ maxAttempts: 1 });
     const db = await createTestDb();
-    const app = await createApp({ db, limiter, trustProxy });
+    const app = await createApp({ db, auth: createTestAuth(db).auth, limiter, trustProxy });
     const proxied = app.listen(0);
     await new Promise<void>((resolve) => proxied.once('listening', resolve));
     return {

@@ -1,9 +1,8 @@
-import type { ApolloServerPlugin } from '@apollo/server';
 import { maxAliasesRule } from '@escape.tech/graphql-armor-max-aliases';
 import { maxDepthRule } from '@escape.tech/graphql-armor-max-depth';
 import { type DocumentNode, GraphQLError, type GraphQLSchema, validate } from 'graphql';
 import { fieldExtensionsEstimator, getComplexity, simpleEstimator } from 'graphql-query-complexity';
-import type { Context } from '../core/context.ts';
+import type { Plugin } from 'graphql-yoga';
 import { OPERATION_LIMIT_DEFAULTS, type OperationLimitSettings } from '../core/defaults.ts';
 import { tooComplex } from '../core/errors.ts';
 
@@ -84,24 +83,27 @@ export function assertWithinLimits(operation: Operation, settings: OperationLimi
 }
 
 /**
- * The Apollo Server plugin that holds every operation to the limits.
+ * The Yoga plugin that holds every operation to the limits.
  *
- * It runs once the operation is known and before anything executes, so a
+ * It runs once the operation is validated and before anything executes, so a
  * refused request reads no rows.
  *
- * @param overrides - Bounds to use in place of `OPERATION_LIMIT_DEFAULTS`.
- * @returns The plugin, for `new ApolloServer({ plugins })`.
+ * @param [overrides] - Bounds to use in place of `OPERATION_LIMIT_DEFAULTS`.
+ * @returns The plugin, for `createYoga({ plugins })`.
  */
-export function operationLimits(overrides: Partial<OperationLimitSettings> = {}): ApolloServerPlugin<Context> {
+export function useOperationLimits(overrides: Partial<OperationLimitSettings> = {}): Plugin {
   const settings = { ...OPERATION_LIMIT_DEFAULTS, ...overrides };
   return {
-    requestDidStart: async () => ({
-      didResolveOperation: async ({ schema, document, request }) => {
-        assertWithinLimits(
-          { schema, document, operationName: request.operationName, variables: request.variables },
-          settings,
-        );
-      },
-    }),
+    onExecute: ({ args }) => {
+      assertWithinLimits(
+        {
+          schema: args.schema,
+          document: args.document,
+          operationName: args.operationName ?? undefined,
+          variables: args.variableValues ?? undefined,
+        },
+        settings,
+      );
+    },
   };
 }
