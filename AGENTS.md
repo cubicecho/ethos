@@ -51,7 +51,7 @@ ethos/
 │   ├── global.css           # Imports the tokens; page background and border colour
 │   ├── metro.config.cjs
 │   └── postcss.config.mjs   # Tailwind 4, through `@tailwindcss/postcss`
-├── server/                  # GraphQL API (port 3006)
+├── server/                  # GraphQL API (port 3000)
 │   ├── __generated__/       # Generated SDL + resolver types (not committed)
 │   └── src/
 │       ├── index.ts         # Entry point: migrate, mount /graphql, serve the SPA
@@ -95,7 +95,7 @@ ethos/
 ## Commands
 
 ```bash
-npm run dev              # API (3006) + app on http://localhost:3000
+npm run dev              # API (3000) + app on http://localhost:8081
 npm run db:up            # Postgres in Docker, bind and host following the active context
 npm run db:generate      # new migration from a schema change
 npm run db:migrate       # apply migrations
