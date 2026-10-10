@@ -1,3 +1,15 @@
+# [4.0.0](https://github.com/cubicecho/ethos/compare/v3.3.1...v4.0.0) (2026-10-10)
+
+
+* feat!: remove streaks and the period rate ([14d686e](https://github.com/cubicecho/ethos/commit/14d686e085918de6f922cfb9018b346efecfe5dd)), closes [#5](https://github.com/cubicecho/ethos/issues/5)
+
+
+### BREAKING CHANGES
+
+* the GraphQL fields `Habit.streak`, `Habit.longestStreak`
+and `HabitPeriod.rate` are removed. A client selecting any of them is
+refused by validation.
+
 ## [3.3.1](https://github.com/cubicecho/ethos/compare/v3.3.0...v3.3.1) (2026-10-10)
 
 
