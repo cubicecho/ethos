@@ -1,3 +1,10 @@
+# [3.2.0](https://github.com/cubicecho/ethos/compare/v3.1.0...v3.2.0) (2026-10-10)
+
+
+### Features
+
+* keep a day as a smaller version ([736d24e](https://github.com/cubicecho/ethos/commit/736d24e0f8132954e6ea1f0dae79f969ae66d714))
+
 # [3.1.0](https://github.com/cubicecho/ethos/compare/v3.0.0...v3.1.0) (2026-10-10)
 
 
