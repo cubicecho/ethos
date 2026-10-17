@@ -1,9 +1,11 @@
 import { assertObjectType, extendSchema, type GraphQLSchema, parse } from 'graphql';
 import { z } from 'zod';
-import { secureLocalNet } from '../core/config.ts';
+import { secureLocalNet, serverUrl } from '../core/config.ts';
 import type { Context } from '../core/context.ts';
 import { badInput, unauthenticated } from '../core/errors.ts';
 import { parseOrThrow } from '../core/validation.ts';
+import { SSO_START_PATH } from '../http/sso.ts';
+import { effectiveOidc } from '../sso/settings.ts';
 import { sendsMagicLinks, sessionUserId } from './better-auth.ts';
 import { AuthFlow, throttle } from './throttle.ts';
 
@@ -13,6 +15,9 @@ const LOCAL_NET_METHOD = 'secure-local-net';
 /** What a link that cannot be spent is told, whichever way it is wrong. */
 const BAD_LINK = 'Invalid or expired sign-in link.';
 
+/** What a one-time token that cannot be spent is told: the sign-in has to be started again. */
+const BAD_SSO_TOKEN = 'Invalid or expired sign-in. Sign in again.';
+
 const AUTH_SDL = parse(`
   """Which ways of signing in this instance offers, so the sign-in page shows only those."""
   type AuthConfig {
@@ -20,6 +25,16 @@ const AUTH_SDL = parse(`
     secureLocalNet: Boolean!
     """The instance can email sign-in links."""
     magicLink: Boolean!
+    """The OIDC provider to sign in with (OIDC_ISSUER, or the paired one), or null when there is none."""
+    sso: SsoProvider
+  }
+
+  """An OpenID Connect provider the sign-in page offers."""
+  type SsoProvider {
+    """What the button calls it (OIDC_NAME, or the name in the setup URL)."""
+    name: String!
+    """Where the button sends the browser. Absolute: in development the server is not the app's origin."""
+    signInUrl: String!
   }
 
   type AuthSession {
@@ -42,6 +57,8 @@ const AUTH_SDL = parse(`
   extend type Mutation {
     requestSignIn(email: String!): SignInResult!
     verifyMagicLink(token: String!): AuthSession!
+    """The last leg of an OIDC sign-in: the one-time token the callback put on /auth/sso, for a session."""
+    verifyOneTimeToken(token: String!): AuthSession!
     signOut: Boolean!
   }
 `);
@@ -115,10 +132,14 @@ export function applyAuthExtension(schema: GraphQLSchema): GraphQLSchema {
   const queries = assertObjectType(extendedSchema.getType('Query')).getFields();
   const mutations = assertObjectType(extendedSchema.getType('Mutation')).getFields();
 
-  queries.authConfig.resolve = (_parent: unknown, _args: unknown, context: Context) => ({
-    secureLocalNet: secureLocalNet(),
-    magicLink: sendsMagicLinks(context.auth),
-  });
+  queries.authConfig.resolve = async (_parent: unknown, _args: unknown, context: Context) => {
+    const { config: oidc } = await effectiveOidc(context.db);
+    return {
+      secureLocalNet: secureLocalNet(),
+      magicLink: sendsMagicLinks(context.auth),
+      sso: oidc === null ? null : { name: oidc.name, signInUrl: `${serverUrl()}${SSO_START_PATH}` },
+    };
+  };
 
   mutations.requestSignIn.resolve = async (_parent: unknown, args: { email: string }, context: Context) => {
     const normalized = normalizeEmail(args.email);
@@ -155,6 +176,18 @@ export function applyAuthExtension(schema: GraphQLSchema): GraphQLSchema {
     } catch {
       // Expired, used and unknown tokens answer the same.
       throw badInput(BAD_LINK);
+    }
+  };
+
+  mutations.verifyOneTimeToken.resolve = async (_parent: unknown, args: { token: string }, context: Context) => {
+    throttle(context, AuthFlow.VerifyOneTimeToken);
+    // Spent, expired and made-up tokens all throw, and all mean the sign-in has
+    // to be started again. None of them is an expired session.
+    try {
+      const result = await context.auth.api.verifyOneTimeToken({ body: { token: args.token }, headers: new Headers() });
+      return { token: result.session.token, userId: result.user.id };
+    } catch {
+      throw badInput(BAD_SSO_TOKEN);
     }
   };
 

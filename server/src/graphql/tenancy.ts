@@ -27,8 +27,11 @@ export const ALL_TABLES = ['users', ...USER_OWNED_TABLES] as const;
 /** better-auth's tables: sessions, provider accounts and pending sign-in links. */
 export const AUTH_TABLES = ['sessions', 'accounts', 'verifications'] as const;
 
-/** Auth tables never cross the API: not readable, not filterable, not reachable as a relation. */
-export const exclude: NonNullable<BuildSchemaConfig['exclude']> = { tables: [...AUTH_TABLES] };
+/** Tables only the server reads: the OIDC pairing holds a client secret and a registration token. */
+export const SERVER_TABLES = ['oidcSettings'] as const;
+
+/** Auth and server tables never cross the API: not readable, not filterable, not reachable as a relation. */
+export const exclude: NonNullable<BuildSchemaConfig['exclude']> = { tables: [...AUTH_TABLES, ...SERVER_TABLES] };
 
 /**
  * Limits a table to the rows whose `userId` is the caller's.

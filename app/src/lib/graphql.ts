@@ -142,6 +142,7 @@ export const MeDocument = graphql(`
       id
       email
       name
+      isAdmin
     }
   }
 `);
@@ -242,6 +243,10 @@ export const AuthConfigDocument = graphql(`
     authConfig {
       secureLocalNet
       magicLink
+      sso {
+        name
+        signInUrl
+      }
     }
   }
 `);
@@ -263,6 +268,50 @@ export const VerifyMagicLinkDocument = graphql(`
     verifyMagicLink(token: $token) {
       token
       userId
+    }
+  }
+`);
+
+export const VerifyOneTimeTokenDocument = graphql(`
+  mutation VerifyOneTimeToken($token: String!) {
+    verifyOneTimeToken(token: $token) {
+      token
+      userId
+    }
+  }
+`);
+
+// The setup has no id to normalize by, so a pairing refetches it and `AuthConfig` by name.
+export const SsoSetupFieldsFragment = graphql(`
+  fragment SsoSetupFields on SsoSetup {
+    source
+    issuer
+    name
+    canPair
+    redirectUri
+  }
+`);
+
+export const SsoSetupDocument = graphql(`
+  query SsoSetup {
+    ssoSetup {
+      ...SsoSetupFields
+    }
+  }
+`);
+
+export const PairSsoDocument = graphql(`
+  mutation PairSso($setupUrl: String!) {
+    pairSso(setupUrl: $setupUrl) {
+      ...SsoSetupFields
+    }
+  }
+`);
+
+export const UnpairSsoDocument = graphql(`
+  mutation UnpairSso {
+    unpairSso {
+      ...SsoSetupFields
     }
   }
 `);

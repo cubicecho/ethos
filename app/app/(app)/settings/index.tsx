@@ -1,13 +1,14 @@
 import { useQuery } from '@apollo/client';
 import { DescriptionList, PropertyRow } from '@/components/description-list';
 import { LoadFailure } from '@/components/domain/query/load-state';
+import { SsoSettings } from '@/components/domain/sso/sso-settings';
 import { PageLayout } from '@/components/page-layout';
 import { Section } from '@/components/section';
 import { ThemePicker } from '@/components/ui/theme-picker';
 import { PALETTE_PREFERENCES } from '@/components/ui/theme-preference-base';
 import { MeDocument } from '@/lib/graphql';
 
-/** One card per thing you can change. Sections, not tabs — there are two. */
+/** One card per thing you can change. Sections, not tabs — there are a few. */
 export default function SettingsScreen() {
   // `users` is scoped to the caller, so the list is the one row the token
   // names — there is no "me" query because there is no one else to ask about.
@@ -41,6 +42,14 @@ export default function SettingsScreen() {
               )
             }
           />
+          {me?.isAdmin ? (
+            <Section
+              surface="card"
+              title="Sign-in"
+              description="People can always sign in with an emailed link. An OpenID Connect provider adds a button for it on the login page."
+              contentSlot={<SsoSettings />}
+            />
+          ) : null}
         </>
       }
     />

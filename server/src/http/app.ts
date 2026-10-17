@@ -1,7 +1,7 @@
 import type { DB } from '@ethos/db';
 import cors from 'cors';
 import express, { type Express } from 'express';
-import { type Auth, createAuth } from '../auth/better-auth.ts';
+import { type AuthHost, createAuthHost } from '../auth/auth-host.ts';
 import { createRateLimiter, type RateLimiter } from '../auth/rate-limit.ts';
 import { HTTP_DEFAULTS, type HttpSettings } from '../core/defaults.ts';
 import { HttpStatus } from '../core/wire.ts';
@@ -9,13 +9,17 @@ import { createSchema } from '../graphql/build-schema.ts';
 import { createContextFactory, createGraphQLHandler } from '../graphql/handler.ts';
 import { createMcpHandler } from '../graphql/mcp.ts';
 import { checkHealth } from './health.ts';
+import { mountSso } from './sso.ts';
 import { createStaticHandler } from './static.ts';
 
 /** What the app talks to. Tests pass PGlite. */
 export interface AppDeps {
   db: DB;
-  /** The better-auth instance. Tests pass one that captures links; the default is `createAuth(db)`. */
-  auth?: Auth;
+  /**
+   * Hands out the current auth instance. Tests pass a `fixedAuthHost` over one that captures links;
+   * the default is `createAuthHost(db)`, which reads the paired provider, so migrations must have run.
+   */
+  authHost?: AuthHost;
   /** Sign-in throttle. Tests pass a tighter one; the default is `createRateLimiter()`. */
   limiter?: RateLimiter;
   /** Origins a browser may call from, or `true` for any. The default is none but the app's own. */
@@ -29,7 +33,7 @@ export interface AppDeps {
 }
 
 /**
- * Builds the Express app: /graphql, /mcp, /healthz and the web client.
+ * Builds the Express app: /graphql, /mcp, /healthz, the OIDC redirects and the web client.
  *
  * It does not listen, migrate or read the environment, so a test can build the
  * app production runs.
@@ -39,7 +43,7 @@ export interface AppDeps {
  */
 export async function createApp({
   db,
-  auth = createAuth(db),
+  authHost,
   limiter = createRateLimiter(),
   allowedOrigins = [],
   trustProxy = HTTP_DEFAULTS.trustProxy,
@@ -52,7 +56,8 @@ export async function createApp({
   app.set('trust proxy', trustProxy);
   app.use(cors({ origin: allowedOrigins }));
   const { schema } = createSchema(db);
-  const contextFor = createContextFactory({ db, auth, limiter });
+  const host = authHost ?? (await createAuthHost(db));
+  const contextFor = createContextFactory({ db, authHost: host, limiter });
   const graphql = createGraphQLHandler(schema, contextFor);
   app.use(graphql.graphqlEndpoint, express.json({ limit: HTTP_DEFAULTS.bodyLimit }));
   // `all`, not `use`: a mounted `use` strips the path, and Yoga matches graphqlEndpoint itself.
@@ -72,6 +77,9 @@ export async function createApp({
     const health = await checkHealth(db);
     response.status(health.ok ? HttpStatus.Ok : HttpStatus.ServiceUnavailable).json(health);
   });
+  // Before the static handler, whose fallback would answer both paths with the app. Always
+  // mounted, because a provider can be paired while the server runs.
+  mountSso(app, host);
   if (staticDir !== undefined) {
     const serveStatic = createStaticHandler(staticDir);
     app.use((request, response) => serveStatic(request, response));

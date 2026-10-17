@@ -55,6 +55,14 @@ export interface AuthSettings {
   minSecretLength: number;
   /** Whether an email address alone signs in, when `SECURE_LOCAL_NET` is unset. */
   secureLocalNet: boolean;
+  /** How long the token an OIDC callback hands the app works: the hop from the callback to `/auth/sso`. */
+  oneTimeTokenTtlMinutes: number;
+  /** What the login page's OIDC button calls the provider. `OIDC_NAME` overrides it. */
+  oidcName: string;
+  /** How a confidential OIDC client sends its secret. `OIDC_CLIENT_AUTH` overrides it. */
+  oidcClientAuth: 'client_secret_basic' | 'client_secret_post';
+  /** How long pairing waits on the provider before calling it unreachable. */
+  oidcPairingTimeoutMs: number;
 }
 
 export const AUTH_DEFAULTS: Readonly<AuthSettings> = Object.freeze({
@@ -62,6 +70,11 @@ export const AUTH_DEFAULTS: Readonly<AuthSettings> = Object.freeze({
   magicLinkTtlMinutes: 15,
   minSecretLength: 32,
   secureLocalNet: false,
+  oneTimeTokenTtlMinutes: 3,
+  oidcName: 'SSO',
+  // The default the OIDC spec names.
+  oidcClientAuth: 'client_secret_basic',
+  oidcPairingTimeoutMs: 10_000,
 });
 
 export interface HabitSettings {

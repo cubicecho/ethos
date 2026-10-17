@@ -1,5 +1,6 @@
 import type { Server } from 'node:http';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { fixedAuthHost } from '../../auth/auth-host.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { HttpStatus } from '../../core/wire.ts';
 import { MCP_NAME } from '../../graphql/mcp.ts';
@@ -45,8 +46,8 @@ beforeAll(async () => {
   await createClient(db, bobId).expectOk(create, { values: { name: 'Run' } });
   const { auth } = createTestAuth(db);
   aliceToken = await createSessionToken(auth, aliceId);
-  on = (await createApp({ db, auth, mcp: true })).listen(0);
-  off = (await createApp({ db, auth })).listen(0);
+  on = (await createApp({ db, authHost: fixedAuthHost(auth), mcp: true })).listen(0);
+  off = (await createApp({ db, authHost: fixedAuthHost(auth) })).listen(0);
   onUrl = await listening(on);
   offUrl = await listening(off);
 });

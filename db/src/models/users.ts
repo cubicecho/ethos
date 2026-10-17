@@ -10,6 +10,8 @@ export const users = pgTable(
     emailVerified: boolean('email_verified').notNull().default(false),
     /** better-auth's column for a picture. Ethos shows none. */
     image: text('image'),
+    /** Whether this account manages the instance: pairs sign-in with an OIDC provider. The first account is. */
+    isAdmin: boolean('is_admin').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()

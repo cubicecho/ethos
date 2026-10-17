@@ -8,6 +8,8 @@ export const ErrorCode = {
   BadUserInput: 'BAD_USER_INPUT',
   TooManyRequests: 'TOO_MANY_REQUESTS',
   QueryTooComplex: 'QUERY_TOO_COMPLEX',
+  Forbidden: 'FORBIDDEN',
+  Conflict: 'CONFLICT',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
@@ -22,6 +24,13 @@ export const badInput = withCode(ErrorCode.BadUserInput);
 export const notFound = withCode(ErrorCode.NotFound);
 /** Nobody is signed in, or the session has run out. */
 export const unauthenticated = withCode(ErrorCode.Unauthenticated);
+/**
+ * The caller may not change something about the instance itself, such as how it signs people in.
+ * Never for a row: a row the caller may not touch is NOT_FOUND, so its existence is not confirmed.
+ */
+export const forbidden = withCode(ErrorCode.Forbidden);
+/** The request is fine, but the instance is in a state that refuses it, such as pairing twice. */
+export const conflict = withCode(ErrorCode.Conflict);
 /**
  * Too many attempts for now. `retryAfter` is the seconds until the next one would be let through.
  *

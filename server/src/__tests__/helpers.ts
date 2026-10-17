@@ -6,8 +6,10 @@ import { getTableName, is, sql, Table } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/pglite';
 import { type ExecutionResult, type GraphQLSchema, graphql } from 'graphql';
 import { inject } from 'vitest';
+import { type AuthHost, fixedAuthHost } from '../auth/auth-host.ts';
 import { type Auth, createAuth, type MagicLink } from '../auth/better-auth.ts';
 import { createRateLimiter, type RateLimiter } from '../auth/rate-limit.ts';
+import type { OidcConfig } from '../core/config.ts';
 import type { Context } from '../core/context.ts';
 import { createSchema } from '../graphql/build-schema.ts';
 import { createLoaders } from '../graphql/loaders.ts';
@@ -44,12 +46,14 @@ export const TEST_SECRET = 'test-secret-0123456789abcdef0123456789';
  * Builds an auth instance that captures sign-in links where production would email them.
  *
  * @param db - A database from `createTestDb`.
+ * @param [oidc] - An OIDC provider to sign in with. None by default, whatever the environment says.
  * @returns The auth instance, and the links it was asked to deliver, oldest first.
  */
-export function createTestAuth(db: TestDb): { auth: Auth; links: MagicLink[] } {
+export function createTestAuth(db: TestDb, oidc: OidcConfig | null = null): { auth: Auth; links: MagicLink[] } {
   const links: MagicLink[] = [];
   const auth = createAuth(db, {
     secret: TEST_SECRET,
+    oidc,
     sendMagicLink: async (link) => {
       links.push(link);
     },
@@ -64,7 +68,7 @@ export function createTestAuth(db: TestDb): { auth: Auth; links: MagicLink[] } {
  * @returns The auth instance.
  */
 export function createLinklessAuth(db: TestDb): Auth {
-  return createAuth(db, { secret: TEST_SECRET });
+  return createAuth(db, { secret: TEST_SECRET, oidc: null });
 }
 
 /**
@@ -136,6 +140,8 @@ export interface TestClient {
 export interface ClientDeps {
   /** The auth instance. The default is one per database that captures its links and shows them to nobody. */
   auth?: Auth;
+  /** Pass one to see pairing rebuild it. The default is a host that always hands out `auth`. */
+  authHost?: AuthHost;
   /** The request's headers, for a resolver that reads the session itself. The default is none. */
   headers?: Headers;
   /** Pass a small one to reach the budget. The default is `createRateLimiter()`. */
@@ -155,9 +161,20 @@ export function createClient(db: TestDb, userId: string | null, deps: ClientDeps
   if (deps.auth === undefined) {
     auths.set(db, auth);
   }
+  const authHost = deps.authHost ?? fixedAuthHost(auth);
 
   const run = async (query: string, variables?: Record<string, unknown>) => {
-    const contextValue: Context = { db, auth, userId, headers, ip, limiter, loaders: createLoaders(db) };
+    // Per run, as the handler does per request: a pairing may have rebuilt it since the last one.
+    const contextValue: Context = {
+      db,
+      auth: authHost.current(),
+      authHost,
+      userId,
+      headers,
+      ip,
+      limiter,
+      loaders: createLoaders(db),
+    };
     return graphql({ schema, source: query, contextValue, variableValues: variables });
   };
 
