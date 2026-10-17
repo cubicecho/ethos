@@ -3,7 +3,8 @@ import './core/preflight.ts';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { closeDatabase, db } from '@ethos/db';
-import { errorCode, RETRYABLE_CODES, waitForDatabase } from '@ethos/db/wait';
+import { CannotCreateDatabaseError, prepareDatabase } from '@ethos/db/create';
+import { errorCode, RETRYABLE_CODES } from '@ethos/db/wait';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { createAuthHost } from './auth/auth-host.ts';
 import {
@@ -29,11 +30,15 @@ const LISTEN_HOST = '0.0.0.0';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// A container started beside its database usually wins the race, so wait for
-// Postgres instead of exiting on the first refused connection.
+// Wait out a Postgres that is still starting rather than exit on the first refused
+// connection, and create the database when the server is up without it.
 try {
-  await waitForDatabase(db, { connectTimeoutMs: dbConnectTimeoutMs() });
+  await prepareDatabase(db, databaseUrl(), { connectTimeoutMs: dbConnectTimeoutMs() });
 } catch (error) {
+  if (error instanceof CannotCreateDatabaseError) {
+    console.error(`[boot] ${error.message}`);
+    process.exit(1);
+  }
   // A misconfigured DATABASE_URL would otherwise surface as a driver stack
   // trace. Name the actual problem instead.
   const code = errorCode(error);

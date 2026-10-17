@@ -17,7 +17,7 @@ export const RETRYABLE_CODES: readonly string[] = [
 ];
 
 /** The least a database has to do for boot to ask whether it is up. */
-interface Queryable {
+export interface Queryable {
   execute: (query: ReturnType<typeof sql>) => Promise<unknown>;
 }
 
