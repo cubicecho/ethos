@@ -1,3 +1,10 @@
+# [4.1.0](https://github.com/cubicecho/ethos/compare/v4.0.0...v4.1.0) (2026-10-17)
+
+
+### Features
+
+* sign in through an OpenID Connect provider, paired from the app ([6df193a](https://github.com/cubicecho/ethos/commit/6df193a9c50a40ce40506bcc7257fe3067cd8fe1))
+
 # [4.0.0](https://github.com/cubicecho/ethos/compare/v3.3.1...v4.0.0) (2026-10-10)
 
 
