@@ -1,3 +1,10 @@
+# [5.1.0](https://github.com/cubicecho/ethos/compare/v5.0.0...v5.1.0) (2026-10-17)
+
+
+### Features
+
+* create the database at boot when Postgres is up without it ([384b818](https://github.com/cubicecho/ethos/commit/384b8180dcfc5538682b22ce604c91abb0c6ccae))
+
 # [5.0.0](https://github.com/cubicecho/ethos/compare/v4.1.0...v5.0.0) (2026-10-17)
 
 
