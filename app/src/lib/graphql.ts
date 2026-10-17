@@ -251,23 +251,21 @@ export const AuthConfigDocument = graphql(`
   }
 `);
 
-export const RequestSignInDocument = graphql(`
-  mutation RequestSignIn($email: String!) {
-    requestSignIn(email: $email) {
-      sent
-      session {
-        token
-        userId
-      }
+// Signing in and out are better-auth's own endpoints, served as GraphQL by the server.
+export const SignInMagicLinkDocument = graphql(`
+  mutation SignInMagicLink($email: String!) {
+    signInMagicLink(email: $email) {
+      status
+      token
+      userId
     }
   }
 `);
 
-export const VerifyMagicLinkDocument = graphql(`
-  mutation VerifyMagicLink($token: String!) {
-    verifyMagicLink(token: $token) {
+export const MagicLinkVerifyDocument = graphql(`
+  mutation MagicLinkVerify($token: String!) {
+    magicLinkVerify(token: $token) {
       token
-      userId
     }
   }
 `);
@@ -318,6 +316,8 @@ export const UnpairSsoDocument = graphql(`
 
 export const SignOutDocument = graphql(`
   mutation SignOut {
-    signOut
+    signOut {
+      success
+    }
   }
 `);

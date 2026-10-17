@@ -6,13 +6,13 @@ import { CircleAlert } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/spinner';
 import { setToken } from '@/lib/auth';
 import { describeError } from '@/lib/errors';
-import { VerifyMagicLinkDocument } from '@/lib/graphql';
+import { MagicLinkVerifyDocument } from '@/lib/graphql';
 
 /** Spends the token of a sign-in link and opens the app. */
 export default function VerifyScreen() {
   const router = useRouter();
   const { token } = useLocalSearchParams<{ token?: string }>();
-  const [verifyMagicLink, { error }] = useMutation(VerifyMagicLinkDocument);
+  const [magicLinkVerify, { error }] = useMutation(MagicLinkVerifyDocument);
   // Strict mode and route re-renders both run effects more than once; a magic
   // token is meant to be spent exactly once.
   const hasStarted = useRef(false);
@@ -22,18 +22,18 @@ export default function VerifyScreen() {
       return;
     }
     hasStarted.current = true;
-    verifyMagicLink({ variables: { token } })
+    magicLinkVerify({ variables: { token } })
       .then(({ data }) => {
-        if (!data?.verifyMagicLink) {
+        if (!data?.magicLinkVerify) {
           return;
         }
-        setToken(data.verifyMagicLink.token);
+        setToken(data.magicLinkVerify.token);
         router.replace('/');
       })
       .catch(() => {
         // Rendered from `error` below.
       });
-  }, [token, verifyMagicLink, router]);
+  }, [token, magicLinkVerify, router]);
 
   const failure = token ? (error ? describeError(error) : null) : 'The link is missing its token.';
 

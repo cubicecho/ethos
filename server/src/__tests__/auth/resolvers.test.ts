@@ -15,9 +15,12 @@ import {
 } from '../helpers.ts';
 
 const CONFIG = `query { authConfig { secureLocalNet magicLink } }`;
-const REQUEST = `mutation ($email: String!) { requestSignIn(email: $email) { sent session { token userId } } }`;
-const VERIFY = `mutation ($token: String!) { verifyMagicLink(token: $token) { token userId } }`;
-const SIGN_OUT = `mutation { signOut }`;
+const REQUEST = `mutation ($email: String!) { signInMagicLink(email: $email) { status token userId } }`;
+const VERIFY = `mutation ($token: String!) { magicLinkVerify(token: $token) { token user { id } } }`;
+const SIGN_OUT = `mutation { signOut { success } }`;
+const SESSION = `query { getSession { user { id email } session { userId } } }`;
+const SESSIONS = `query { listSessions { token } }`;
+const REVOKE_OTHERS = `mutation { revokeOtherSessions { status } }`;
 
 let db: TestDb;
 let auth: Auth;
@@ -74,11 +77,11 @@ describe('authConfig', () => {
   });
 });
 
-describe('requestSignIn', () => {
+describe('signInMagicLink', () => {
   it('delivers a link to the app and returns no session', async () => {
     const email = nextEmail();
     const data = await anonymous.expectOk(REQUEST, { email });
-    expect(data.requestSignIn).toEqual({ sent: true, session: null });
+    expect(data.signInMagicLink).toEqual({ status: true, token: null, userId: null });
     expect(links).toHaveLength(1);
     expect(links[0]?.email).toBe(email);
     expect(links[0]?.url).toContain(`/auth/verify?token=${links[0]?.token}`);
@@ -108,46 +111,45 @@ describe('requestSignIn', () => {
   it('signs straight in under SECURE_LOCAL_NET, with no link sent', async () => {
     vi.stubEnv('SECURE_LOCAL_NET', 'true');
     const data = await anonymous.expectOk(REQUEST, { email: nextEmail() });
-    const { sent, session } = data.requestSignIn;
-    expect(sent).toBe(false);
+    const { token, userId } = data.signInMagicLink;
     expect(links).toHaveLength(0);
-    expect(await sessionUserId(auth, bearer(session.token))).toBe(session.userId);
+    expect(await sessionUserId(auth, bearer(token))).toBe(userId);
   });
 
   it('opens the account that already has the address under SECURE_LOCAL_NET', async () => {
     vi.stubEnv('SECURE_LOCAL_NET', 'true');
     const existing = await createUser(db, 'kept@example.com');
     const data = await anonymous.expectOk(REQUEST, { email: ' Kept@Example.com ' });
-    expect(data.requestSignIn.session.userId).toBe(existing);
+    expect(data.signInMagicLink.userId).toBe(existing);
     expect(await db.select().from(dbSchema.users)).toHaveLength(1);
   });
 });
 
-describe('verifyMagicLink', () => {
+describe('magicLinkVerify', () => {
   it('trades the link for a session the server recognises', async () => {
     const data = await anonymous.expectOk(VERIFY, { token: await linkTokenFor(nextEmail()) });
-    const { token, userId } = data.verifyMagicLink;
-    expect(await sessionUserId(auth, bearer(token))).toBe(userId);
+    const { token, user } = data.magicLinkVerify;
+    expect(await sessionUserId(auth, bearer(token))).toBe(user.id);
   });
 
   it('creates the account on first use and reuses it on the second', async () => {
     const email = nextEmail();
     const first = await anonymous.expectOk(VERIFY, { token: await linkTokenFor(email) });
     const second = await anonymous.expectOk(VERIFY, { token: await linkTokenFor(email) });
-    expect(first.verifyMagicLink.userId).toBe(second.verifyMagicLink.userId);
+    expect(first.magicLinkVerify.user.id).toBe(second.magicLinkVerify.user.id);
   });
 
   it('opens an account made before sessions were kept in the database', async () => {
     const existing = await createUser(db, 'early@example.com');
     const data = await anonymous.expectOk(VERIFY, { token: await linkTokenFor('early@example.com') });
-    expect(data.verifyMagicLink.userId).toBe(existing);
+    expect(data.magicLinkVerify.user.id).toBe(existing);
   });
 
   it('treats addresses case-insensitively', async () => {
     const email = nextEmail();
     const lower = await anonymous.expectOk(VERIFY, { token: await linkTokenFor(email) });
     const upper = await anonymous.expectOk(VERIFY, { token: await linkTokenFor(email.toUpperCase()) });
-    expect(upper.verifyMagicLink.userId).toBe(lower.verifyMagicLink.userId);
+    expect(upper.magicLinkVerify.user.id).toBe(lower.magicLinkVerify.user.id);
   });
 
   it('spends a link: the second use is refused', async () => {
@@ -172,18 +174,57 @@ describe('verifyMagicLink', () => {
   });
 });
 
+/** Signs `email` in through a link, and returns a client carrying the session. */
+async function signedIn(email: string): Promise<{ client: TestClient; token: string; userId: string }> {
+  const verified = await anonymous.expectOk(VERIFY, { token: await linkTokenFor(email) });
+  const { token, user } = verified.magicLinkVerify;
+  return { client: createClient(db, user.id, { auth, headers: bearer(token) }), token, userId: user.id };
+}
+
 describe('signOut', () => {
   it('ends the session the request carries', async () => {
-    const verified = await anonymous.expectOk(VERIFY, { token: await linkTokenFor(nextEmail()) });
-    const { token, userId } = verified.verifyMagicLink;
-    const data = await createClient(db, userId, { auth, headers: bearer(token) }).expectOk(SIGN_OUT);
-    expect(data.signOut).toBe(true);
+    const { client, token } = await signedIn(nextEmail());
+    const data = await client.expectOk(SIGN_OUT);
+    expect(data.signOut).toEqual({ success: true });
     expect(await sessionUserId(auth, bearer(token))).toBeNull();
   });
 
   it('answers false for a request that carries none', async () => {
     const data = await anonymous.expectOk(SIGN_OUT);
-    expect(data.signOut).toBe(false);
+    expect(data.signOut).toEqual({ success: false });
+  });
+});
+
+describe('sessions', () => {
+  it("reads the caller's own session", async () => {
+    const email = nextEmail();
+    const { client, userId } = await signedIn(email);
+    const data = await client.expectOk(SESSION);
+    expect(data.getSession).toEqual({ user: { id: userId, email }, session: { userId } });
+  });
+
+  it('answers null for a request with no session', async () => {
+    const data = await anonymous.expectOk(SESSION);
+    expect(data.getSession).toBeNull();
+  });
+
+  it('lists every session of the account, and ends all but this one', async () => {
+    const email = nextEmail();
+    const { client, token } = await signedIn(email);
+    const other = await signedIn(email);
+    const listed = await client.expectOk(SESSIONS);
+    expect(listed.listSessions.map((session: { token: string }) => session.token).sort()).toEqual(
+      [token, other.token].sort(),
+    );
+
+    await client.expectOk(REVOKE_OTHERS);
+    expect(await sessionUserId(auth, bearer(other.token))).toBeNull();
+    expect(await sessionUserId(auth, bearer(token))).not.toBeNull();
+  });
+
+  it('refuses listing sessions without one as an expired session', async () => {
+    const error = await anonymous.expectError(SESSIONS);
+    expect(error.code).toBe(ErrorCode.Unauthenticated);
   });
 });
 

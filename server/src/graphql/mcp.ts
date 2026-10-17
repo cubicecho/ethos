@@ -47,6 +47,8 @@ export function createMcpHandler(schema: GraphQLSchema, contextFor: ContextFacto
     name: MCP_NAME,
     version: version(),
     includeMutations: false,
+    // Both answer with session tokens, and every other session's is a way into the account from elsewhere.
+    exclude: ['Query.getSession', 'Query.listSessions'],
     // Express's `ip` where there is one, since it honours TRUST_PROXY.
     contextFromRequest: (request) =>
       contextFor(
