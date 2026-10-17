@@ -269,6 +269,13 @@ unique-local, a dotless service name, and the private-use suffixes (`.lan`,
 `.local`, `.internal`, `.home.arpa`) all being answers of "yes". A dot in a
 hostname says nothing about reach.
 
+**A reachable Postgres without the database gets it created.** Boot and
+`npm run db:migrate` go through `prepareDatabase` in `db/src/create.ts`: only
+when the first query answers `3D000` does it connect to the same server's
+`postgres` database and `CREATE DATABASE`, so a server that already has it is
+never asked anything more. Losing the race to another instance counts as done,
+and a role without `CREATEDB` is told so in one line rather than a stack trace.
+
 **`/mcp` is `/graphql` with a different envelope.** `server/src/graphql/mcp.ts`
 projects the same schema instance as MCP tools, and `createContextFactory` in
 `handler.ts` builds the context for both, so there is one place a request's

@@ -9,7 +9,8 @@
     "./relations": "./src/relations.ts",
     "./defaults": "./src/defaults.ts",
     "./ssl": "./src/ssl.ts",
-    "./wait": "./src/wait.ts"
+    "./wait": "./src/wait.ts",
+    "./create": "./src/create.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",
