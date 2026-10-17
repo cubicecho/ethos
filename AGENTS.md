@@ -15,7 +15,7 @@ monorepo (npm workspaces) with three packages — `app/` (frontend), `server/`
 | Frontend | React 19, Expo Router (web target), Apollo Client        |
 | UI       | React Native primitives, NativeWind 5 + Tailwind 4, cubeui (native registry) |
 | API      | graphql-yoga 5 on Express 5, GraphQL                     |
-| Auth     | better-auth (magic link + bearer), sessions in Postgres  |
+| Auth     | better-auth (magic link or OIDC, bearer), sessions in Postgres |
 | Database | Drizzle ORM + PostgreSQL (`postgres-js`)                 |
 | Testing  | Vitest, PGlite as an in-memory Postgres fixture          |
 | Linting  | Biome (formatter + linter)                               |
@@ -30,6 +30,7 @@ ethos/
 │   │   ├── _layout.tsx      # Root layout (ApolloProvider + Stack)
 │   │   ├── login.tsx        # Unauthenticated routes live at the top level
 │   │   ├── auth/verify.tsx  # Sign-in link landing page
+│   │   ├── auth/sso.tsx     # Where an OIDC sign-in lands: swaps its one-time token
 │   │   └── (app)/           # Authenticated group (redirects to /login)
 │   │       ├── index.tsx    # Today — every habit, and today's square
 │   │       ├── overview.tsx # Every habit against the days of one week or month
@@ -43,7 +44,7 @@ ethos/
 │   │   │   ├── app-form.tsx # `useAppForm`: cubeui's `createAppForm`, plus the colour field
 │   │   │   ├── app-icons.tsx, app-icons.web.tsx  # The icons cubeui's set does not carry
 │   │   │   ├── page-layout.tsx, card-layout.tsx, section.tsx, sidebar.tsx, …  # cubeui layouts
-│   │   │   └── domain/      # habit/, navigation/ (the app's rail), query/ (`LoadState`)
+│   │   │   └── domain/      # habit/, navigation/ (the app's rail), query/ (`LoadState`), sso/ (pairing)
 │   │   └── lib/             # apollo, auth, cache writers, periods, cadence, graphql documents, cn()
 │   ├── public/index.html    # HTML shell; applies the theme before first paint
 │   ├── app.json             # Expo config
@@ -62,6 +63,8 @@ ethos/
 │       │   ├── config.ts        # Feature flags read from the environment
 │       │   └── context.ts       # The GraphQL context type
 │       ├── http/            # Plain HTTP, nothing GraphQL
+│       │   ├── app.ts           # The Express app: every route, in order
+│       │   ├── sso.ts           # The OIDC sign-in's start and callback, which a browser is sent to
 │       │   └── static.ts        # Serves the built web client
 │       ├── graphql/         # The schema, and what applies to every table in it
 │       │   ├── build-schema.ts  # createSchema(db) — buildSchema + extensions
@@ -75,10 +78,16 @@ ethos/
 │       │   └── loaders.ts       # Per-request DataLoaders
 │       ├── auth/            # Signing in, and who a request is
 │       │   ├── better-auth.ts   # The better-auth instance, and who a request's session belongs to
-│       │   ├── resolvers.ts     # SDL extension: authConfig, requestSignIn, verifyMagicLink, signOut
+│       │   ├── auth-host.ts     # Holds the current instance, and rebuilds it when the provider changes
+│       │   ├── admin.ts         # The instance's admin: the first account
+│       │   ├── resolvers.ts     # SDL extension: authConfig, requestSignIn, verifyMagicLink, verifyOneTimeToken, signOut
 │       │   ├── email.ts         # Sends a sign-in link through SMTP_URL
 │       │   ├── throttle.ts      # Which sign-in flows are limited, and by what key
 │       │   └── rate-limit.ts    # In-process limiter for sign-in requests
+│       ├── sso/             # Pairing with an OIDC provider from the app
+│       │   ├── pairing.ts       # Setup URLs, and registering with a provider (RFC 7591 / 7592)
+│       │   ├── settings.ts      # The paired provider's row, and which provider is in effect
+│       │   └── resolvers.ts     # SDL extension: ssoSetup, pairSso, unpairSso
 │       ├── habits/          # The habit domain
 │       │   ├── resolvers.ts     # SDL extension for what CRUD cannot express
 │       │   ├── periods.ts       # Where the period boundaries are drawn
@@ -268,7 +277,9 @@ the route answers its own 404 so the web client's fallback does not hand an MCP
 client a page. Until API keys exist the only credential is a session token.
 
 **Report `NOT_FOUND`, never `FORBIDDEN`.** "You may not touch this" confirms the
-row exists, which is itself something the caller is not entitled to know.
+row exists, which is itself something the caller is not entitled to know. The one
+`FORBIDDEN` is `pairSso`/`unpairSso`: they are about the instance, not a row, and
+there is nothing to hide about whether an instance exists.
 
 **`UNAUTHENTICATED` means the session expired.** The client drops its token on it
 and redirects to `/login`. A bad magic link is `BAD_USER_INPUT` — it must not
@@ -433,14 +444,25 @@ one of these has found a decision, not a mistake.
   only, so `use-today.ts`, `hotkeys.ts`, the sign-out in `app-sidebar.tsx` and
   the root `ErrorBoundary` reach for them directly. `auth.ts` and `apollo.ts`
   check `Platform.OS` because they run at import time.
-- **Sign-in is link-only, and the link is only ever emailed.** There is no
-  password. `auth/email.ts` sends the link through `SMTP_URL`; it is never
-  logged and never in a response. `SECURE_LOCAL_NET` is the one way in without
-  mail, and preflight refuses it when `APP_URL` names a public host.
+- **Sign-in is a link or a provider, never a password.** `auth/email.ts` sends
+  the link through `SMTP_URL`; it is never logged and never in a response.
+  `SECURE_LOCAL_NET` is the one way in without mail or a provider, and preflight
+  refuses it when `APP_URL` names a public host.
 - **better-auth is called, not mounted.** Its REST routes are not served: the
   GraphQL resolvers call `auth.api.*`, so sign-in keeps one transport, one
-  throttle and one error vocabulary. Its three tables are in `exclude` in
+  throttle and one error vocabulary. The exception is the OIDC sign-in in
+  `http/sso.ts`, because a browser has to be sent to the provider and back; it
+  ends in a one-time token the app swaps for a bearer session
+  (`verifyOneTimeToken`), never in a cookie. better-auth's three tables are
+  `AUTH_TABLES` and `oidc_settings` is `SERVER_TABLES`, both in `exclude` in
   `tenancy.ts`, which is why they need no `scope`.
+- **An OIDC provider can be paired from the app.** Pasting a provider's setup
+  URL registers Ethos with it (Dynamic Client Registration) and `AuthHost`
+  rebuilds better-auth, so the login button appears without a restart. Anyone
+  may pair while there are no accounts, and only the admin after; the first
+  account is the admin. `OIDC_ISSUER` in the environment wins and is read-only
+  from the app. The callback is on `SERVER_URL`, which in development is not
+  `APP_URL`.
 - **`archivedAt` is the soft delete.** A habit has no `deletedAt`: archiving is
   the reversible removal, and a delete really deletes.
 - **No streak, and no all-time percentage.** Ethos shows each period's tally

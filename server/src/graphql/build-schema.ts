@@ -2,13 +2,14 @@ import { buildSchema, GraphQLDateTime } from '@vantreeseba/drizzle-graphql';
 import { applyAuthExtension } from '../auth/resolvers.ts';
 import { OPERATION_LIMIT_DEFAULTS } from '../core/defaults.ts';
 import { applyHabitsExtension } from '../habits/resolvers.ts';
+import { applySsoExtension } from '../sso/resolvers.ts';
 import { contextValues, exclude, features, scope } from './tenancy.ts';
 import { onWrite } from './write-guards.ts';
 
 // The whole CRUD surface is generated from the Drizzle schema — there are no
 // hand-written create/read/update/delete resolvers, and adding a column to a
 // table is all it takes to expose it. What generated CRUD cannot express is
-// layered on top by the two extensions below.
+// layered on top by the extensions below.
 //
 // Kept separate from schema.ts, which binds it to the real database, so a test
 // can build the same schema against a throwaway one.
@@ -67,7 +68,7 @@ export function createSchema(db: AnyDb) {
     onWrite,
   });
 
-  const schema = applyHabitsExtension(applyAuthExtension(drizzleSchema));
+  const schema = applySsoExtension(applyHabitsExtension(applyAuthExtension(drizzleSchema)));
 
   return { schema, entities };
 }

@@ -1,4 +1,5 @@
 import type { DB } from '@ethos/db';
+import type { AuthHost } from '../auth/auth-host.ts';
 import type { Auth } from '../auth/better-auth.ts';
 import type { RateLimiter } from '../auth/rate-limit.ts';
 import type { Loaders } from '../graphql/loaders.ts';
@@ -13,8 +14,10 @@ export const UNKNOWN_IP = 'unknown';
  */
 export interface Context {
   db: DB;
-  /** The better-auth instance; the auth resolvers call `auth.api.*`. */
+  /** The better-auth instance for this request; the auth resolvers call `auth.api.*`. */
   auth: Auth;
+  /** Where `auth` came from. Pairing a provider rebuilds it, so later requests get the new one. */
+  authHost: AuthHost;
   userId: string | null;
   /** The request's headers. Signing out reads the session from them. */
   headers: Headers;

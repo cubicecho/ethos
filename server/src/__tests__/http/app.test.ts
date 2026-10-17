@@ -3,6 +3,7 @@ import type { Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { fixedAuthHost } from '../../auth/auth-host.ts';
 import { createRateLimiter } from '../../auth/rate-limit.ts';
 import { version } from '../../core/config.ts';
 import { OPERATION_LIMIT_DEFAULTS } from '../../core/defaults.ts';
@@ -45,7 +46,7 @@ beforeAll(async () => {
   aliceId = await createUser(db, EMAIL);
   const { auth } = createTestAuth(db);
   aliceToken = await createSessionToken(auth, aliceId);
-  const app = await createApp({ db, auth, staticDir, allowedOrigins: [APP_ORIGIN] });
+  const app = await createApp({ db, authHost: fixedAuthHost(auth), staticDir, allowedOrigins: [APP_ORIGIN] });
   server = app.listen(0);
   await new Promise<void>((resolve) => server.once('listening', resolve));
   base = `http://127.0.0.1:${portOf(server)}`;
@@ -163,7 +164,7 @@ describe('app when a resolver fails unexpectedly', () => {
     const db = await createTestDb();
     const { auth } = createTestAuth(db);
     const token = await createSessionToken(auth, await createUser(db, 'masked@example.com'));
-    const app = await createApp({ db, auth });
+    const app = await createApp({ db, authHost: fixedAuthHost(auth) });
     const broken = app.listen(0);
     await new Promise<void>((resolve) => broken.once('listening', resolve));
     // A closed database throws a plain Error, which is not the caller's to read.
@@ -223,7 +224,7 @@ describe('app behind a proxy', () => {
   async function served(trustProxy: number | false): Promise<{ origin: string; close: () => Promise<void> }> {
     const limiter = createRateLimiter({ maxAttempts: 1 });
     const db = await createTestDb();
-    const app = await createApp({ db, auth: createTestAuth(db).auth, limiter, trustProxy });
+    const app = await createApp({ db, authHost: fixedAuthHost(createTestAuth(db).auth), limiter, trustProxy });
     const proxied = app.listen(0);
     await new Promise<void>((resolve) => proxied.once('listening', resolve));
     return {

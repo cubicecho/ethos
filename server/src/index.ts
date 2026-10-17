@@ -5,11 +5,13 @@ import { fileURLToPath } from 'node:url';
 import { closeDatabase, db } from '@ethos/db';
 import { errorCode, RETRYABLE_CODES, waitForDatabase } from '@ethos/db/wait';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import { createAuthHost } from './auth/auth-host.ts';
 import {
   allowedOrigins,
   databaseUrl,
   dbConnectTimeoutMs,
   mcpEnabled,
+  oidcRedirectUri,
   port,
   secureLocalNet,
   smtpConfigured,
@@ -53,8 +55,11 @@ try {
 // install. They are idempotent; a container restart is a no-op.
 await migrate(db, { migrationsFolder: join(__dirname, '../../db/drizzle') });
 
+// After migrate: the provider may be a pairing, which lives in the database.
+const authHost = await createAuthHost(db);
 const app = await createApp({
   db,
+  authHost,
   allowedOrigins: allowedOrigins(),
   trustProxy: trustProxy(),
   mcp: mcpEnabled(),
@@ -64,11 +69,16 @@ const app = await createApp({
 const server = app.listen(port(), LISTEN_HOST, () => {
   console.log(`[boot] Ethos ready at http://localhost:${port()}`);
   console.log(`[boot] GraphQL at http://localhost:${port()}/graphql`);
+  const oidc = authHost.oidc();
+  if (oidc !== null) {
+    // The redirect URI is the one thing the operator has to copy into the provider, exactly.
+    console.log(`[auth] sign-in with ${oidc.name} (${oidc.issuer}); redirect URI ${oidcRedirectUri()}`);
+  }
   if (secureLocalNet()) {
     console.warn('[auth] SECURE_LOCAL_NET is on: any email address signs in without a link. Private networks only.');
-  } else if (smtpConfigured() === false) {
+  } else if (smtpConfigured() === false && oidc === null) {
     console.warn(
-      '[auth] Nobody can sign in: set SMTP_URL to email sign-in links, or SECURE_LOCAL_NET on a private network.',
+      '[auth] Nobody can sign in: set SMTP_URL to email sign-in links, set OIDC_ISSUER or pair a provider from the sign-in page, or SECURE_LOCAL_NET on a private network.',
     );
   }
 });

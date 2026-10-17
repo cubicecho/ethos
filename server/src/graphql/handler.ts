@@ -2,7 +2,8 @@ import type { DB } from '@ethos/db';
 import type { Request } from 'express';
 import { type GraphQLSchema, NoSchemaIntrospectionCustomRule } from 'graphql';
 import { createYoga, type Plugin } from 'graphql-yoga';
-import { type Auth, sessionUserId } from '../auth/better-auth.ts';
+import type { AuthHost } from '../auth/auth-host.ts';
+import { sessionUserId } from '../auth/better-auth.ts';
 import type { RateLimiter } from '../auth/rate-limit.ts';
 import { isProduction } from '../core/config.ts';
 import { type Context, UNKNOWN_IP } from '../core/context.ts';
@@ -13,7 +14,8 @@ import { useOperationLimits } from './operation-limits.ts';
 /** What every request's context is built from. */
 export interface ContextDeps {
   db: DB;
-  auth: Auth;
+  /** Hands out the current auth instance. Pairing a provider rebuilds it while the server runs. */
+  authHost: AuthHost;
   limiter: RateLimiter;
 }
 
@@ -26,19 +28,24 @@ export type ContextFactory = (headers: Headers, ip?: string) => Promise<Context>
  * Loaders are built per call: their batching is only ever valid within one
  * request, and their cache must not outlive it.
  *
- * @param deps - The database, the auth instance and the sign-in limiter every resolver is given.
+ * @param deps - The database, the auth host and the sign-in limiter every resolver is given.
  * @returns The factory.
  */
-export function createContextFactory({ db, auth, limiter }: ContextDeps): ContextFactory {
-  return async (headers, ip = UNKNOWN_IP) => ({
-    db,
-    auth,
-    limiter,
-    userId: await sessionUserId(auth, headers),
-    headers,
-    ip,
-    loaders: createLoaders(db),
-  });
+export function createContextFactory({ db, authHost, limiter }: ContextDeps): ContextFactory {
+  return async (headers, ip = UNKNOWN_IP) => {
+    // Asked per request: pairing a provider swaps the instance while the server runs.
+    const auth = authHost.current();
+    return {
+      db,
+      auth,
+      authHost,
+      limiter,
+      userId: await sessionUserId(auth, headers),
+      headers,
+      ip,
+      loaders: createLoaders(db),
+    };
+  };
 }
 
 /** What Express hands Yoga alongside the fetch request. */
