@@ -1,3 +1,16 @@
+# [5.0.0](https://github.com/cubicecho/ethos/compare/v4.1.0...v5.0.0) (2026-10-17)
+
+
+* feat!: serve better-auth's endpoints through @cubicecho/graphql-better-auth ([1770410](https://github.com/cubicecho/ethos/commit/17704102d9840f894c0723b61ed5b565b0b804fe))
+
+
+### BREAKING CHANGES
+
+* requestSignIn is signInMagicLink (`{ status token userId }`
+instead of `{ sent session { token userId } }`), verifyMagicLink is
+magicLinkVerify (`userId` is `user { id }`), and signOut returns
+`{ success }` instead of a Boolean.
+
 # [4.1.0](https://github.com/cubicecho/ethos/compare/v4.0.0...v4.1.0) (2026-10-17)
 
 
