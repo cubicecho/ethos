@@ -100,6 +100,11 @@ describe('/mcp', () => {
     expect(names.filter((name) => /^(create|update|delete|mark|clear|request|verify|sign)/.test(name))).toEqual([]);
   });
 
+  it('offers no query that answers with session tokens', async () => {
+    const names = await toolNames();
+    expect(names.filter((name) => /session/i.test(name))).toEqual([]);
+  });
+
   it("returns the caller's habits and nobody else's", async () => {
     const body = await call('tools/call', { name: 'habits', arguments: {} }, `Bearer ${aliceToken}`);
     const text = JSON.stringify(body.result);

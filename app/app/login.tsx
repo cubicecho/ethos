@@ -13,7 +13,7 @@ import { CircleCheck } from '@/components/ui/icons';
 import { SegmentedButton, SegmentedGroup } from '@/components/ui/segmented';
 import { setToken } from '@/lib/auth';
 import { describeError } from '@/lib/errors';
-import { AuthConfigDocument, RequestSignInDocument, SsoSetupDocument } from '@/lib/graphql';
+import { AuthConfigDocument, SignInMagicLinkDocument, SsoSetupDocument } from '@/lib/graphql';
 
 /** What `?error=` says when the provider's button was followed after it was disconnected. */
 const SSO_OFF = 'sso_off';
@@ -39,7 +39,7 @@ export default function LoginScreen() {
   const [paired, setPaired] = useState<string | null>(null);
   const configQuery = useQuery(AuthConfigDocument);
   const setup = useQuery(SsoSetupDocument).data?.ssoSetup;
-  const [requestSignIn, { error }] = useMutation(RequestSignInDocument);
+  const [signInMagicLink, { error }] = useMutation(SignInMagicLinkDocument);
 
   const config = configQuery.data?.authConfig;
   const sso = config?.sso ?? null;
@@ -56,14 +56,14 @@ export default function LoginScreen() {
   async function send(email: string) {
     setSentTo(null);
     try {
-      const { data } = await requestSignIn({ variables: { email } });
-      const result = data?.requestSignIn;
+      const { data } = await signInMagicLink({ variables: { email } });
+      const result = data?.signInMagicLink;
       if (!result) {
         return;
       }
       // Under SECURE_LOCAL_NET the server answers with a session instead of sending a link.
-      if (result.session) {
-        setToken(result.session.token);
+      if (result.token) {
+        setToken(result.token);
         router.replace('/');
         return;
       }

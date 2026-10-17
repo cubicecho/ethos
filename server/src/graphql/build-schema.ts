@@ -1,4 +1,5 @@
 import { buildSchema, GraphQLDateTime } from '@vantreeseba/drizzle-graphql';
+import { applyBetterAuthExtension } from '../auth/endpoints.ts';
 import { applyAuthExtension } from '../auth/resolvers.ts';
 import { OPERATION_LIMIT_DEFAULTS } from '../core/defaults.ts';
 import { applyHabitsExtension } from '../habits/resolvers.ts';
@@ -36,7 +37,7 @@ function timestampInput(column: { columnType: string }): { input: typeof GraphQL
 // keyed by the naming config, so spelling it here would mean restating
 // `typeNameMapper` in a second place that could disagree with the first.
 /**
- * Builds the GraphQL schema: the generated CRUD, scoped to the caller, with the auth and habits extensions on it.
+ * Builds the GraphQL schema: the generated CRUD, scoped to the caller, with the auth, habits and SSO extensions on it.
  *
  * @param db - The database the resolvers query.
  * @returns The schema, and the generated entities it was built from.
@@ -68,7 +69,9 @@ export function createSchema(db: AnyDb) {
     onWrite,
   });
 
-  const schema = applySsoExtension(applyHabitsExtension(applyAuthExtension(drizzleSchema)));
+  const schema = applySsoExtension(
+    applyHabitsExtension(applyBetterAuthExtension(applyAuthExtension(drizzleSchema), db)),
+  );
 
   return { schema, entities };
 }

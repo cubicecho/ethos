@@ -59,7 +59,7 @@ export function createAuth(db: DB, { secret = authSecret(), sendMagicLink, oidc 
             // better-auth takes seconds.
             expiresIn: AUTH_DEFAULTS.magicLinkTtlMinutes * SECONDS_PER_MINUTE,
             storeToken: 'hashed',
-            // Links go to the app, which calls verifyMagicLink. The REST verify route is not mounted.
+            // Links go to the app, which calls magicLinkVerify over GraphQL. The REST verify route is not mounted.
             sendMagicLink: ({ email, token }) =>
               deliver({ email, token, url: `${appUrl()}/auth/verify?token=${encodeURIComponent(token)}` }),
           }),

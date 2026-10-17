@@ -2,8 +2,8 @@ import type { Context } from '../core/context.ts';
 
 /** The sign-in steps that are throttled. Each has its own budget. */
 export const AuthFlow = {
-  RequestSignIn: 'request-sign-in',
-  VerifyMagicLink: 'verify-magic-link',
+  SignInMagicLink: 'sign-in-magic-link',
+  MagicLinkVerify: 'magic-link-verify',
   VerifyOneTimeToken: 'verify-one-time-token',
 } as const;
 export type AuthFlow = (typeof AuthFlow)[keyof typeof AuthFlow];

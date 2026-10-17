@@ -4,8 +4,8 @@ import { ErrorCode } from '../../core/errors.ts';
 import { MS_PER_SECOND, SECONDS_PER_MINUTE } from '../../core/wire.ts';
 import { closeTestDb, createClient, createTestDb, resetTestDb, TEST_IP, type TestDb } from '../helpers.ts';
 
-const REQUEST = `mutation ($email: String!) { requestSignIn(email: $email) { sent } }`;
-const VERIFY = `mutation ($token: String!) { verifyMagicLink(token: $token) { userId } }`;
+const REQUEST = `mutation ($email: String!) { signInMagicLink(email: $email) { status } }`;
+const VERIFY = `mutation ($token: String!) { magicLinkVerify(token: $token) { token } }`;
 
 const SETTINGS = { maxAttempts: 2, windowMinutes: 1 };
 const WINDOW_SECONDS = SETTINGS.windowMinutes * SECONDS_PER_MINUTE;

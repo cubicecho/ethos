@@ -80,7 +80,8 @@ ethos/
 │       │   ├── better-auth.ts   # The better-auth instance, and who a request's session belongs to
 │       │   ├── auth-host.ts     # Holds the current instance, and rebuilds it when the provider changes
 │       │   ├── admin.ts         # The instance's admin: the first account
-│       │   ├── resolvers.ts     # SDL extension: authConfig, requestSignIn, verifyMagicLink, verifyOneTimeToken, signOut
+│       │   ├── endpoints.ts     # better-auth's own endpoints as GraphQL: signInMagicLink, magicLinkVerify, sessions, signOut
+│       │   ├── resolvers.ts     # SDL extension: authConfig, and requireAuth
 │       │   ├── email.ts         # Sends a sign-in link through SMTP_URL
 │       │   ├── throttle.ts      # Which sign-in flows are limited, and by what key
 │       │   └── rate-limit.ts    # In-process limiter for sign-in requests
@@ -448,9 +449,16 @@ one of these has found a decision, not a mistake.
   the link through `SMTP_URL`; it is never logged and never in a response.
   `SECURE_LOCAL_NET` is the one way in without mail or a provider, and preflight
   refuses it when `APP_URL` names a public host.
-- **better-auth is called, not mounted.** Its REST routes are not served: the
-  GraphQL resolvers call `auth.api.*`, so sign-in keeps one transport, one
-  throttle and one error vocabulary. The exception is the OIDC sign-in in
+- **better-auth is called, not mounted.** Its REST routes are not served:
+  `auth/endpoints.ts` serves its endpoints as GraphQL fields through
+  `@cubicecho/graphql-better-auth`, each calling the request's own `auth.api.*`,
+  so sign-in keeps one transport, one throttle and one error vocabulary. The
+  field names and types are better-auth's (`signInMagicLink`, `magicLinkVerify`,
+  `getSession`); what Ethos adds — the throttle, SECURE_LOCAL_NET, a bad token
+  answered as `BAD_USER_INPUT` — is in each operation's `around`. The fields are
+  described from an instance that always has the magic-link plugin, so the
+  schema does not change with `SMTP_URL`. `getSession` and `listSessions` answer
+  with session tokens, so `/mcp` leaves them out. The exception is the OIDC sign-in in
   `http/sso.ts`, because a browser has to be sent to the provider and back; it
   ends in a one-time token the app swaps for a bearer session
   (`verifyOneTimeToken`), never in a cookie. better-auth's three tables are

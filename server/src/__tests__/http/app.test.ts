@@ -208,7 +208,7 @@ describe('app in production', () => {
 });
 
 describe('app behind a proxy', () => {
-  const REQUEST = 'mutation ($email: String!) { requestSignIn(email: $email) { sent } }';
+  const REQUEST = 'mutation ($email: String!) { signInMagicLink(email: $email) { status } }';
   let addresses = 0;
 
   /** Asks for a sign-in link for a fresh address, as the proxy would forward it for `client`. */
