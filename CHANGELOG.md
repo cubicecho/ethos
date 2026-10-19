@@ -1,3 +1,10 @@
+## [5.1.1](https://github.com/cubicecho/ethos/compare/v5.1.0...v5.1.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* stop charging __typename against the query cost limit ([46c4f59](https://github.com/cubicecho/ethos/commit/46c4f590957980332d6cb5876c82b36acf465f60))
+
 # [5.1.0](https://github.com/cubicecho/ethos/compare/v5.0.0...v5.1.0) (2026-10-17)
 
 
