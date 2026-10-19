@@ -1,7 +1,12 @@
 import { maxAliasesRule } from '@escape.tech/graphql-armor-max-aliases';
 import { maxDepthRule } from '@escape.tech/graphql-armor-max-depth';
-import { type DocumentNode, GraphQLError, type GraphQLSchema, validate } from 'graphql';
-import { fieldExtensionsEstimator, getComplexity, simpleEstimator } from 'graphql-query-complexity';
+import { type DocumentNode, GraphQLError, type GraphQLSchema, TypeNameMetaFieldDef, validate } from 'graphql';
+import {
+  type ComplexityEstimator,
+  fieldExtensionsEstimator,
+  getComplexity,
+  simpleEstimator,
+} from 'graphql-query-complexity';
 import type { Plugin } from 'graphql-yoga';
 import { OPERATION_LIMIT_DEFAULTS, type OperationLimitSettings } from '../core/defaults.ts';
 import { tooComplex } from '../core/errors.ts';
@@ -17,6 +22,17 @@ interface Operation {
   operationName?: string;
   variables?: Record<string, unknown>;
 }
+
+/**
+ * Prices `__typename` at nothing. It is answered from the row already in hand,
+ * and Apollo adds one to every selection, so charging for it would price a list
+ * at twice the fields anyone wrote.
+ *
+ * @param options - The field being priced.
+ * @returns 0 for `__typename`; nothing otherwise, so the next estimator prices it.
+ */
+const typenameEstimator: ComplexityEstimator = ({ field }) =>
+  field.name === TypeNameMetaFieldDef.name ? 0 : undefined;
 
 /**
  * What an operation could cost, or 0 when its variables do not fit their types.
@@ -36,7 +52,11 @@ function priceOf({ schema, document, operationName, variables = {} }: Operation,
       query: document,
       operationName,
       variables,
-      estimators: [fieldExtensionsEstimator(), simpleEstimator({ defaultComplexity: settings.defaultFieldCost })],
+      estimators: [
+        typenameEstimator,
+        fieldExtensionsEstimator(),
+        simpleEstimator({ defaultComplexity: settings.defaultFieldCost }),
+      ],
     });
   } catch (error) {
     if (error instanceof GraphQLError) {
