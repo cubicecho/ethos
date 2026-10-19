@@ -1,3 +1,4 @@
+import { addTypenameToDocument } from '@apollo/client/utilities';
 import { type DocumentNode, type GraphQLSchema, Kind, parse } from 'graphql';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 // The documents the web client really sends, as its codegen wrote them. A copy
@@ -66,7 +67,10 @@ const VARIABLES = {
   token: 'a-token',
 };
 
-const sent = Object.entries(appDocuments).filter((entry): entry is [string, DocumentNode] => isOperation(entry[1]));
+// Priced as they leave the browser: Apollo adds `__typename` to every selection.
+const sent = Object.entries(appDocuments)
+  .filter((entry): entry is [string, DocumentNode] => isOperation(entry[1]))
+  .map(([name, document]): [string, DocumentNode] => [name, addTypenameToDocument(document)]);
 
 describe('assertWithinLimits', () => {
   it('finds the documents the app sends', () => {
@@ -77,6 +81,14 @@ describe('assertWithinLimits', () => {
     expect(() =>
       assertWithinLimits({ schema, document, variables: VARIABLES }, OPERATION_LIMIT_DEFAULTS),
     ).not.toThrow();
+  });
+
+  it('prices __typename at nothing', () => {
+    // 250 habits of 20 entries: under the limit as written, and twice it if each __typename were a field.
+    const listed = `{ habits(limit: 250) { entries(limit: 20) { id } } }`;
+    const typed = `{ habits(limit: 250) { __typename entries(limit: 20) { __typename id } } }`;
+    expect(refusalOf(listed)).toBeUndefined();
+    expect(refusalOf(typed)).toBeUndefined();
   });
 
   it('leaves a missing variable for execution to report', () => {
