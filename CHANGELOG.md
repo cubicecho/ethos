@@ -1,3 +1,10 @@
+# [5.2.0](https://github.com/cubicecho/ethos/compare/v5.1.1...v5.2.0) (2026-10-20)
+
+
+### Features
+
+* hide the email sign-in when the instance cannot use it ([51b4a34](https://github.com/cubicecho/ethos/commit/51b4a342e0e1001d3da4538ae53b92e613ad4b70))
+
 ## [5.1.1](https://github.com/cubicecho/ethos/compare/v5.1.0...v5.1.1) (2026-10-19)
 
 
