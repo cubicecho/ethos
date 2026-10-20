@@ -26,7 +26,8 @@ const Mode = {
 type Mode = (typeof Mode)[keyof typeof Mode];
 
 /**
- * Asks for an address, and either emails it a sign-in link or signs it straight in. Where the
+ * Asks for an address, and either emails it a sign-in link or signs it straight in, when the instance
+ * can do either; with no SMTP_URL and no SECURE_LOCAL_NET there is no address field at all. Where the
  * instance has an OIDC provider, its button comes first, and a sign-in there that failed comes back
  * here with `?error=`. A new instance, with no accounts and no provider, also offers to pair one,
  * so whoever installs it can set sign-in up before there is an admin to ask.
@@ -44,8 +45,10 @@ export default function LoginScreen() {
   const config = configQuery.data?.authConfig;
   const sso = config?.sso ?? null;
   const isLocalNet = config?.secureLocalNet === true;
+  // The address alone signs in, or it is where a link is mailed. With neither, the form is a dead end.
+  const offersEmail = isLocalNet || config?.magicLink === true;
   // Only once the server has answered: a form that is merely still loading is not a broken instance.
-  const cannotSignIn = config !== undefined && isLocalNet === false && config.magicLink === false && sso === null;
+  const cannotSignIn = config !== undefined && !offersEmail && sso === null;
   const offerSetup = setup?.canPair === true && setup.source === 'NONE';
 
   const form = useAppForm({
@@ -75,20 +78,22 @@ export default function LoginScreen() {
 
   const signInForm = (
     <>
-      <form.AppForm>
-        <Form className="gap-4">
-          <form.AppField
-            name="email"
-            validators={{ onChange: ({ value }) => (value.trim() === '' ? 'Enter your email.' : undefined) }}
-          >
-            {(field) => <field.InputField label="Email" type="email" placeholder="you@example.com" />}
-          </form.AppField>
-          <form.SubmitButton
-            createLabel={isLocalNet ? 'Sign in' : 'Send sign-in link'}
-            savingLabel={isLocalNet ? 'Signing in…' : 'Sending…'}
-          />
-        </Form>
-      </form.AppForm>
+      {offersEmail ? (
+        <form.AppForm>
+          <Form className="gap-4">
+            <form.AppField
+              name="email"
+              validators={{ onChange: ({ value }) => (value.trim() === '' ? 'Enter your email.' : undefined) }}
+            >
+              {(field) => <field.InputField label="Email" type="email" placeholder="you@example.com" />}
+            </form.AppField>
+            <form.SubmitButton
+              createLabel={isLocalNet ? 'Sign in' : 'Send sign-in link'}
+              savingLabel={isLocalNet ? 'Signing in…' : 'Sending…'}
+            />
+          </Form>
+        </form.AppForm>
+      ) : null}
 
       {configQuery.error ? <Alert variant="destructive" description={describeError(configQuery.error)} /> : null}
       {error ? <Alert variant="destructive" description={describeError(error)} /> : null}
@@ -163,7 +168,11 @@ export default function LoginScreen() {
                 <Alert
                   variant="warning"
                   title="That sign-in button is gone"
-                  description="This instance no longer signs in through a provider. Use an emailed link instead."
+                  description={
+                    offersEmail
+                      ? 'This instance no longer signs in through a provider. Sign in with your email instead.'
+                      : 'This instance no longer signs in through a provider.'
+                  }
                 />
               ) : ssoError ? (
                 <Alert
@@ -176,7 +185,9 @@ export default function LoginScreen() {
                 <>
                   {/* A plain link, not the router's: the server sends the browser on to the provider. */}
                   <Button content={`Sign in with ${sso.name}`} linkSlot={<a href={sso.signInUrl} />} />
-                  <Text className="text-center text-foreground/60 text-sm">or sign in by email</Text>
+                  {offersEmail ? (
+                    <Text className="text-center text-foreground/60 text-sm">or sign in by email</Text>
+                  ) : null}
                 </>
               ) : null}
               {signInForm}
