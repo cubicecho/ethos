@@ -4,8 +4,8 @@ import { View } from 'react-native';
 import { Archive } from '@/components/app-icons';
 import { BackToTodayLink } from '@/components/domain/habit/back-to-today-link';
 import { LoadState } from '@/components/domain/query/load-state';
+import { EmptyState } from '@/components/empty-state';
 import { ListItem } from '@/components/list-item';
-import { EmptyState } from '@/components/page';
 import { PageLayout } from '@/components/page-layout';
 import { ColorDot } from '@/components/ui/color-dot';
 import { asPeriod, describeCadence } from '@/lib/cadence';
@@ -38,7 +38,7 @@ export default function ArchiveScreen() {
             query={archivedQuery}
             what="the archive"
             count={habits.length}
-            emptySlot={<EmptyState icon={Archive} title="Nothing archived" actionSlot={<BackToTodayLink />} />}
+            emptySlot={<EmptyState iconSlot={<Archive />} title="Nothing archived" actionSlot={<BackToTodayLink />} />}
           />
           {habits.length > 0 ? (
             <View role="list" className="gap-0.5">

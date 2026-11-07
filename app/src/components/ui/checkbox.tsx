@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Pressable } from 'react-native';
-import { CHECKBOX_CLASS, type CheckboxProps } from '@/components/ui/checkbox-base';
-import { Check } from '@/components/ui/icons';
-import { cn } from '@/lib/utils';
+import { useState } from "react";
+import { Pressable } from "react-native";
+import { CHECKBOX_CLASS, type CheckboxProps } from "@/components/ui/checkbox-base";
+import { Check } from "@/components/ui/icons";
+import { cn } from "@/lib/utils";
 
+/** A box that is checked or not. */
 function Checkbox({
   checked: checkedProp,
   defaultChecked = false,
@@ -29,12 +30,16 @@ function Checkbox({
       onBlur={onBlur}
       className={cn(
         CHECKBOX_CLASS,
-        checked ? 'border-active bg-active' : 'border-foreground/15 bg-background',
-        disabled && 'opacity-50',
+        // Checked is the chosen tint, edged in `active` because the tint is not 3:1 from the
+        // surface; the check is `foreground`, 3:1 or more on the tint and around it.
+        checked
+          ? "border-active bg-active/40 hover:bg-active/60"
+          : "border-foreground/50 bg-background",
+        disabled && "opacity-50",
         className,
       )}
     >
-      {checked && <Check className="h-3 w-3 text-active-foreground" />}
+      {checked && <Check className="h-3 w-3 text-foreground" />}
     </Pressable>
   );
 }

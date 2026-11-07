@@ -1,9 +1,9 @@
 import { useQuery } from '@apollo/client';
-import { DescriptionList, PropertyRow } from '@/components/description-list';
+import { CardLayout } from '@/components/card-layout';
 import { LoadFailure } from '@/components/domain/query/load-state';
 import { SsoSettings } from '@/components/domain/sso/sso-settings';
 import { PageLayout } from '@/components/page-layout';
-import { Section } from '@/components/section';
+import { PropertyList, PropertyRow } from '@/components/property-list';
 import { ThemePicker } from '@/components/ui/theme-picker';
 import { PALETTE_PREFERENCES } from '@/components/ui/theme-preference-base';
 import { MeDocument } from '@/lib/graphql';
@@ -24,27 +24,27 @@ export default function SettingsScreen() {
       contentClassName="gap-6 py-6"
       contentSlot={
         <>
-          <Section
-            surface="card"
+          <CardLayout
+            level={2}
             title="Theme"
             description="System follows whatever your operating system is set to. A dark-only palette, such as Monokai, keeps the page dark whatever the theme says."
             contentSlot={<ThemePicker palettes={PALETTE_PREFERENCES} />}
           />
-          <Section
-            surface="card"
+          <CardLayout
+            level={2}
             title="Account"
             description="Sign in with a link sent to this address."
             contentSlot={
               error && me === undefined ? (
                 <LoadFailure error={error} onRetry={() => refetch()} what="your account" compact />
               ) : (
-                <DescriptionList contentSlot={[<PropertyRow key="email" label="Email" value={email} />]} />
+                <PropertyList contentSlot={[<PropertyRow key="email" label="Email" value={email} />]} />
               )
             }
           />
           {me?.isAdmin ? (
-            <Section
-              surface="card"
+            <CardLayout
+              level={2}
               title="Sign-in"
               description="People can always sign in with an emailed link. An OpenID Connect provider adds a button for it on the login page."
               contentSlot={<SsoSettings />}

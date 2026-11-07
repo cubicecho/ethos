@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text } from 'react-native';
 import { useAppForm } from '@/components/app-form';
-import { CenteredLayout } from '@/components/centered-layout';
+import { CenteredCardLayout } from '@/components/centered-card-layout';
 import { PairSsoForm } from '@/components/domain/sso/sso-settings';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -122,7 +122,7 @@ export default function LoginScreen() {
   );
 
   return (
-    <CenteredLayout
+    <CenteredCardLayout
       className="bg-background"
       level={1}
       title="Ethos"

@@ -5,7 +5,7 @@ import { CalendarCheck } from '@/components/app-icons';
 import { HabitFormDialog } from '@/components/domain/habit/habit-form-dialog';
 import { HabitRow } from '@/components/domain/habit/habit-row';
 import { LoadState } from '@/components/domain/query/load-state';
-import { EmptyState } from '@/components/page';
+import { EmptyState } from '@/components/empty-state';
 import { PageLayout } from '@/components/page-layout';
 import { Button } from '@/components/ui/button';
 import { Plus } from '@/components/ui/icons';
@@ -60,7 +60,7 @@ export default function TodayScreen() {
               count={habits.length}
               emptySlot={
                 <EmptyState
-                  icon={CalendarCheck}
+                  iconSlot={<CalendarCheck />}
                   title="Nothing to keep yet"
                   description="A habit is a thing you mean to do, and how often. Start with one."
                   actionSlot={<Button onPress={() => setIsCreating(true)} content="Create a habit" />}

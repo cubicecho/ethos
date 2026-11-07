@@ -1,14 +1,14 @@
 import { useQuery } from '@apollo/client';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { ActionButton } from '@/components/action-button';
 import { BackToTodayLink } from '@/components/domain/habit/back-to-today-link';
 import { HabitOverview } from '@/components/domain/habit/habit-overview';
 import { useMarkHabitOverview } from '@/components/domain/habit/use-mark-habit';
 import { LoadState } from '@/components/domain/query/load-state';
-import { EmptyState } from '@/components/page';
+import { EmptyState } from '@/components/empty-state';
 import { PageLayout } from '@/components/page-layout';
 import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Calendar, ChevronLeft, ChevronRight } from '@/components/ui/icons';
 import { SegmentedButton, SegmentedGroup } from '@/components/ui/segmented';
 import { asPeriod } from '@/lib/cadence';
@@ -63,15 +63,15 @@ export default function OverviewScreen() {
             <SegmentedButton value={Period.Month}>Month</SegmentedButton>
           </SegmentedGroup>
           <View className="flex-row items-center gap-1">
-            <ActionButton
-              label={`Previous ${SPAN_NAME[span]}`}
+            <Button
+              aria-label={`Previous ${SPAN_NAME[span]}`}
               variant="outline"
               size="icon-sm"
               onPress={() => setSpansBack(spansBack + 1)}
               iconSlot={<ChevronLeft />}
             />
-            <ActionButton
-              label={`Next ${SPAN_NAME[span]}`}
+            <Button
+              aria-label={`Next ${SPAN_NAME[span]}`}
               variant="outline"
               size="icon-sm"
               disabled={isThisSpan}
@@ -91,7 +91,7 @@ export default function OverviewScreen() {
             count={habits.length}
             emptySlot={
               <EmptyState
-                icon={Calendar}
+                iconSlot={<Calendar />}
                 title="Nothing to look over yet"
                 description="Every habit you keep gets a row here, and every day a square."
                 actionSlot={<BackToTodayLink />}

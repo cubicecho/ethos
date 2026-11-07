@@ -2,12 +2,12 @@ import { useMutation } from '@apollo/client';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text } from 'react-native';
-import { ActionButton } from '@/components/action-button';
 import { Archive, ArchiveRestore } from '@/components/app-icons';
 import { ConfirmButton } from '@/components/confirm-button';
 import { PageLayout } from '@/components/page-layout';
 import { StatTile } from '@/components/stat-tile';
 import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
 import { Pencil, Trash2 } from '@/components/ui/icons';
 import { placeHabit, removeHabit } from '@/lib/cache';
@@ -90,22 +90,22 @@ export function HabitPage({
         iconSlot={<ColorDot color={habit.color} />}
         actionSlot={
           <>
-            <ActionButton
-              label="Edit habit"
+            <Button
+              aria-label="Edit habit"
               variant="outline"
               size="icon"
               onPress={() => setIsEditing(true)}
               iconSlot={<Pencil />}
             />
-            <ActionButton
-              label={isArchived ? 'Restore habit' : 'Archive habit'}
+            <Button
+              aria-label={isArchived ? 'Restore habit' : 'Archive habit'}
               variant="outline"
               size="icon"
               onPress={() => void setArchived(isArchived === false)}
               iconSlot={isArchived ? <ArchiveRestore /> : <Archive />}
             />
             <ConfirmButton
-              label="Delete habit"
+              aria-label="Delete habit"
               variant="destructive-outline"
               size="icon"
               iconSlot={<Trash2 />}

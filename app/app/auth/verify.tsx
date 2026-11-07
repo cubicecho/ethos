@@ -1,7 +1,7 @@
 import { useMutation } from '@apollo/client';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { CenteredLayout } from '@/components/centered-layout';
+import { CenteredCardLayout } from '@/components/centered-card-layout';
 import { CircleAlert } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/spinner';
 import { setToken } from '@/lib/auth';
@@ -39,7 +39,7 @@ export default function VerifyScreen() {
 
   if (failure) {
     return (
-      <CenteredLayout
+      <CenteredCardLayout
         className="bg-background"
         level={1}
         iconSlot={<CircleAlert className="size-4" />}
@@ -54,5 +54,5 @@ export default function VerifyScreen() {
     );
   }
 
-  return <CenteredLayout className="bg-background" level={1} iconSlot={<Spinner />} title="Signing you in…" />;
+  return <CenteredCardLayout className="bg-background" level={1} iconSlot={<Spinner />} title="Signing you in…" />;
 }

@@ -1,10 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
-import { ActionButton } from '@/components/action-button';
 import { Minimize2, SkipForward } from '@/components/app-icons';
 import { ListItem } from '@/components/list-item';
 import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Check } from '@/components/ui/icons';
 import { asPeriod, describeCadence, describeProgress } from '@/lib/cadence';
@@ -54,8 +54,8 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
         )}
         onPress={() => router.push(habitPath(habit.id))}
         leadingSlot={
-          <ActionButton
-            label={isDone ? `Undo ${habit.name} for today` : `Mark ${habit.name} kept today`}
+          <Button
+            aria-label={isDone ? `Undo ${habit.name} for today` : `Mark ${habit.name} kept today`}
             aria-pressed={isDone}
             disabled={isPending}
             variant="outline"
@@ -79,8 +79,8 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
           <View className="flex-row items-center gap-1">
             {/* A second way of keeping the day, not a third state: it opens a
                 note, and the tick beside the name is still what undoes it. */}
-            <ActionButton
-              label={
+            <Button
+              aria-label={
                 isSmaller
                   ? `Reword the smaller version of ${habit.name} today`
                   : `Did a smaller version of ${habit.name} today`
@@ -92,8 +92,8 @@ export function HabitRow({ habit, today }: { habit: HabitSummary; today: string 
               onPress={() => setIsNoting(true)}
               iconSlot={<Minimize2 />}
             />
-            <ActionButton
-              label={isSkipped ? `Un-skip ${habit.name} today` : `Skip ${habit.name} today`}
+            <Button
+              aria-label={isSkipped ? `Un-skip ${habit.name} today` : `Skip ${habit.name} today`}
               aria-pressed={isSkipped}
               disabled={isPending}
               variant={isSkipped ? 'secondary' : 'outline'}

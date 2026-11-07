@@ -248,11 +248,21 @@ describe('HabitFormDialog creating a habit', () => {
   it('closes without sending when cancelled', async () => {
     const { onOpenChange, user } = renderDialog();
 
-    await user.type(nameField(), 'Run');
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(onOpenChange).toHaveBeenCalledExactlyOnceWith(false);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('asks before a cancel throws away what was typed', async () => {
+    const { onOpenChange, user } = renderDialog();
+
+    await user.type(nameField(), 'Run');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    await user.click(await screen.findByRole('button', { name: 'Discard' }));
+    expect(onOpenChange).toHaveBeenCalledExactlyOnceWith(false);
   });
 });
 

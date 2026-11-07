@@ -21,12 +21,13 @@ WORKDIR /app
 
 # Only the runtime workspaces are installed. Copying the built image wholesale
 # would drag in Expo and Metro — hundreds of megabytes that exist to produce
-# app/dist and are useless once it exists.
+# app/dist and are useless once it exists. No install script is needed here:
+# the root postinstall patches react-native-css, which is not in this tree.
 COPY package.json package-lock.json ./
 COPY db/package.json db/
 COPY server/package.json server/
 COPY app/package.json app/
-RUN npm ci --omit=dev --include-workspace-root --workspace @ethos/db --workspace @ethos/server \
+RUN npm ci --omit=dev --ignore-scripts --include-workspace-root --workspace @ethos/db --workspace @ethos/server \
  && npm cache clean --force
 
 # The server is not compiled: it runs its TypeScript sources directly under
