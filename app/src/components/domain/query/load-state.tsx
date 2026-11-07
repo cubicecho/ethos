@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react';
-import { QueryError, QueryState } from '@/components/query-state';
+import { LoadState as CubeuiLoadState, LoadError, type LoadStateProps } from '@/components/load-state';
 import { describeError } from '@/lib/errors';
 
 /**
@@ -7,13 +7,16 @@ import { describeError } from '@/lib/errors';
  *
  * An empty state means the server said "none", never that we failed to ask, and
  * a failure the reader can only answer by reloading is barely better than a
- * blank page. This is cubeui's `QueryError` worded through `describeError`, so
+ * blank page. This is cubeui's `LoadError` worded through `describeError`, so
  * the reader sees "Your session has expired" rather than the transport's status
  * code. A list takes `LoadState`, which adds the loading and empty rungs.
  */
-export function LoadFailure(props: Omit<ComponentProps<typeof QueryError>, 'describe'>) {
-  return <QueryError describe={describeError} {...props} />;
+export function LoadFailure(props: Omit<ComponentProps<typeof LoadError>, 'describe'>) {
+  return <LoadError describe={describeError} {...props} />;
 }
+
+/** `Omit` over each arm of a union, where the plain one would merge the arms into one. */
+type OmitEach<Props, Key extends PropertyKey> = Props extends unknown ? Omit<Props, Key> : never;
 
 /** What `LoadState` reads off an Apollo `useQuery` result. */
 type ApolloResult = {
@@ -24,7 +27,7 @@ type ApolloResult = {
 };
 
 /**
- * cubeui's `QueryState` over an Apollo result: failed, loading, or empty,
+ * cubeui's `LoadState` over an Apollo result: failed, loading, or empty,
  * worded like `LoadFailure`, and nothing once there are rows.
  *
  * Pending and failed both mean *nothing to show*, not merely that a request is
@@ -36,10 +39,10 @@ type ApolloResult = {
 export function LoadState({
   query,
   ...props
-}: Omit<ComponentProps<typeof QueryState>, 'describe' | 'query'> & { query: ApolloResult }) {
+}: OmitEach<LoadStateProps, 'describe' | 'query'> & { query: ApolloResult }) {
   const nothing = query.data === undefined;
   return (
-    <QueryState
+    <CubeuiLoadState
       query={{
         isPending: query.loading && nothing,
         isError: query.error != null && nothing,

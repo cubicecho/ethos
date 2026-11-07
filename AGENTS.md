@@ -344,9 +344,9 @@ disable while the mutation is in flight instead. A create is still optimistic â€
 what a new habit's fields are is not in question.
 
 **An empty state means the server said "none", never that we failed to ask.**
-A list renders `LoadState` from `domain/query/load-state.tsx` (cubeui's `QueryState` over
+A list renders `LoadState` from `domain/query/load-state.tsx` (cubeui's `LoadState` over
 an Apollo result) and hands it the empty state as `emptySlot`; a single failure
-renders `LoadFailure` (cubeui's `QueryError`). The ordering is the rule, and
+renders `LoadFailure` (cubeui's `LoadError`). The ordering is the rule, and
 `LoadState` is what keeps it: the failure rung comes *before* the empty one, and
 both come after "we have rows, show them", so a refetch that fails while good
 data is on screen leaves the good data alone. Mutations follow the same rule from the other side â€” every one
@@ -425,7 +425,7 @@ a value it failed to read.
   `width="page"` because a month of squares is wider than the reading column. The `(app)` shell's main does not
   scroll; the `PageLayout` body does, so the header stays put. A habit's header
   is `HabitPage` in `domain/habit/habit-page.tsx`. A screen whose whole content
-  is "nothing here" or "that failed" is `EmptyState` (from `page.tsx`), not a
+  is "nothing here" or "that failed" is `EmptyState` (from `empty-state.tsx`), not a
   hand-built column.
 - `import './core/preflight.ts';` stays first in `server/src/index.ts`, separated by a
   blank line so Biome's import sorting leaves it there. It has to run before

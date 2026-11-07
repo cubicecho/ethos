@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { Archive, CalendarCheck, LogOut } from '@/components/app-icons';
 import { HabitFormDialog } from '@/components/domain/habit/habit-form-dialog';
 import { LoadState } from '@/components/domain/query/load-state';
-import { EmptyState } from '@/components/page';
-import { Sidebar, SidebarNavItem, SidebarSection } from '@/components/sidebar';
+import { EmptyState } from '@/components/empty-state';
+import { Sidebar, SidebarItem, SidebarSection } from '@/components/sidebar';
 import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
 import { Calendar, Plus, Settings } from '@/components/ui/icons';
@@ -60,10 +60,10 @@ export function AppSidebar() {
               label="Main"
               contentSlot={[
                 <Link key="today" href="/" asChild>
-                  <SidebarNavItem label="Today" iconSlot={<CalendarCheck />} active={pathname === '/'} />
+                  <SidebarItem label="Today" iconSlot={<CalendarCheck />} active={pathname === '/'} />
                 </Link>,
                 <Link key="overview" href="/overview" asChild>
-                  <SidebarNavItem label="Overview" iconSlot={<Calendar />} active={pathname === '/overview'} />
+                  <SidebarItem label="Overview" iconSlot={<Calendar />} active={pathname === '/overview'} />
                 </Link>,
               ]}
             />
@@ -85,7 +85,7 @@ export function AppSidebar() {
               }
               contentSlot={habits.map((habit) => (
                 <Link key={habit.id} href={habitPath(habit.id)} asChild>
-                  <SidebarNavItem
+                  <SidebarItem
                     label={habit.name}
                     // The habit's colour is how it is recognised everywhere else.
                     // A dot, because filled rows would make the sidebar a colour chart.
@@ -104,15 +104,15 @@ export function AppSidebar() {
               label="More"
               contentSlot={[
                 <Link key="archive" href="/archive" asChild>
-                  <SidebarNavItem label="Archive" iconSlot={<Archive />} active={pathname === '/archive'} />
+                  <SidebarItem label="Archive" iconSlot={<Archive />} active={pathname === '/archive'} />
                 </Link>,
                 <Link key="settings" href="/settings" asChild>
-                  <SidebarNavItem label="Settings" iconSlot={<Settings />} active={pathname === '/settings'} />
+                  <SidebarItem label="Settings" iconSlot={<Settings />} active={pathname === '/settings'} />
                 </Link>,
               ]}
             />
             {/* A button, not a link: it does something rather than going somewhere. */}
-            <SidebarNavItem label="Sign out" iconSlot={<LogOut />} onPress={signOut} />
+            <SidebarItem label="Sign out" iconSlot={<LogOut />} onPress={signOut} />
           </>
         }
       />

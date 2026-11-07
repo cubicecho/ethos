@@ -6,7 +6,7 @@ import { HabitPage } from '@/components/domain/habit/habit-page';
 import { SmallerVersions } from '@/components/domain/habit/smaller-versions';
 import { useMarkHabitDay } from '@/components/domain/habit/use-mark-habit';
 import { LoadState } from '@/components/domain/query/load-state';
-import { EmptyState } from '@/components/page';
+import { EmptyState } from '@/components/empty-state';
 import { PageLayout } from '@/components/page-layout';
 import { Section } from '@/components/section';
 import { Alert } from '@/components/ui/alert';
@@ -39,7 +39,7 @@ export default function HabitScreen() {
             count={0}
             emptySlot={
               <EmptyState
-                icon={Search}
+                iconSlot={<Search />}
                 title="That habit doesn't exist, or isn't yours."
                 actionSlot={<BackToTodayLink />}
               />
