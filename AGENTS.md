@@ -420,6 +420,9 @@ a value it failed to read.
   `form.AppField` with a `validators` rule, `field.*` for the control, and
   `form.SubmitButton` for the disabled state. Not `useState` and a
   hand-computed `canSubmit`.
+- A form in a dialog is cubeui's `DialogLayout`: the `Form` in `wrapperSlot`, so the
+  footer's submit is inside it, a Cancel on the `close` it is handed, and
+  `hasUnsavedChanges` so leaving with typed work asks first.
 - Every screen in `(app)` is a cubeui `PageLayout`: title, description and
   actions in its header, `width="prose"` — except the overview, which is
   `width="page"` because a month of squares is wider than the reading column. The `(app)` shell's main does not

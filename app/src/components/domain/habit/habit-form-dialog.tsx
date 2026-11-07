@@ -1,10 +1,12 @@
 import { useMutation } from '@apollo/client';
 import { useEffect } from 'react';
 import { useAppForm } from '@/components/app-form';
-import { RadioGroupField, type RadioOption } from '@/components/radio-group-field';
+import { DialogLayout } from '@/components/dialog-layout';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { isHexColor } from '@/components/ui/color-picker';
 import { Form } from '@/components/ui/form';
-import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
+import { RadioGroupField, type RadioOption } from '@/components/ui/radio-group-field';
 import { placeHabit } from '@/lib/cache';
 import { asPeriod, describeCadence, isPeriod, maxTargetFor } from '@/lib/cadence';
 import { describeError } from '@/lib/errors';
@@ -129,7 +131,7 @@ export function HabitFormDialog({
         });
       }
     } catch {
-      // The mutation rejects as well as setting `error`. Stay open: the footer
+      // The mutation rejects as well as setting `error`. Stay open: the alert
       // says why, and what was typed is still in the fields.
       return;
     }
@@ -139,14 +141,21 @@ export function HabitFormDialog({
   const error = createError ?? updateError;
 
   return (
-    <FormDialog
+    <DialogLayout
       open={open}
       onOpenChange={onOpenChange}
       title={habit ? 'Edit habit' : 'New habit'}
       description="A habit is a thing you mean to do, and how often. Nothing more."
-    >
-      <form.AppForm>
-        <Form className="gap-4">
+      hasUnsavedChanges={() => form.state.isDefaultValue === false}
+      // Around the header, the body and the footer, so the submit is inside the form it submits.
+      wrapperSlot={(parts, { className }) => (
+        <form.AppForm>
+          <Form className={className}>{parts}</Form>
+        </form.AppForm>
+      )}
+      contentClassName="gap-4"
+      contentSlot={
+        <>
           <form.AppField
             name="name"
             validators={{ onChange: ({ value }) => (value.trim() === '' ? 'Give the habit a name.' : undefined) }}
@@ -236,11 +245,15 @@ export function HabitFormDialog({
             {(field) => <field.ColorField label="Colour" colors={PALETTE} />}
           </form.AppField>
 
-          <FormDialogFooter onCancel={() => onOpenChange(false)} error={error ? describeError(error) : null}>
-            <form.SubmitButton isEdit={habit !== undefined} editLabel="Save" />
-          </FormDialogFooter>
-        </Form>
-      </form.AppForm>
-    </FormDialog>
+          {error ? <Alert variant="destructive" description={describeError(error)} /> : null}
+        </>
+      }
+      footerActionsSlot={(close) => (
+        <>
+          <Button variant="outline" onPress={close} content="Cancel" />
+          <form.SubmitButton isEdit={habit !== undefined} editLabel="Save" />
+        </>
+      )}
+    />
   );
 }

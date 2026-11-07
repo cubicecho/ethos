@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
 import { useAppForm } from '@/components/app-form';
+import { DialogLayout } from '@/components/dialog-layout';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
-import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 
 /** Asks what was done instead, for a day kept as a smaller version of the habit. */
 export function SmallerVersionDialog({
@@ -26,7 +28,7 @@ export function SmallerVersionDialog({
     defaultValues: { note: note ?? '' },
     onSubmit: async ({ value }) => {
       const text = value.note.trim();
-      // Stays open on a refusal: the footer says why, and the note is still typed.
+      // Stays open on a refusal: the alert under the field says why, and the note is still typed.
       if (await onSubmit(text === '' ? null : text)) {
         onOpenChange(false);
       }
@@ -40,24 +42,35 @@ export function SmallerVersionDialog({
   }, [open, note, form]);
 
   return (
-    <FormDialog
+    <DialogLayout
       open={open}
       onOpenChange={onOpenChange}
       title="A smaller version"
       description={`Counts as keeping “${habitName}” today. The note is for you to read back.`}
-    >
-      <form.AppForm>
-        <Form className="gap-4">
+      hasUnsavedChanges={() => form.state.isDefaultValue === false}
+      // Around the header, the body and the footer, so the submit is inside the form it submits.
+      wrapperSlot={(parts, { className }) => (
+        <form.AppForm>
+          <Form className={className}>{parts}</Form>
+        </form.AppForm>
+      )}
+      contentClassName="gap-4"
+      contentSlot={
+        <>
           <form.AppField name="note">
             {(field) => (
               <field.InputField label="What did you do?" autoFocus placeholder="One page instead of a chapter." />
             )}
           </form.AppField>
-          <FormDialogFooter onCancel={() => onOpenChange(false)} error={error}>
-            <form.SubmitButton createLabel="Keep the day" />
-          </FormDialogFooter>
-        </Form>
-      </form.AppForm>
-    </FormDialog>
+          {error ? <Alert variant="destructive" description={error} /> : null}
+        </>
+      }
+      footerActionsSlot={(close) => (
+        <>
+          <Button variant="outline" onPress={close} content="Cancel" />
+          <form.SubmitButton createLabel="Keep the day" />
+        </>
+      )}
+    />
   );
 }
