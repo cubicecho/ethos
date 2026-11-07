@@ -39,7 +39,7 @@
       "includes": [
         "**/components/ui/**",
         "app/src/components/*.tsx",
-        "app/src/lib/{cubeui-theme,utils,readable-text-color,color,format}.ts",
+        "app/src/lib/{cubeui-theme,utils,readable-text-color,color,format,bottom-bar,error-message,form-binding,frame-focus-guard,number-draft,select-options,web-as.d}.ts",
         "app/cubeui-tokens.css"
       ],
       "linter": { "enabled": false },
