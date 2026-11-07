@@ -113,7 +113,6 @@ export function SsoSettings() {
         </View>
         {setup.source === 'PAIRED' ? (
           <ConfirmButton
-            label="Disconnect"
             content="Disconnect"
             variant="destructive-outline"
             loading={loading}

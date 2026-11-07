@@ -1,6 +1,6 @@
 import type { MockedResponse } from '@apollo/client/testing';
 import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClearHabitDocument, MarkHabitDocument } from '@/lib/graphql';
 import { entry, habit, renderWithApollo, TODAY, tally } from '../../__tests__/helpers';
@@ -142,9 +142,12 @@ describe('HabitRow', () => {
     await userEvent.click(done(/^Mark Read kept today$/));
 
     // Asserted by what the presses do: a second request would find no mock
-    // left, and the row would read that failure out.
-    await userEvent.click(done(/^Skip Read today$/));
-    await userEvent.click(done(/^Mark Read kept today$/));
+    // left, and the row would read that failure out. A disabled button takes no
+    // pointer events, so the presses go through without user-event's check.
+    expect(done(/^Skip Read today$/)).toBeDisabled();
+    const presser = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
+    await presser.click(done(/^Skip Read today$/));
+    await presser.click(done(/^Mark Read kept today$/));
     expect(result).not.toHaveBeenCalled();
 
     await waitFor(() => expect(result).toHaveBeenCalledTimes(1), { timeout: IN_FLIGHT_MS * 3 });
