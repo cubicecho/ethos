@@ -1,3 +1,10 @@
+## [5.2.1](https://github.com/cubicecho/ethos/compare/v5.2.0...v5.2.1) (2026-11-09)
+
+
+### Bug Fixes
+
+* **app:** reinstall cubeui segmented for the 40px strip, and drop the touchTarget workaround ([7da0c42](https://github.com/cubicecho/ethos/commit/7da0c4279d47860db9f62ae8df231847180ead65)), closes [cubeui#540](https://github.com/cubeui/issues/540) [cubeui#541](https://github.com/cubeui/issues/541)
+
 # [5.2.0](https://github.com/cubicecho/ethos/compare/v5.1.1...v5.2.0) (2026-10-20)
 
 
