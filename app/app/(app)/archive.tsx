@@ -1,13 +1,13 @@
 import { useQuery } from '@apollo/client';
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
-import { Archive } from '@/components/app-icons';
 import { BackToTodayLink } from '@/components/domain/habit/back-to-today-link';
 import { LoadState } from '@/components/domain/query/load-state';
 import { EmptyState } from '@/components/empty-state';
 import { ListItem } from '@/components/list-item';
 import { PageLayout } from '@/components/page-layout';
 import { ColorDot } from '@/components/ui/color-dot';
+import { Archive } from '@/components/ui/icons';
 import { asPeriod, describeCadence } from '@/lib/cadence';
 import { ArchivedHabitsDocument } from '@/lib/graphql';
 import { habitPath } from '@/lib/habits';
