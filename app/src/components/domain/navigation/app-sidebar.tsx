@@ -1,14 +1,14 @@
 import { useMutation, useQuery } from '@apollo/client';
 import { Link, usePathname } from 'expo-router';
 import { useState } from 'react';
-import { Archive, CalendarCheck, LogOut } from '@/components/app-icons';
+import { CalendarCheck } from '@/components/app-icons';
 import { HabitFormDialog } from '@/components/domain/habit/habit-form-dialog';
 import { LoadState } from '@/components/domain/query/load-state';
 import { EmptyState } from '@/components/empty-state';
 import { Sidebar, SidebarItem, SidebarSection } from '@/components/sidebar';
 import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
-import { Calendar, Plus, Settings } from '@/components/ui/icons';
+import { Archive, Calendar, LogOut, Plus, Settings } from '@/components/ui/icons';
 import { clearToken } from '@/lib/auth';
 import { HabitsDocument, SignOutDocument } from '@/lib/graphql';
 import { habitPath, nextPosition } from '@/lib/habits';

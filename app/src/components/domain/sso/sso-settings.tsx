@@ -60,7 +60,7 @@ export function PairSsoForm({ onPaired }: PairSsoFormProps) {
             />
           )}
         </form.AppField>
-        <form.SubmitButton createLabel="Connect" savingLabel="Connecting…" />
+        <form.SubmitButton createLabel="Connect" loadingLabel="Connecting…" />
       </Form>
     </form.AppForm>
   );

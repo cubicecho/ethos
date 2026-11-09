@@ -3,12 +3,13 @@ import { type ErrorBoundaryProps, Stack } from 'expo-router';
 import { Text, View } from 'react-native';
 import { ErrorPage } from '@/components/error-page';
 import { Button } from '@/components/ui/button';
+import { OverlayHost } from '@/components/ui/overlay';
 import { PaletteProvider, useThemePreference } from '@/components/ui/theme-preference';
 import { client } from '@/lib/apollo';
 import { describeError } from '@/lib/errors';
 import '../global.css';
 
-/** The root of every route: the theme and the Apollo client around the stack. */
+/** The root of every route: the theme, the overlay layer and the Apollo client around the stack. */
 export default function RootLayout() {
   // `public/index.html` has already painted the right theme; this keeps it on
   // every screen and repaints a `system` user when the OS switches.
@@ -16,9 +17,13 @@ export default function RootLayout() {
 
   return (
     <PaletteProvider>
-      <ApolloProvider client={client}>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }} />
-      </ApolloProvider>
+      {/* The layer tooltips are drawn in on device, over the screen rather than inside a
+          `ScrollView` that would clip them. The app has no `ToastProvider` to draw it. */}
+      <OverlayHost>
+        <ApolloProvider client={client}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }} />
+        </ApolloProvider>
+      </OverlayHost>
     </PaletteProvider>
   );
 }

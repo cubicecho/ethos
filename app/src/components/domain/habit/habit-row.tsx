@@ -1,12 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
-import { Minimize2, SkipForward } from '@/components/app-icons';
+import { Minimize2 } from '@/components/app-icons';
 import { ListItem } from '@/components/list-item';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Check } from '@/components/ui/icons';
+import { Check, SkipForward } from '@/components/ui/icons';
 import { asPeriod, describeCadence, describeProgress } from '@/lib/cadence';
 import { joinStats } from '@/lib/format';
 import { habitPath } from '@/lib/habits';
