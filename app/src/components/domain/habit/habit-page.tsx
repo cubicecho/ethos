@@ -84,7 +84,7 @@ export function HabitPage({
       <PageLayout
         width="prose"
         title={habit.name}
-        description={joinStats(describeCadence(period, habit.targetCount), isArchived && 'Archived')}
+        description={joinStats(describeCadence(period, habit.targetCount, habit.dailyAmount), isArchived && 'Archived')}
         // The habit's colour is how it is recognised on every other screen.
         iconSlot={<ColorDot color={habit.color} />}
         actionSlot={

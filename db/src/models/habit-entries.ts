@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { boolean, check, date, index, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { boolean, check, date, index, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
 import { habits } from './habits.ts';
 import { users } from './users.ts';
@@ -34,6 +34,11 @@ export const habitEntries = pgTable(
     // A smaller version of the habit than was meant. Still `done`, so every tally
     // counts it whole: this is for the keeper to read back, not for the arithmetic.
     partial: boolean('partial').notNull().default(false),
+    // How much of the habit was done that day, as an absolute value, and the
+    // habit's daily amount when it was written, so "5 of 8" stays true after the
+    // habit asks for more. Both are a neutral 1 on a skip, where they mean nothing.
+    amount: integer('amount').notNull().default(1),
+    dailyAmount: integer('daily_amount').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()
@@ -49,6 +54,13 @@ export const habitEntries = pgTable(
     index('idx_habit_entries_day').on(table.day),
     check('ck_habit_entries_status', sql`${table.status} in ('done', 'skipped')`),
     check('ck_habit_entries_partial', sql`${table.partial} = false or ${table.status} = 'done'`),
+    // No ceiling at the goal: doing more than was asked is allowed, and recorded.
+    check('ck_habit_entries_amount_positive', sql`${table.amount} >= 1`),
+    // A kept day short of its amount is a smaller version, whatever the caller said.
+    check(
+      'ck_habit_entries_short_is_partial',
+      sql`${table.status} <> 'done' or ${table.amount} >= ${table.dailyAmount} or ${table.partial}`,
+    ),
   ],
 );
 

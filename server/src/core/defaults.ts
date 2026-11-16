@@ -108,6 +108,11 @@ export interface HabitSettings {
   maxNoteLength: number;
   /** The longest cue a habit may have: one line, not a second note. */
   maxCueLength: number;
+  /**
+   * The most a habit may ask for in one day, and the most one day may record.
+   * High on purpose: a step count is a daily amount too.
+   */
+  maxAmount: number;
 }
 
 export const HABIT_DEFAULTS: Readonly<HabitSettings> = Object.freeze({
@@ -117,6 +122,7 @@ export const HABIT_DEFAULTS: Readonly<HabitSettings> = Object.freeze({
   maxNameLength: 120,
   maxNoteLength: 2_000,
   maxCueLength: 200,
+  maxAmount: 100_000,
 });
 
 export interface OperationLimitSettings {
@@ -128,7 +134,10 @@ export interface OperationLimitSettings {
   maxDepth: number;
   /** How many aliases one operation may use. An alias is how one request asks for a field many times. */
   maxAliases: number;
-  /** The most one operation may cost: roughly the fields it could return, lists priced by their `limit`. */
+  /**
+   * The most one operation may cost: roughly the fields it could return, lists priced by their `limit`.
+   * The app's widest read is the overview: a page of habits, each with a month of days.
+   */
   maxCost: number;
   /** What a field costs when the schema states no price for it. */
   defaultFieldCost: number;
@@ -139,6 +148,6 @@ export const OPERATION_LIMIT_DEFAULTS: Readonly<OperationLimitSettings> = Object
   maxPageSize: 500,
   maxDepth: 8,
   maxAliases: 15,
-  maxCost: 10_000,
+  maxCost: 15_000,
   defaultFieldCost: 1,
 });

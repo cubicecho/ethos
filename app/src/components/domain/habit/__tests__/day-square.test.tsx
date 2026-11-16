@@ -74,6 +74,23 @@ describe('DaySquare', () => {
     expect(onValueChange).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { measure: { partial: true, amount: 5, dailyAmount: 8 }, state: /— kept, 5 of 8, smaller version$/ },
+    { measure: { partial: false, amount: 8, dailyAmount: 8 }, state: /— kept, 8 of 8$/ },
+    // Past the goal is recorded as it was, and read as the goal met.
+    { measure: { partial: false, amount: 10, dailyAmount: 8 }, state: /— kept, 8 of 8$/ },
+    { measure: { partial: true, amount: 1, dailyAmount: 1 }, state: /— kept, smaller version$/ },
+    { measure: { partial: false, amount: 1, dailyAmount: 1 }, state: /— kept$/ },
+  ])('says how much a kept day held: $state', ({ measure, state }) => {
+    const { square } = renderSquare({ value: 'done', measure });
+    expect(square).toHaveAccessibleName(state);
+  });
+
+  it('says no amount on a skipped day', () => {
+    const { square } = renderSquare({ value: 'skipped', measure: { partial: false, amount: 1, dailyAmount: 1 } });
+    expect(square).toHaveAccessibleName(/— skipped$/);
+  });
+
   it('keeps today pressable and saying its own state', () => {
     // Today is an outline, not a state: a kept today still reads as kept.
     const { square } = renderSquare({ isToday: true, value: 'done' });

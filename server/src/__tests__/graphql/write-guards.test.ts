@@ -192,6 +192,38 @@ describe('cadence, however the write arrives', () => {
   });
 });
 
+describe('a daily amount, however the write arrives', () => {
+  const CREATE_AMOUNT = `mutation ($values: CreateHabitInput!) { createHabit(values: $values) { id dailyAmount } }`;
+
+  it('lets a daily habit ask for more than one of something a day', async () => {
+    // The amount is a separate axis from the target, which counts days: a daily
+    // habit is still kept once a day, and that day holds eight glasses.
+    const data = await mine.expectOk(CREATE_AMOUNT, { values: { name: 'Water', period: 'day', dailyAmount: 8 } });
+    expect(data.createHabit.dailyAmount).toBe(8);
+  });
+
+  it('accepts the cap, and refuses one past it on create and update', async () => {
+    const max = HABIT_DEFAULTS.maxAmount;
+    const id = (await mine.expectOk(CREATE_AMOUNT, { values: { name: 'Steps', dailyAmount: max } })).createHabit.id;
+
+    const created = await mine.expectError(CREATE_AMOUNT, { values: { name: 'More', dailyAmount: max + 1 } });
+    expect(created.code).toBe(ErrorCode.BadUserInput);
+    const updated = await mine.expectError(
+      `mutation ($id: UUID!, $amount: Int!) { updateHabit(set: { dailyAmount: $amount }, where: { id: { eq: $id } }) { id } }`,
+      { id, amount: max + 1 },
+    );
+    expect(updated.code).toBe(ErrorCode.BadUserInput);
+    const [row] = await db.select().from(dbSchema.habits).where(eq(dbSchema.habits.id, id));
+    expect(row.dailyAmount).toBe(max);
+  });
+
+  it('refuses a daily amount of nothing', async () => {
+    const error = await mine.expectError(CREATE_AMOUNT, { values: { name: 'Nothing', dailyAmount: 0 } });
+    expect(error.code).toBe(ErrorCode.BadUserInput);
+    expect(await db.select().from(dbSchema.habits)).toHaveLength(1);
+  });
+});
+
 describe('row scope', () => {
   it('hides another user’s habits from every read', async () => {
     expect(await mine.expectOk(`query { habits { id } habitEntries { id } }`)).toEqual({

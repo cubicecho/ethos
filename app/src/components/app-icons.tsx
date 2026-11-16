@@ -1,5 +1,6 @@
 import CalendarCheckSource from 'lucide-react-native/icons/calendar-check';
 import Minimize2Source from 'lucide-react-native/icons/minimize-2';
+import MinusSource from 'lucide-react-native/icons/minus';
 import { icon } from '@/components/ui/icons';
 
 /**
@@ -8,3 +9,4 @@ import { icon } from '@/components/ui/icons';
  */
 export const CalendarCheck = icon(CalendarCheckSource);
 export const Minimize2 = icon(Minimize2Source);
+export const Minus = icon(MinusSource);

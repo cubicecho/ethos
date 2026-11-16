@@ -177,7 +177,14 @@ nothing converts it on the way in or the way out, because a habit kept at 11pm o
 Tuesday is a Tuesday in the keeper's own zone and no server in another one gets
 to reinterpret it. `uq_habit_entries_day` makes one day one row, and `markHabit`
 upserts onto that constraint rather than reading first and writing after, so a
-double-click, two open tabs and a retried request are all the same tick.
+double-click, two open tabs and a retried request are all the same tick. The
+same goes for a day's `amount`: it is always the day's total, never a step of
+"one more", so sending it twice records it once.
+
+**`markHabit` rewrites the note on every write.** Insert and conflict-update both
+set `note` to what was sent, so a write that leaves `note` out wipes the day's.
+Anything that changes a kept day without meaning to touch its note — the
+stepper, rewording a smaller version's amount — sends the note it already has.
 
 **A skip is not a miss, and there are two of them.** A day you deliberately
 declined comes off what the period asked for; an untouched day is the miss. That
@@ -203,6 +210,24 @@ filled like any kept day and only its label says "smaller version".
 `ck_habit_entries_partial` refuses it on a skip, and `markHabit` resets it on
 every write, so a plain tick over a smaller version is a plain kept day again.
 
+A habit can ask for more than one of something a day — `habits.daily_amount`,
+"8 glasses" — and a kept day records how much it held in `habit_entries.amount`.
+A day short of its amount is a smaller version: `markHabit` stores `partial` as
+what the caller declared *or* an amount under the habit's, at write time, and
+`ck_habit_entries_short_is_partial` refuses a short kept day that is not one.
+`habit_entries.daily_amount` snapshots the habit's amount when the day was
+written, so "5 of 8" stays true after the habit asks for 10. An omitted `amount`
+on a kept day is the whole amount, which is what a plain tick and a tap on the
+grid send. A skip stores `amount = 1, daily_amount = 1`, which mean nothing on it.
+
+**An amount past the goal is recorded, and read as the goal met.** Doing more than
+the habit's daily amount is allowed and stored as sent — ten glasses on an
+eight-glass day is ten — and capped only by `HABIT_DEFAULTS.maxAmount`, set high
+for step counts. The app's copy of the cap is in `app/src/lib/defaults.ts`, and
+`cadence.test.ts` on the server fails when the two disagree. Everything that *reads* it as progress clamps at the goal through
+`describeAmount()` in `app/src/lib/cadence.ts`, so that day says "8 of 8". The
+stepper's own box shows the number that was typed.
+
 **Recording a day has no generated mutations.** `features` in `tenancy.ts` turns
 off insert/update/delete for `habitEntries` so every day goes through `markHabit`
 and `clearHabit`, which is where the day key and the skip cap live. A generated
@@ -219,6 +244,11 @@ deliberately not a `before` hook over the arguments: a write that changes only
 reading the arguments would wave through. The ceiling is measured against the
 *shortest* instance of a period, because a cadence that works in August and fails
 in February is a habit that breaks once a year for reasons nobody wrote down.
+The daily amount is a separate axis: `target_count` counts days, and
+`daily_amount` counts what one of them holds, so "8 a day on 5 days a week" is
+`period = week, targetCount = 5, dailyAmount = 8` and a daily habit may ask for 8.
+Its bounds (1 to `HABIT_DEFAULTS.maxAmount`) are checked in the `before` hook by
+`habitInput`, because, unlike the target, they depend on no other column.
 
 **Periods are ISO weeks, and all the arithmetic is UTC.** `server/src/habits/periods.ts`
 never constructs a local `Date`: `new Date('2026-09-17')` is UTC midnight, which
@@ -406,10 +436,12 @@ period's tally, and whether a skip is allowed at all is the cap's to say. Both
 are decided by the server from entries the list screens do not hold, and
 answering on the client would mean reimplementing `server/src/habits/tallies.ts`
 and the skip cap in the browser and keeping them in step. The controls
-disable while the mutation is in flight instead. A create is still optimistic —
-what a new habit's fields are is not in question. API keys are the other
-exception: the server mints a key and its id together, so a new key refetches
-the list, and a revoked one leaves the cache once the server has said it is gone.
+disable while the mutation is in flight instead, the amount stepper's `−`, box
+and `+` included — which is also what keeps two absolute totals from landing out
+of order. A create is still optimistic — what a new habit's fields are is not in
+question. API keys are the other exception: the server mints a key and its id
+together, so a new key refetches the list, and a revoked one leaves the cache
+once the server has said it is gone.
 
 **An empty state means the server said "none", never that we failed to ask.**
 A list renders `LoadState` from `domain/query/load-state.tsx` (cubeui's `LoadState` over

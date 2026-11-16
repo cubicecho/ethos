@@ -30,3 +30,15 @@ export const HISTORY_DEFAULTS: Readonly<HistorySettings> = Object.freeze({
   entryWindowDays: 400,
   dailyWeeks: 4,
 });
+
+export interface HabitSettings {
+  /**
+   * The most a habit may ask for in one day, and the most one day may record.
+   * The client's copy of the server's `HABIT_DEFAULTS.maxAmount`, which decides.
+   */
+  maxAmount: number;
+}
+
+export const HABIT_DEFAULTS: Readonly<HabitSettings> = Object.freeze({
+  maxAmount: 100_000,
+});

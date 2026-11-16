@@ -46,7 +46,7 @@ export default function ArchiveScreen() {
                 <View key={habit.id} role="listitem">
                   <ListItem
                     title={habit.name}
-                    description={describeCadence(asPeriod(habit.period), habit.targetCount)}
+                    description={describeCadence(asPeriod(habit.period), habit.targetCount, habit.dailyAmount)}
                     leadingSlot={<ColorDot color={habit.color} />}
                     onPress={() => router.push(habitPath(habit.id))}
                   />

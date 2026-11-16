@@ -56,12 +56,20 @@ export function nextStatus(current: DayStatus): DayStatus {
   return current === ENTRY_DONE ? ENTRY_SKIPPED : null;
 }
 
+/** What a day held, beyond its status: whether it was a smaller version, and how much of how much. */
+export type DayMeasure = Pick<HabitEntrySummary, 'partial' | 'amount' | 'dailyAmount'>;
+
 /**
- * The days kept as a smaller version of the habit.
+ * Each marked day's measure, by its day.
  *
  * @param entries - The entries to look through.
- * @returns Their days.
+ * @returns The measures, keyed by `YYYY-MM-DD`.
  */
-export function smallerDays(entries: readonly HabitEntrySummary[]): Set<string> {
-  return new Set(entries.filter((entry) => entry.partial).map((entry) => entry.day));
+export function dayMeasures(entries: readonly HabitEntrySummary[]): Map<string, DayMeasure> {
+  return new Map(
+    entries.map((entry) => [
+      entry.day,
+      { partial: entry.partial, amount: entry.amount, dailyAmount: entry.dailyAmount },
+    ]),
+  );
 }

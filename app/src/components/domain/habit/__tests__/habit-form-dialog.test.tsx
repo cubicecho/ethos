@@ -2,6 +2,7 @@ import type { MockedResponse } from '@apollo/client/testing';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, type Mock, vi } from 'vitest';
+import { describeAmountLimit, maxAmount } from '@/lib/cadence';
 import { CreateHabitDocument, UpdateHabitDocument } from '@/lib/graphql';
 import { PALETTE } from '@/lib/palette';
 import { habit, renderWithApollo, TODAY } from '../../__tests__/helpers';
@@ -54,6 +55,7 @@ function renderDialog(
 const nameField = () => screen.getByRole('textbox', { name: 'Name' });
 const cadence = (label: string) => screen.getByRole('radio', { name: label });
 const submit = (label = 'Create') => screen.getByRole('button', { name: label });
+const timesPerDay = () => screen.getByRole('spinbutton', { name: 'Times per day' });
 
 /**
  * What a mock was sent, once it has been sent.
@@ -85,11 +87,12 @@ async function refused(user: ReturnType<typeof userEvent.setup>, onOpenChange: (
 }
 
 describe('HabitFormDialog creating a habit', () => {
-  it('starts as a daily habit with no number to pick', () => {
+  it('starts as a daily habit, once a day, with no number of days to pick', () => {
     renderDialog();
     expect(screen.getByRole('dialog', { name: 'New habit' })).toBeInTheDocument();
     expect(cadence('Daily')).toBeChecked();
-    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+    expect(screen.queryByRole('spinbutton', { name: /^Times per (week|month)$/ })).not.toBeInTheDocument();
+    expect(timesPerDay()).toHaveValue(1);
   });
 
   it('sends a client-generated id with the new habit, and closes', async () => {
@@ -110,6 +113,7 @@ describe('HabitFormDialog creating a habit', () => {
         color: PALETTE[0],
         period: 'day',
         targetCount: 1,
+        dailyAmount: 1,
         position: 4,
       },
     });
@@ -218,6 +222,62 @@ describe('HabitFormDialog creating a habit', () => {
     expect(await sentTo(result)).toMatchObject({ values: { period: 'day', targetCount: 1 } });
   });
 
+  it('asks how many times a day on a daily habit, and says the whole cadence', async () => {
+    const { mock, result } = createMock();
+    const { user } = renderDialog({}, [mock]);
+
+    await user.type(nameField(), 'Water');
+    await user.clear(timesPerDay());
+    await user.type(timesPerDay(), '8');
+
+    expect(await screen.findByText('8× every day')).toBeInTheDocument();
+    await user.click(submit());
+    expect(await sentTo(result)).toMatchObject({ values: { period: 'day', targetCount: 1, dailyAmount: 8 } });
+  });
+
+  it('puts the amount beside the days on a weekly habit', async () => {
+    const { mock, result } = createMock();
+    const { user } = renderDialog({}, [mock]);
+
+    await user.type(nameField(), 'Water');
+    await user.click(cadence('Weekly'));
+    const days = screen.getByRole('spinbutton', { name: 'Times per week' });
+    await user.clear(days);
+    await user.type(days, '5');
+    await user.clear(timesPerDay());
+    await user.type(timesPerDay(), '8');
+
+    expect(await screen.findByText('8× a day, 5 days a week')).toBeInTheDocument();
+    await user.click(submit());
+    expect(await sentTo(result)).toMatchObject({ values: { period: 'week', targetCount: 5, dailyAmount: 8 } });
+  });
+
+  it('takes a large amount, up to the cap', async () => {
+    const { mock, result } = createMock();
+    const { user } = renderDialog({}, [mock]);
+
+    await user.type(nameField(), 'Walk');
+    await user.clear(timesPerDay());
+    await user.type(timesPerDay(), String(maxAmount()));
+    await user.click(submit());
+
+    expect(await sentTo(result)).toMatchObject({ values: { dailyAmount: maxAmount() } });
+  });
+
+  it.each([
+    { over: '0', why: 'nothing' },
+    { over: String(maxAmount() + 1), why: 'past the cap' },
+  ])('refuses a daily amount of $why, and sends nothing', async ({ over }) => {
+    const { onOpenChange, user } = renderDialog();
+
+    await user.type(nameField(), 'Water');
+    await user.clear(timesPerDay());
+    await user.type(timesPerDay(), over);
+
+    expect(await screen.findByText(describeAmountLimit())).toBeInTheDocument();
+    await refused(user, onOpenChange);
+  });
+
   it('sends the colour that was picked', async () => {
     const { mock, result } = createMock();
     const { user } = renderDialog({}, [mock]);
@@ -290,9 +350,29 @@ describe('HabitFormDialog editing a habit', () => {
     expect(await sentTo(result)).toEqual({
       id: 'habit-1',
       today: TODAY,
-      set: { name: 'Read more', notes: 'Twenty pages.', cue: null, color: PALETTE[1], period: 'week', targetCount: 3 },
+      set: {
+        name: 'Read more',
+        notes: 'Twenty pages.',
+        cue: null,
+        color: PALETTE[1],
+        period: 'week',
+        targetCount: 3,
+        dailyAmount: 1,
+      },
     });
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledExactlyOnceWith(false));
+  });
+
+  it('sends a changed daily amount with the rest of the habit', async () => {
+    const { mock, result } = updateMock();
+    const { user } = renderDialog({ habit: habit({ ...weekly, dailyAmount: 8 }) }, [mock]);
+
+    expect(timesPerDay()).toHaveValue(8);
+    await user.clear(timesPerDay());
+    await user.type(timesPerDay(), '10');
+    await user.click(submit('Save'));
+
+    expect(await sentTo(result)).toMatchObject({ set: { dailyAmount: 10, targetCount: 3 } });
   });
 
   it('clears the notes with null rather than an empty string', async () => {

@@ -8,7 +8,7 @@ import { isHexColor } from '@/components/ui/color-picker';
 import { Form } from '@/components/ui/form';
 import { RadioGroupField, type RadioOption } from '@/components/ui/radio-group-field';
 import { placeHabit } from '@/lib/cache';
-import { asPeriod, describeCadence, isPeriod, maxTargetFor } from '@/lib/cadence';
+import { asPeriod, describeAmountLimit, describeCadence, isPeriod, maxAmount, maxTargetFor } from '@/lib/cadence';
 import { describeError } from '@/lib/errors';
 import { CreateHabitDocument, UpdateHabitDocument } from '@/lib/graphql';
 import { newId } from '@/lib/ids';
@@ -30,6 +30,8 @@ type HabitValues = {
   period: Period;
   /** `null` while the box is empty: a number field that has been cleared holds no number. */
   targetCount: number | null;
+  /** How much of the habit one kept day asks for. `null` while the box is empty, as above. */
+  dailyAmount: number | null;
 };
 
 /**
@@ -45,6 +47,7 @@ const valuesOf = (habit: HabitSummary | undefined): HabitValues => ({
   color: habit?.color ?? PALETTE[0],
   period: habit ? asPeriod(habit.period) : Period.Day,
   targetCount: habit?.targetCount ?? 1,
+  dailyAmount: habit?.dailyAmount ?? 1,
 });
 
 /** Creates a habit, or edits the one it is given. */
@@ -79,7 +82,7 @@ export function HabitFormDialog({
     form.reset(valuesOf(habit));
   }, [open, habit, form]);
 
-  async function save({ name, notes, cue, color, period, targetCount }: HabitValues) {
+  async function save({ name, notes, cue, color, period, targetCount, dailyAmount }: HabitValues) {
     if (isCreating || isUpdating) {
       return;
     }
@@ -89,8 +92,9 @@ export function HabitFormDialog({
       cue: cue.trim() === '' ? null : cue.trim(),
       color,
       period,
-      // The field's validator has already refused an empty box.
+      // The fields' validators have already refused an empty box.
       targetCount: targetCount ?? 1,
+      dailyAmount: dailyAmount ?? 1,
     };
 
     try {
@@ -221,7 +225,7 @@ export function HabitFormDialog({
                       type="number"
                       description={
                         field.state.value != null && field.state.meta.errors.length === 0
-                          ? describeCadence(period, field.state.value)
+                          ? describeCadence(period, field.state.value, 1)
                           : undefined
                       }
                     />
@@ -229,6 +233,36 @@ export function HabitFormDialog({
                 </form.AppField>
               )
             }
+          </form.Subscribe>
+
+          {/* Asked for on every cadence: a daily habit is kept once a day, and that
+              day can still hold eight glasses. */}
+          <form.Subscribe
+            selector={(state) => ({ period: state.values.period, targetCount: state.values.targetCount })}
+          >
+            {({ period, targetCount }) => (
+              <form.AppField
+                name="dailyAmount"
+                validators={{
+                  onChange: ({ value }) =>
+                    value == null || Number.isInteger(value) === false || value < 1 || value > maxAmount()
+                      ? describeAmountLimit()
+                      : undefined,
+                }}
+              >
+                {(field) => (
+                  <field.InputField
+                    label="Times per day"
+                    type="number"
+                    description={
+                      field.state.value != null && field.state.meta.errors.length === 0
+                        ? describeCadence(period, targetCount ?? 1, field.state.value)
+                        : undefined
+                    }
+                  />
+                )}
+              </form.AppField>
+            )}
           </form.Subscribe>
 
           <form.AppField name="notes">

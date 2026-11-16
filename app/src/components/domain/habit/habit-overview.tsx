@@ -8,7 +8,7 @@ import { habitPath } from '@/lib/habits';
 import { daysOf, type PeriodRange, weekdayInitial } from '@/lib/periods';
 import { cn } from '@/lib/utils';
 import { DaySquare } from './day-square';
-import { asStatus, type DayStatus, ENTRY_DONE, type HabitOverviewSummary, smallerDays } from './types';
+import { asStatus, type DayStatus, dayMeasures, ENTRY_DONE, type HabitOverviewSummary } from './types';
 
 /** How much of a `YYYY-MM-DD` names the date within its month. */
 const DATE_LENGTH = 'DD'.length;
@@ -119,7 +119,7 @@ export function HabitOverview({
             const status = new Map<string, DayStatus>(
               habit.rangeEntries.map((entry) => [entry.day, asStatus(entry.status)]),
             );
-            const smaller = smallerDays(habit.rangeEntries);
+            const measures = dayMeasures(habit.rangeEntries);
             const keptCount = days.filter((day) => status.get(day) === ENTRY_DONE).length;
 
             return (
@@ -140,7 +140,7 @@ export function HabitOverview({
                     color={habit.color}
                     isToday={day === today}
                     isFuture={day > today}
-                    isSmaller={smaller.has(day)}
+                    measure={measures.get(day)}
                     disabled={disabled}
                     onValueChange={(value) => onValueChange(habit.id, day, value)}
                   />

@@ -28,6 +28,7 @@ export const HabitFieldsFragment = graphql(`
     color
     period
     targetCount
+    dailyAmount
     position
     archivedAt
     current(today: $today) {
@@ -49,6 +50,8 @@ export const HabitEntryFieldsFragment = graphql(`
     status
     note
     partial
+    amount
+    dailyAmount
   }
 `);
 
@@ -178,8 +181,16 @@ export const DeleteHabitDocument = graphql(`
 // sends the version whose selection matches what it is displaying.
 
 export const MarkHabitDocument = graphql(`
-  mutation MarkHabit($habitId: ID!, $day: String!, $status: String, $note: String, $partial: Boolean, $today: String!) {
-    markHabit(habitId: $habitId, day: $day, status: $status, note: $note, partial: $partial) {
+  mutation MarkHabit(
+    $habitId: ID!
+    $day: String!
+    $status: String
+    $note: String
+    $partial: Boolean
+    $amount: Int
+    $today: String!
+  ) {
+    markHabit(habitId: $habitId, day: $day, status: $status, note: $note, partial: $partial, amount: $amount) {
       ...HabitFields
     }
   }
@@ -194,8 +205,16 @@ export const ClearHabitDocument = graphql(`
 `);
 
 export const MarkHabitDayDocument = graphql(`
-  mutation MarkHabitDay($habitId: ID!, $day: String!, $status: String, $note: String, $partial: Boolean, $today: String!) {
-    markHabit(habitId: $habitId, day: $day, status: $status, note: $note, partial: $partial) {
+  mutation MarkHabitDay(
+    $habitId: ID!
+    $day: String!
+    $status: String
+    $note: String
+    $partial: Boolean
+    $amount: Int
+    $today: String!
+  ) {
+    markHabit(habitId: $habitId, day: $day, status: $status, note: $note, partial: $partial, amount: $amount) {
       ...HabitFields
       ...HabitHistoryFields
     }
@@ -218,11 +237,12 @@ export const MarkHabitOverviewDocument = graphql(`
     $status: String
     $note: String
     $partial: Boolean
+    $amount: Int
     $today: String!
     $from: String!
     $to: String!
   ) {
-    markHabit(habitId: $habitId, day: $day, status: $status, note: $note, partial: $partial) {
+    markHabit(habitId: $habitId, day: $day, status: $status, note: $note, partial: $partial, amount: $amount) {
       ...HabitFields
       ...HabitOverviewFields
     }

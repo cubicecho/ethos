@@ -33,6 +33,9 @@ export const habits = pgTable(
     period: text('period').notNull().$type<Period>().default(Period.Day),
     // How many days inside the period the habit asks for.
     targetCount: integer('target_count').notNull().default(1),
+    // How much of the habit one kept day asks for: 8 glasses, 3 times, 10,000
+    // steps. A separate axis from `targetCount`, which counts days, not amounts.
+    dailyAmount: integer('daily_amount').notNull().default(1),
     position: integer('position').notNull().default(0),
     // An archived habit keeps its history and leaves the grid. Never deleted on
     // the user's behalf: the record of having kept it is most of the point.
@@ -50,6 +53,8 @@ export const habits = pgTable(
     // `target_count = 3, period = 'day'` would be a target no day could reach.
     check('ck_habits_daily_target', sql`${table.period} <> 'day' or ${table.targetCount} = 1`),
     check('ck_habits_target_positive', sql`${table.targetCount} > 0`),
+    // The ceiling is configuration (HABIT_DEFAULTS.maxAmount), not a fact about every row.
+    check('ck_habits_daily_amount_positive', sql`${table.dailyAmount} > 0`),
     check('ck_habits_period', sql`${table.period} in ('day', 'week', 'month')`),
   ],
 );
