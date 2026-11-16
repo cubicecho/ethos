@@ -92,6 +92,7 @@ ethos/
 │       ├── sso/             # Pairing with an OIDC provider from the app
 │       │   ├── pairing.ts       # Setup URLs, and registering with a provider (RFC 7591 / 7592)
 │       │   ├── settings.ts      # The paired provider's row, and which provider is in effect
+│       │   ├── device-client.ts # Which client device apps use, and whether the provider has turned it on
 │       │   └── resolvers.ts     # SDL extension: ssoSetup, pairSso, unpairSso
 │       ├── habits/          # The habit domain
 │       │   ├── resolvers.ts     # SDL extension for what CRUD cannot express
@@ -332,8 +333,16 @@ instance (`authHost.providerTokens()`), so a new pairing never trusts the last
 provider's keys. `http/protected-resource.ts` serves RFC 9728 metadata at
 `/.well-known/oauth-protected-resource`, and a refused bearer on `/graphql` gets
 a `WWW-Authenticate` challenge on its 200 (GraphQL never answers 401).
-`OIDC_API_AUDIENCE` and `OIDC_DEVICE_CLIENT_ID` are environment only, for a
-paired provider too. Telos ends a live board when the token expires
+`OIDC_API_AUDIENCE` is environment only, for a paired provider too. The device
+client (`authConfig.sso.deviceClientId`) is `OIDC_DEVICE_CLIENT_ID`, else the
+public client pairing registers with the same setup token when discovery offers
+the device flow (`sso/pairing.ts`), told to device apps only while its RFC 7592
+registration lists the device code grant (`sso/device-client.ts`, asked at most
+every `AUTH_DEFAULTS.deviceClientCheckSeconds`): heautou holds it back until its
+admin turns it on. A provider that refuses the second registration leaves
+pairing done without one, and unpairing deletes both clients. Pairing also
+registers `client_uri: serverUrl()`, under which the RFC 9728 metadata is how
+heautou finds the API to offer its admin. Telos ends a live board when the token expires
 (`credential-expiry.ts`); Ethos has no subscriptions, so each request checking
 the token is the whole of it.
 
@@ -542,7 +551,8 @@ one of these has found a decision, not a mistake.
   `APP_URL`.
 - **A device app signs in at the provider, not here.** Home Assistant and the
   like run the device flow at the OIDC provider and send its access token as a
-  bearer; Ethos serves no device endpoint of its own. It verifies the token
+  bearer; Ethos serves no device endpoint of its own, and pairing registers the
+  provider's device client for them. It verifies the token
   (`auth/provider-tokens.ts`) and treats it as its person on every row, but not
   as a session: keys, sessions and sign-in stay a session's.
 - **`archivedAt` is the soft delete.** A habit has no `deletedAt`: archiving is

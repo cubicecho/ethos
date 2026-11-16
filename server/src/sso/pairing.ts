@@ -1,7 +1,8 @@
 import type { DB } from '@ethos/db';
-import { oidcRedirectUri } from '../core/config.ts';
+import { oidcRedirectUri, serverUrl } from '../core/config.ts';
 import { AUTH_DEFAULTS } from '../core/defaults.ts';
 import { HttpStatus } from '../core/wire.ts';
+import { DEVICE_CODE_GRANT, forgetDeviceClientCheck } from './device-client.ts';
 import { clearPairedOidc, type PairedOidc, readPairedOidc, savePairedOidc } from './settings.ts';
 
 // Pairing with an OIDC provider by pasting one URL, instead of copying a client
@@ -12,7 +13,16 @@ import { clearPairedOidc, type PairedOidc, readPairedOidc, savePairedOidc } from
 //
 // Ethos reads the issuer's discovery document, registers itself at its
 // registration endpoint with the token (RFC 7591), and keeps the client it gets
-// back. Unpairing deletes that client at the provider (RFC 7592).
+// back. When the provider offers the device flow (RFC 8628), Ethos registers a
+// second, public client with the same token, for device apps (Home Assistant)
+// to sign in with; a provider that allows the token once refuses it, and
+// pairing goes on without one. The provider may hold that client's device flow
+// back until its admin turns it on (device-client.ts checks). Unpairing
+// deletes both clients at the provider (RFC 7592).
+//
+// Ethos also registers its own address as `client_uri`. Under it, Ethos serves
+// its protected-resource metadata (http/protected-resource.ts), where heautou
+// finds Ethos's API to offer its admin.
 //
 // The token is a credential: it is sent once, to the endpoint the issuer names,
 // and never logged or stored.
@@ -55,6 +65,12 @@ export interface SetupUrl {
 
 /** What Ethos asks the provider to call it. */
 const CLIENT_NAME = 'Ethos';
+
+/** What Ethos asks the provider to call its client for device apps. */
+const DEVICE_CLIENT_NAME = 'Ethos devices';
+
+/** The grant that keeps a device app signed in after the device flow. */
+const REFRESH_TOKEN_GRANT = 'refresh_token';
 
 /**
  * Takes a setup URL apart.
@@ -113,8 +129,22 @@ function text(value: unknown): string | null {
   return typeof value === 'string' && value !== '' ? value : null;
 }
 
-/** The issuer's registration endpoint, once its discovery document has been checked as the issuer's own. */
-async function discover(issuer: string): Promise<string> {
+/** What the discovery document says pairing needs. */
+interface Discovered {
+  registrationEndpoint: string;
+  /** Whether the provider offers the device flow, so a device client is worth asking for. */
+  hasDeviceFlow: boolean;
+}
+
+/**
+ * Reads the issuer's registration endpoint, and whether it offers the device flow, once its discovery document has
+ * been checked as the issuer's own.
+ *
+ * @param issuer - The issuer the setup URL names.
+ * @returns What pairing needs.
+ * @throws A `PairingError` when the document is another issuer's, or names no registration endpoint.
+ */
+async function discover(issuer: string): Promise<Discovered> {
   const response = await call(`${issuer}/.well-known/openid-configuration`, {
     headers: { accept: 'application/json' },
   });
@@ -133,18 +163,77 @@ async function discover(issuer: string): Promise<string> {
       'This provider does not support pairing. Set OIDC_ISSUER and OIDC_CLIENT_ID in the environment instead.',
     );
   }
-  return endpoint;
+  // A provider that lists no grant types is taken at its device endpoint's word.
+  const grants = Array.isArray(doc.grant_types_supported) ? doc.grant_types_supported : null;
+  const hasDeviceFlow =
+    text(doc.device_authorization_endpoint) !== null && (grants === null || grants.includes(DEVICE_CODE_GRANT));
+  return { registrationEndpoint: endpoint, hasDeviceFlow };
 }
 
 /** What Ethos asks to be registered as. */
 function clientMetadata() {
   return {
     client_name: CLIENT_NAME,
+    client_uri: serverUrl(),
     redirect_uris: [oidcRedirectUri()],
     token_endpoint_auth_method: 'client_secret_basic',
     grant_types: ['authorization_code'],
     response_types: ['code'],
   };
+}
+
+/** What Ethos asks its device client to be registered as: public, no redirect, the device flow. */
+function deviceClientMetadata() {
+  return {
+    client_name: DEVICE_CLIENT_NAME,
+    client_uri: serverUrl(),
+    redirect_uris: [],
+    token_endpoint_auth_method: 'none',
+    grant_types: [DEVICE_CODE_GRANT, REFRESH_TOKEN_GRANT],
+    response_types: [],
+  };
+}
+
+/** The device client a provider registered. */
+interface DeviceRegistration {
+  clientId: string;
+  registrationAccessToken: string | null;
+  registrationClientUri: string | null;
+}
+
+/**
+ * Registers the device client with the setup URL's token, after Ethos's own client. Never fails the pairing: a
+ * provider that allows the token once, or will not hold a device client, leaves device sign-in to the environment.
+ *
+ * @param endpoint - The registration endpoint.
+ * @param token - The initial access token.
+ * @returns The client, or null when the provider registered none.
+ */
+async function registerDeviceClient(endpoint: string, token: string): Promise<DeviceRegistration | null> {
+  try {
+    const response = await call(endpoint, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify(deviceClientMetadata()),
+    });
+    if (response.ok === false) {
+      console.warn(`[auth] the OIDC provider answered ${response.status} to registering a device client`);
+      return null;
+    }
+    const body = await json(response);
+    const clientId = text(body.client_id);
+    if (clientId === null) {
+      return null;
+    }
+    return {
+      clientId,
+      registrationAccessToken: text(body.registration_access_token),
+      registrationClientUri: text(body.registration_client_uri),
+    };
+  } catch {
+    console.warn('[auth] could not register a device client with the OIDC provider');
+    return null;
+  }
 }
 
 /** Turns a failed registration call into what to tell the admin. */
@@ -185,7 +274,7 @@ async function refusal(response: Response): Promise<PairingError> {
  */
 export async function pair(db: DB, setupUrl: string): Promise<PairedOidc> {
   const setup = parseSetupUrl(setupUrl);
-  const endpoint = await discover(setup.issuer);
+  const { registrationEndpoint: endpoint, hasDeviceFlow } = await discover(setup.issuer);
   const response = await call(endpoint, {
     method: 'POST',
     headers: {
@@ -206,6 +295,7 @@ export async function pair(db: DB, setupUrl: string): Promise<PairedOidc> {
       `The provider registered ${CLIENT_NAME} but sent back no client id.`,
     );
   }
+  const device = hasDeviceFlow ? await registerDeviceClient(endpoint, setup.token) : null;
   const paired: PairedOidc = {
     issuer: setup.issuer,
     clientId,
@@ -215,43 +305,64 @@ export async function pair(db: DB, setupUrl: string): Promise<PairedOidc> {
     name: setup.name,
     registrationAccessToken: text(body.registration_access_token),
     registrationClientUri: text(body.registration_client_uri),
+    deviceClientId: device?.clientId ?? null,
+    deviceRegistrationAccessToken: device?.registrationAccessToken ?? null,
+    deviceRegistrationClientUri: device?.registrationClientUri ?? null,
   };
   await savePairedOidc(db, paired);
+  forgetDeviceClientCheck();
   return paired;
 }
 
 /**
- * Deletes Ethos's client at the provider and forgets the pairing.
+ * Deletes Ethos's clients at the provider and forgets the pairing.
  *
  * @param db - The database.
- * @returns Whether the provider confirmed the client is gone.
+ * @returns Whether the provider confirmed Ethos's own client is gone.
  *
  * @remarks
  * The pairing is forgotten even when the provider cannot be reached, so an admin is never stuck
- * with a provider they want gone; the provider's admin can remove the client on their side.
+ * with a provider they want gone; the provider's admin can remove the clients on their side.
  */
 export async function unpair(db: DB): Promise<boolean> {
   const paired = await readPairedOidc(db);
   if (paired === null) {
     return true;
   }
-  let removed = false;
-  if (paired.registrationClientUri && paired.registrationAccessToken) {
-    try {
-      const response = await fetch(paired.registrationClientUri, {
-        method: 'DELETE',
-        headers: { authorization: `Bearer ${paired.registrationAccessToken}` },
-        signal: AbortSignal.timeout(AUTH_DEFAULTS.oidcPairingTimeoutMs),
-      });
-      // A 401 or a 404: the client is already gone, which is what was wanted.
-      removed = response.ok || response.status === HttpStatus.Unauthorized || response.status === HttpStatus.NotFound;
-      if (removed === false) {
-        console.warn(`[auth] OIDC provider answered ${response.status} to deleting the client`);
-      }
-    } catch (error) {
-      console.warn('[auth] could not reach the OIDC provider to delete the client:', error);
-    }
-  }
+  const removed = await deleteClient(paired.registrationClientUri, paired.registrationAccessToken);
+  // The device client goes too; whether it did is the provider's admin's to tidy.
+  await deleteClient(paired.deviceRegistrationClientUri, paired.deviceRegistrationAccessToken);
   await clearPairedOidc(db);
+  forgetDeviceClientCheck();
   return removed;
+}
+
+/**
+ * Deletes a client at the provider (RFC 7592).
+ *
+ * @param uri - Its registration client URI.
+ * @param token - Its registration access token.
+ * @returns Whether the provider confirmed it is gone. False with no way to ask.
+ */
+async function deleteClient(uri: string | null, token: string | null): Promise<boolean> {
+  if (!uri || !token) {
+    return false;
+  }
+  try {
+    const response = await fetch(uri, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(AUTH_DEFAULTS.oidcPairingTimeoutMs),
+    });
+    // A 401 or a 404: the client is already gone, which is what was wanted.
+    const removed =
+      response.ok || response.status === HttpStatus.Unauthorized || response.status === HttpStatus.NotFound;
+    if (removed === false) {
+      console.warn(`[auth] OIDC provider answered ${response.status} to deleting a client`);
+    }
+    return removed;
+  } catch (error) {
+    console.warn('[auth] could not reach the OIDC provider to delete a client:', error);
+    return false;
+  }
 }

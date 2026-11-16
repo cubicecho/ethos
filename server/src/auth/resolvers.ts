@@ -1,8 +1,9 @@
 import { assertObjectType, extendSchema, type GraphQLSchema, parse } from 'graphql';
-import { oidcDeviceClientId, secureLocalNet, serverUrl } from '../core/config.ts';
+import { secureLocalNet, serverUrl } from '../core/config.ts';
 import { type Context, Credential } from '../core/context.ts';
 import { forbidden, unauthenticated } from '../core/errors.ts';
 import { SSO_START_PATH } from '../http/sso.ts';
+import { deviceClientId } from '../sso/device-client.ts';
 import { effectiveOidc } from '../sso/settings.ts';
 import { sendsMagicLinks } from './better-auth.ts';
 
@@ -24,8 +25,9 @@ const AUTH_SDL = parse(`
     """Where the button sends the browser. Absolute: in development the server is not the app's origin."""
     signInUrl: String!
     """
-    The public client a device app (Home Assistant) uses at the provider for the device flow (OIDC_DEVICE_CLIENT_ID),
-    or null when none is set. Its access tokens, issued for this server's API audience, are accepted as a bearer.
+    The public client a device app (Home Assistant) uses at the provider for the device flow: OIDC_DEVICE_CLIENT_ID,
+    else the one pairing registered once the provider has turned its device flow on, else null. Its access tokens,
+    issued for this server's API audience, are accepted as a bearer.
     """
     deviceClientId: String
   }
@@ -79,14 +81,18 @@ export function applyAuthExtension(schema: GraphQLSchema): GraphQLSchema {
   const queries = assertObjectType(extendedSchema.getType('Query')).getFields();
 
   queries.authConfig.resolve = async (_parent: unknown, _args: unknown, context: Context) => {
-    const { config: oidc } = await effectiveOidc(context.db);
+    const { config: oidc, source } = await effectiveOidc(context.db);
     return {
       secureLocalNet: secureLocalNet(),
       magicLink: sendsMagicLinks(context.auth),
       sso:
         oidc === null
           ? null
-          : { name: oidc.name, signInUrl: `${serverUrl()}${SSO_START_PATH}`, deviceClientId: oidcDeviceClientId() },
+          : {
+              name: oidc.name,
+              signInUrl: `${serverUrl()}${SSO_START_PATH}`,
+              deviceClientId: await deviceClientId(context.db, source),
+            },
     };
   };
 

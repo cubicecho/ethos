@@ -123,7 +123,7 @@ domain.
 | `OIDC_NAME` | `SSO` | The provider's name on the login button. |
 | `SERVER_URL` | `APP_URL` in production | Where a browser reaches this server, for the OIDC sign-in's callback (`<SERVER_URL>/api/auth/callback/oidc`). |
 | `OIDC_API_AUDIENCE` | `<SERVER_URL>/graphql` | Ethos's API identifier at the provider: the `aud` a provider access token must carry to be accepted as a bearer. |
-| `OIDC_DEVICE_CLIENT_ID` | — | The public client device apps (Home Assistant) use at the provider for the device flow. Ethos only tells them its name, in `authConfig.sso.deviceClientId`. |
+| `OIDC_DEVICE_CLIENT_ID` | — | The public client device apps (Home Assistant) use at the provider for the device flow. Ethos only tells them its name, in `authConfig.sso.deviceClientId`. Pairing registers one for you; set this to use another. |
 
 Set one of `SMTP_URL`, `SECURE_LOCAL_NET` and a provider (`OIDC_ISSUER`, or one
 paired from the login page by pasting the provider's setup URL). With none, the
@@ -156,6 +156,16 @@ sessions; those are for a person signed in to Ethos itself. A client finds the
 provider and the audience at `GET /.well-known/oauth-protected-resource` (RFC
 9728), and a refused bearer is answered with a `WWW-Authenticate` challenge
 pointing there. If a request carries an API key as well, the key decides.
+
+Pairing with heautou sets the rest up. Ethos registers a second, public client
+for device apps with the same setup URL whenever the provider offers the device
+flow, and registers its own address, under which heautou finds Ethos's API in
+the metadata above. Back in heautou, the pairing dialog offers **Device
+sign-in** and **Ethos's API** (`<SERVER_URL>/graphql`); leave both on and
+choose **Finish**. Ethos tells device apps about the client only once the
+provider has turned it on, checking at most once a minute. Disconnecting
+deletes both clients. With another provider, or with `OIDC_ISSUER`, register
+the device client and the API there by hand and set `OIDC_DEVICE_CLIENT_ID`.
 
 ## Before you expose it
 

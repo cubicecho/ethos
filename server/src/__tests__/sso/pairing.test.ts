@@ -9,6 +9,7 @@ import { type AuthHost, createAuthHost } from '../../auth/auth-host.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { HttpStatus } from '../../core/wire.ts';
 import { mountSso, SSO_START_PATH } from '../../http/sso.ts';
+import { DEVICE_CODE_GRANT, forgetDeviceClientCheck } from '../../sso/device-client.ts';
 import { PairingFailure, parseSetupUrl } from '../../sso/pairing.ts';
 import { readPairedOidc, SsoSource } from '../../sso/settings.ts';
 import {
@@ -29,12 +30,15 @@ import {
 const SETUP = 'query { ssoSetup { source issuer name canPair redirectUri } }';
 const PAIR = 'mutation ($url: String!) { pairSso(setupUrl: $url) { source name canPair } }';
 const UNPAIR = 'mutation { unpairSso { source name } }';
-const CONFIG = '{ authConfig { sso { name signInUrl } } }';
+const CONFIG = '{ authConfig { sso { name signInUrl deviceClientId } } }';
 
 const TOKEN = 'iat-good';
 const CLIENT_ID = 'ethos-client';
 const CLIENT_SECRET = 'ethos-secret';
 const RAT = 'rat-1';
+const DEVICE_ID = 'ethos-devices';
+const DEVICE_RAT = 'rat-device';
+const DEVICE_CONFIG = '{ authConfig { sso { deviceClientId } } }';
 
 interface FakeDcr {
   issuer: string;
@@ -50,6 +54,16 @@ interface FakeDcr {
   deletions: (string | undefined)[];
   /** What deleting answers. */
   deleteStatus: number;
+  /** Whether discovery offers the device flow. */
+  hasDeviceFlow: boolean;
+  /** Whether a second registration with the same token is allowed, as heautou allows one device client. */
+  allowsDeviceClient: boolean;
+  /** Whether the provider's admin has turned the device client's device flow on. */
+  isDeviceFlowOn: boolean;
+  /** Whether the device client still exists. */
+  hasDeviceClient: boolean;
+  /** How many times the device client's registration was read. */
+  deviceReads: number;
   close(): Promise<void>;
 }
 
@@ -94,6 +108,11 @@ async function startDcr(): Promise<FakeDcr> {
     registrations: [],
     deletions: [],
     deleteStatus: 204,
+    hasDeviceFlow: false,
+    allowsDeviceClient: true,
+    isDeviceFlowOn: false,
+    hasDeviceClient: false,
+    deviceReads: 0,
     close: () => close(server),
   };
   app.get('/oidc/.well-known/openid-configuration', (_req, res) => {
@@ -103,6 +122,7 @@ async function startDcr(): Promise<FakeDcr> {
       token_endpoint: `${issuer}/token`,
       jwks_uri: `${issuer}/jwks`,
       ...(fake.canRegister ? { registration_endpoint: `${issuer}/reg` } : {}),
+      ...(fake.hasDeviceFlow ? { device_authorization_endpoint: `${issuer}/device/auth` } : {}),
       token_endpoint_auth_methods_supported: ['client_secret_basic'],
     });
   });
@@ -120,6 +140,22 @@ async function startDcr(): Promise<FakeDcr> {
       res.status(400).json({ error: 'invalid_redirect_uri', error_description: 'redirect_uris must use https' });
       return;
     }
+    if (req.body.token_endpoint_auth_method === 'none') {
+      if (fake.allowsDeviceClient === false) {
+        res.status(401).json({ error: 'invalid_token', error_description: 'the setup URL has been used' });
+        return;
+      }
+      fake.hasDeviceClient = true;
+      // Held back until the admin turns it on, so the answer lists no grant types.
+      res.status(201).json({
+        ...req.body,
+        grant_types: [],
+        client_id: DEVICE_ID,
+        registration_access_token: DEVICE_RAT,
+        registration_client_uri: `${issuer}/reg/${DEVICE_ID}`,
+      });
+      return;
+    }
     res.status(201).json({
       ...req.body,
       client_id: CLIENT_ID,
@@ -131,6 +167,19 @@ async function startDcr(): Promise<FakeDcr> {
   app.delete(`/oidc/reg/${CLIENT_ID}`, (req, res) => {
     fake.deletions.push(req.headers.authorization);
     res.status(fake.deleteStatus).end();
+  });
+  app.get(`/oidc/reg/${DEVICE_ID}`, (req, res) => {
+    fake.deviceReads += 1;
+    if (req.headers.authorization !== `Bearer ${DEVICE_RAT}` || fake.hasDeviceClient === false) {
+      res.status(401).json({ error: 'invalid_token' });
+      return;
+    }
+    res.json({ client_id: DEVICE_ID, grant_types: fake.isDeviceFlowOn ? [DEVICE_CODE_GRANT, 'refresh_token'] : [] });
+  });
+  app.delete(`/oidc/reg/${DEVICE_ID}`, (req, res) => {
+    fake.deletions.push(req.headers.authorization);
+    fake.hasDeviceClient = false;
+    res.status(204).end();
   });
   return fake;
 }
@@ -152,6 +201,8 @@ afterAll(async () => {
 beforeEach(async () => {
   vi.stubEnv('OIDC_ISSUER', '');
   vi.stubEnv('OIDC_CLIENT_ID', '');
+  vi.stubEnv('OIDC_DEVICE_CLIENT_ID', '');
+  forgetDeviceClientCheck();
   await resetTestDb(db);
   dcr = await startDcr();
   const app = express();
@@ -251,6 +302,7 @@ describe('pairSso', () => {
     expect(registration?.authorization).toBe(`Bearer ${TOKEN}`);
     expect(registration?.body).toEqual({
       client_name: 'Ethos',
+      client_uri: appUrl,
       redirect_uris: [`${appUrl}/api/auth/callback/oidc`],
       token_endpoint_auth_method: 'client_secret_basic',
       grant_types: ['authorization_code'],
@@ -264,10 +316,12 @@ describe('pairSso', () => {
       name: 'heautou',
       registrationAccessToken: RAT,
       registrationClientUri: `${dcr.issuer}/reg/${CLIENT_ID}`,
+      deviceClientId: null,
     });
     expect((await client().expectOk(CONFIG)).authConfig.sso).toEqual({
       name: 'heautou',
       signInUrl: `${appUrl}${SSO_START_PATH}`,
+      deviceClientId: null,
     });
 
     // The running server's sign-in now goes to the provider, as the new client.
@@ -325,6 +379,77 @@ describe('pairSso', () => {
   it('will not pair over an existing pairing', async () => {
     await client().expectOk(PAIR, { url: setupUrl() });
     expect(await pairError(setupUrl())).toMatchObject({ code: ErrorCode.Conflict });
+  });
+});
+
+describe('the device client', () => {
+  it('is registered with the same token when the provider offers the device flow', async () => {
+    dcr.hasDeviceFlow = true;
+    await client().expectOk(PAIR, { url: setupUrl() });
+    expect(dcr.registrations).toHaveLength(2);
+    expect(dcr.registrations[1]?.authorization).toBe(`Bearer ${TOKEN}`);
+    expect(dcr.registrations[1]?.body).toEqual({
+      client_name: 'Ethos devices',
+      client_uri: appUrl,
+      redirect_uris: [],
+      token_endpoint_auth_method: 'none',
+      grant_types: [DEVICE_CODE_GRANT, 'refresh_token'],
+      response_types: [],
+    });
+    expect(await readPairedOidc(db)).toMatchObject({
+      deviceClientId: DEVICE_ID,
+      deviceRegistrationAccessToken: DEVICE_RAT,
+      deviceRegistrationClientUri: `${dcr.issuer}/reg/${DEVICE_ID}`,
+    });
+  });
+
+  it('is told to device apps only once the provider has turned its device flow on', async () => {
+    dcr.hasDeviceFlow = true;
+    await client().expectOk(PAIR, { url: setupUrl() });
+    expect((await client().expectOk(DEVICE_CONFIG)).authConfig.sso.deviceClientId).toBeNull();
+
+    dcr.isDeviceFlowOn = true;
+    // The answer is remembered for a while, so reading again does not ask.
+    expect((await client().expectOk(DEVICE_CONFIG)).authConfig.sso.deviceClientId).toBeNull();
+    expect(dcr.deviceReads).toBe(1);
+    forgetDeviceClientCheck();
+    expect((await client().expectOk(DEVICE_CONFIG)).authConfig.sso.deviceClientId).toBe(DEVICE_ID);
+
+    // The provider's admin turned it off, which removed it.
+    dcr.hasDeviceClient = false;
+    forgetDeviceClientCheck();
+    expect((await client().expectOk(DEVICE_CONFIG)).authConfig.sso.deviceClientId).toBeNull();
+  });
+
+  it('gives way to OIDC_DEVICE_CLIENT_ID', async () => {
+    dcr.hasDeviceFlow = true;
+    dcr.isDeviceFlowOn = true;
+    await client().expectOk(PAIR, { url: setupUrl() });
+    vi.stubEnv('OIDC_DEVICE_CLIENT_ID', 'home-assistant');
+    expect((await client().expectOk(DEVICE_CONFIG)).authConfig.sso.deviceClientId).toBe('home-assistant');
+  });
+
+  it('is not asked for when the provider has no device flow', async () => {
+    await client().expectOk(PAIR, { url: setupUrl() });
+    expect(dcr.registrations).toHaveLength(1);
+    expect((await client().expectOk(DEVICE_CONFIG)).authConfig.sso.deviceClientId).toBeNull();
+  });
+
+  it('does not stop pairing when the provider allows the token once', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    dcr.hasDeviceFlow = true;
+    dcr.allowsDeviceClient = false;
+    const data = await client().expectOk(PAIR, { url: setupUrl() });
+    expect(data.pairSso.source).toBe(SsoSource.Paired);
+    expect(await readPairedOidc(db)).toMatchObject({ clientId: CLIENT_ID, deviceClientId: null });
+  });
+
+  it('is deleted at the provider on unpairing', async () => {
+    dcr.hasDeviceFlow = true;
+    await client().expectOk(PAIR, { url: setupUrl() });
+    await client().expectOk(UNPAIR);
+    expect(dcr.deletions).toEqual([`Bearer ${RAT}`, `Bearer ${DEVICE_RAT}`]);
+    expect(dcr.hasDeviceClient).toBe(false);
   });
 });
 
