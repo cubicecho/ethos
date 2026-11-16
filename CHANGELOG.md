@@ -1,3 +1,9 @@
+# [5.4.0](https://github.com/cubicecho/ethos/compare/v5.3.0...v5.4.0) (2026-11-16)
+
+### Features
+
+* per-day amounts for habits ([0d4ec86](https://github.com/cubicecho/ethos/commit/0d4ec866d171b8c2dd836aa7436d2ec8eb3d0289))
+
 # [5.3.0](https://github.com/cubicecho/ethos/compare/v5.2.1...v5.3.0) (2026-11-16)
 
 ### Features
