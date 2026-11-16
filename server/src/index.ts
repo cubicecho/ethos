@@ -12,6 +12,7 @@ import {
   databaseUrl,
   dbConnectTimeoutMs,
   mcpEnabled,
+  oidcApiAudience,
   oidcRedirectUri,
   port,
   secureLocalNet,
@@ -78,6 +79,7 @@ const server = app.listen(port(), LISTEN_HOST, () => {
   if (oidc !== null) {
     // The redirect URI is the one thing the operator has to copy into the provider, exactly.
     console.log(`[auth] sign-in with ${oidc.name} (${oidc.issuer}); redirect URI ${oidcRedirectUri()}`);
+    console.log(`[auth] ${oidc.name}'s access tokens for ${oidcApiAudience()} are accepted as a bearer`);
   }
   if (secureLocalNet()) {
     console.warn('[auth] SECURE_LOCAL_NET is on: any email address signs in without a link. Private networks only.');

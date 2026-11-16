@@ -1,12 +1,14 @@
 import type { Server } from 'node:http';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { fixedAuthHost } from '../../auth/auth-host.ts';
+import { API_KEY_HEADER } from '../../auth/better-auth.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { HttpStatus } from '../../core/wire.ts';
 import { MCP_NAME } from '../../graphql/mcp.ts';
 import { createApp } from '../../http/app.ts';
 import {
   closeTestDb,
+  createApiKeyFor,
   createClient,
   createSessionToken,
   createTestAuth,
@@ -25,6 +27,7 @@ let db: TestDb;
 let on: Server;
 let off: Server;
 let aliceToken: string;
+let aliceKey: string;
 
 /** Where `server` serves /mcp, once it is listening. */
 async function listening(server: Server): Promise<string> {
@@ -46,6 +49,7 @@ beforeAll(async () => {
   await createClient(db, bobId).expectOk(create, { values: { name: 'Run' } });
   const { auth } = createTestAuth(db);
   aliceToken = await createSessionToken(auth, aliceId);
+  aliceKey = (await createApiKeyFor(auth, aliceId)).key;
   on = (await createApp({ db, authHost: fixedAuthHost(auth), mcp: true })).listen(0);
   off = (await createApp({ db, authHost: fixedAuthHost(auth) })).listen(0);
   onUrl = await listening(on);
@@ -61,19 +65,15 @@ afterAll(async () => {
 // biome-ignore lint/suspicious/noExplicitAny: each test reads the fields its own call asked for
 type AnyBody = any;
 
-const rpc = (url: string, method: string, params: unknown, authorization?: string) =>
+const rpc = (url: string, method: string, params: unknown, credential: Record<string, string> = {}) =>
   fetch(url, {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      accept: 'application/json, text/event-stream',
-      ...(authorization === undefined ? {} : { authorization }),
-    },
+    headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream', ...credential },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
   });
 
-const call = async (method: string, params: unknown, authorization?: string): Promise<AnyBody> =>
-  (await rpc(onUrl, method, params, authorization)).json();
+const call = async (method: string, params: unknown, credential?: Record<string, string>): Promise<AnyBody> =>
+  (await rpc(onUrl, method, params, credential)).json();
 
 const toolNames = async (): Promise<string[]> =>
   (await call('tools/list', {})).result.tools.map((tool: { name: string }) => tool.name);
@@ -106,11 +106,28 @@ describe('/mcp', () => {
   });
 
   it("returns the caller's habits and nobody else's", async () => {
-    const body = await call('tools/call', { name: 'habits', arguments: {} }, `Bearer ${aliceToken}`);
+    const body = await call('tools/call', { name: 'habits', arguments: {} }, { authorization: `Bearer ${aliceToken}` });
     const text = JSON.stringify(body.result);
     expect(body.result.isError ?? false).toBe(false);
     expect(text).toContain('Read');
     expect(text).not.toContain('Run');
+  });
+
+  it("takes an API key, and returns its owner's habits and nobody else's", async () => {
+    const body = await call('tools/call', { name: 'habits', arguments: {} }, { [API_KEY_HEADER]: aliceKey });
+    const text = JSON.stringify(body.result);
+    expect(body.result.isError ?? false).toBe(false);
+    expect(text).toContain('Read');
+    expect(text).not.toContain('Run');
+  });
+
+  it('refuses a key that is not one', async () => {
+    const body = await call('tools/call', { name: 'habits', arguments: {} }, { [API_KEY_HEADER]: 'ethos_nope' });
+    expect(JSON.stringify(body)).toContain(ErrorCode.Unauthenticated);
+  });
+
+  it('offers no tool for managing keys', async () => {
+    expect((await toolNames()).filter((name) => /apikey/i.test(name))).toEqual([]);
   });
 
   it('refuses a call with no session', async () => {

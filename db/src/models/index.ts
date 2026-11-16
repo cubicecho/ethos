@@ -1,4 +1,5 @@
 export * from './accounts.ts';
+export * from './api-keys.ts';
 export * from './habit-entries.ts';
 export * from './habits.ts';
 export * from './oidc-settings.ts';

@@ -6,7 +6,9 @@ import type { ContextFactory } from './handler.ts';
 
 // The same schema instance /graphql serves, projected as MCP tools. Every call
 // runs in-process through the same resolvers, so the row scope and
-// `requireAuth` an agent meets are the ones a browser does.
+// `requireAuth` an agent meets are the ones a browser does. An agent signs in with
+// an API key in `x-api-key`, or a session token or an access token from the OIDC
+// provider as `Authorization: Bearer` (auth/caller.ts).
 
 /** What an MCP client is told this server is called. */
 export const MCP_NAME = 'ethos';
@@ -47,8 +49,9 @@ export function createMcpHandler(schema: GraphQLSchema, contextFor: ContextFacto
     name: MCP_NAME,
     version: version(),
     includeMutations: false,
-    // Both answer with session tokens, and every other session's is a way into the account from elsewhere.
-    exclude: ['Query.getSession', 'Query.listSessions'],
+    // The first two answer with session tokens, and every other session's is a way into the account
+    // from elsewhere. Keys are managed by a person in Settings, never by a client of this door.
+    exclude: ['Query.getSession', 'Query.listSessions', 'Query.apiKeys'],
     // Express's `ip` where there is one, since it honours TRUST_PROXY.
     contextFromRequest: (request) =>
       contextFor(

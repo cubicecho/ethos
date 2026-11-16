@@ -116,11 +116,56 @@ domain.
 | `SMTP_FROM` | `ethos@<APP_URL host>` | The address those emails come from. |
 | `SECURE_LOCAL_NET` | `false` | Sign in with an address alone: no link, no mail. For a private network only. |
 | `MCP_ENABLED` | `false` | Serve the API's queries as read-only [MCP](https://modelcontextprotocol.io) tools at `/mcp`. |
+| `OIDC_ISSUER` | — | An OpenID Connect provider to sign in with. Set, it wins over a provider paired from the app. Needs `OIDC_CLIENT_ID`. |
+| `OIDC_CLIENT_ID` | — | Ethos's client at that provider. |
+| `OIDC_CLIENT_SECRET` | — | The client's secret. Leave it unset for a public client. |
+| `OIDC_CLIENT_AUTH` | `client_secret_basic` | How the secret is sent: `client_secret_basic` or `client_secret_post`. |
+| `OIDC_NAME` | `SSO` | The provider's name on the login button. |
+| `SERVER_URL` | `APP_URL` in production | Where a browser reaches this server, for the OIDC sign-in's callback (`<SERVER_URL>/api/auth/callback/oidc`). |
+| `OIDC_API_AUDIENCE` | `<SERVER_URL>/graphql` | Ethos's API identifier at the provider: the `aud` a provider access token must carry to be accepted as a bearer. |
+| `OIDC_DEVICE_CLIENT_ID` | — | The public client device apps (Home Assistant) use at the provider for the device flow. Ethos only tells them its name, in `authConfig.sso.deviceClientId`. Pairing registers one for you; set this to use another. |
 
-Set one of `SMTP_URL` and `SECURE_LOCAL_NET`. With neither, the server starts,
-says so in its log, and nobody can sign in. A sign-in link works once, lasts 15
+Set one of `SMTP_URL`, `SECURE_LOCAL_NET` and a provider (`OIDC_ISSUER`, or one
+paired from the login page by pasting the provider's setup URL). With none, the
+server starts, says so in its log, and nobody can sign in. A sign-in link works once, lasts 15
 minutes, and is never written to the log or returned by the API. Sessions last
 30 days and are rows in the database, so signing out ends one for good.
+
+Another program — a calendar, a dashboard, an MCP client — calls Ethos with an
+API key made in Settings, sent as `x-api-key`, to `/graphql` or `/mcp`. A key
+acts as the person who made it, is shown once and stored only as a hash, and
+stops working the moment it is revoked. It cannot make, list or revoke keys
+itself.
+
+### Apps that sign in without a browser (Home Assistant)
+
+A device app signs in at the OIDC provider instead, with the OAuth device flow,
+and calls `/graphql` or `/mcp` with the provider's access token as
+`Authorization: Bearer`. Ethos accepts it as the person, on every habit they
+have, when:
+
+- it is a JWT access token (`typ: at+jwt`, RFC 9068) from the provider in
+  effect, signed with a key in its JWKS by an asymmetric algorithm;
+- its `aud` includes `OIDC_API_AUDIENCE` (default `<SERVER_URL>/graphql`), so
+  register that audience as an API (resource) at the provider; and
+- its `sub` is someone who has signed in to Ethos through the provider in a
+  browser at least once. Tokens are never matched to an account by email.
+
+Like an API key, such a token cannot make, list or revoke keys, or see
+sessions; those are for a person signed in to Ethos itself. A client finds the
+provider and the audience at `GET /.well-known/oauth-protected-resource` (RFC
+9728), and a refused bearer is answered with a `WWW-Authenticate` challenge
+pointing there. If a request carries an API key as well, the key decides.
+
+Pairing with heautou sets the rest up. Ethos registers a second, public client
+for device apps with the same setup URL whenever the provider offers the device
+flow, and registers its own address, under which heautou finds Ethos's API in
+the metadata above. Back in heautou, the pairing dialog offers **Device
+sign-in** and **Ethos's API** (`<SERVER_URL>/graphql`); leave both on and
+choose **Finish**. Ethos tells device apps about the client only once the
+provider has turned it on, checking at most once a minute. Disconnecting
+deletes both clients. With another provider, or with `OIDC_ISSUER`, register
+the device client and the API there by hand and set `OIDC_DEVICE_CLIENT_ID`.
 
 ## Before you expose it
 

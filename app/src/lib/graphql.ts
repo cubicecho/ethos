@@ -314,6 +314,44 @@ export const UnpairSsoDocument = graphql(`
   }
 `);
 
+export const ApiKeyFieldsFragment = graphql(`
+  fragment ApiKeyFields on ApiKey {
+    id
+    name
+    start
+    createdAt
+    lastRequest
+    expiresAt
+  }
+`);
+
+export const ApiKeysDocument = graphql(`
+  query ApiKeys {
+    apiKeys {
+      ...ApiKeyFields
+    }
+  }
+`);
+
+// Minting and revoking are better-auth's own endpoints. `expiresIn` is in seconds,
+// a day to a year, and null never expires. The key is in this answer and nowhere else.
+export const CreateApiKeyDocument = graphql(`
+  mutation CreateApiKey($name: String!, $expiresIn: Float) {
+    createApiKey(name: $name, expiresIn: $expiresIn) {
+      id
+      key
+    }
+  }
+`);
+
+export const DeleteApiKeyDocument = graphql(`
+  mutation DeleteApiKey($keyId: String!) {
+    deleteApiKey(keyId: $keyId) {
+      success
+    }
+  }
+`);
+
 export const SignOutDocument = graphql(`
   mutation SignOut {
     signOut {

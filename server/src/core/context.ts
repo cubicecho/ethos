@@ -8,9 +8,21 @@ import type { Loaders } from '../graphql/loaders.ts';
 export const UNKNOWN_IP = 'unknown';
 
 /**
+ * What a request proved who it is with: a person's session, a key another program holds, or an
+ * access token the OIDC provider issued a device app for Ethos's API (auth/provider-tokens.ts).
+ * Each acts as its user on every row, but signing in and out, sessions and keys are a session's alone.
+ */
+export const Credential = {
+  Session: 'session',
+  ApiKey: 'apiKey',
+  ProviderToken: 'providerToken',
+} as const;
+export type Credential = (typeof Credential)[keyof typeof Credential];
+
+/**
  * What every resolver — generated or hand-written — is handed. `userId` is the
- * only thing that says who the caller is: it comes from the request's session
- * and nothing downstream may take it from an argument.
+ * only thing that says who the caller is: it comes from the request's session, API
+ * key or provider access token, and nothing downstream may take it from an argument.
  */
 export interface Context {
   db: DB;
@@ -19,6 +31,8 @@ export interface Context {
   /** Where `auth` came from. Pairing a provider rebuilds it, so later requests get the new one. */
   authHost: AuthHost;
   userId: string | null;
+  /** What `userId` was read from, or null when nobody is signed in. */
+  credential: Credential | null;
   /** The request's headers. Signing out reads the session from them. */
   headers: Headers;
   /** The client's address as Express resolved it under `TRUST_PROXY`. `UNKNOWN_IP` when there is none. */

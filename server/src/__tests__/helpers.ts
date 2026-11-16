@@ -10,7 +10,7 @@ import { type AuthHost, fixedAuthHost } from '../auth/auth-host.ts';
 import { type Auth, createAuth, type MagicLink } from '../auth/better-auth.ts';
 import { createRateLimiter, type RateLimiter } from '../auth/rate-limit.ts';
 import type { OidcConfig } from '../core/config.ts';
-import type { Context } from '../core/context.ts';
+import { type Context, Credential } from '../core/context.ts';
 import { createSchema } from '../graphql/build-schema.ts';
 import { createLoaders } from '../graphql/loaders.ts';
 
@@ -117,6 +117,19 @@ export async function closeTestDb(db: TestDb): Promise<void> {
   await db.$client.close();
 }
 
+/**
+ * Mints an API key server-side, as Settings would through `createApiKey`.
+ *
+ * @param auth - The auth instance the key is made on.
+ * @param userId - The key's owner.
+ * @param [name] - What the key is called.
+ * @returns The key's id, and the key itself, to send as `x-api-key`.
+ */
+export async function createApiKeyFor(auth: Auth, userId: string, name = 'test'): Promise<{ id: string; key: string }> {
+  const created = await auth.api.createApiKey({ body: { userId, name } });
+  return { id: created.id, key: created.key };
+}
+
 /** A user row created straight through Drizzle — signup is not what is under test. */
 export async function createUser(db: TestDb, email: string): Promise<string> {
   const [user] = await db.insert(dbSchema.users).values({ email }).returning();
@@ -148,6 +161,8 @@ export interface ClientDeps {
   limiter?: RateLimiter;
   /** The address the request is taken to come from. The default is `TEST_IP`. */
   ip?: string;
+  /** What the caller signed in with. The default is a session, or none when `userId` is null. */
+  credential?: Credential;
 }
 
 /** Where a test client's requests come from unless it says otherwise. */
@@ -155,6 +170,7 @@ export const TEST_IP = '127.0.0.1';
 
 export function createClient(db: TestDb, userId: string | null, deps: ClientDeps = {}): TestClient {
   const { limiter = createRateLimiter(), ip = TEST_IP, headers = new Headers() } = deps;
+  const credential = userId === null ? null : (deps.credential ?? Credential.Session);
   const schema = schemas.get(db) ?? createSchema(db).schema;
   schemas.set(db, schema);
   const auth = deps.auth ?? auths.get(db) ?? createTestAuth(db).auth;
@@ -170,6 +186,7 @@ export function createClient(db: TestDb, userId: string | null, deps: ClientDeps
       auth: authHost.current(),
       authHost,
       userId,
+      credential,
       headers,
       ip,
       limiter,

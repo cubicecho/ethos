@@ -51,6 +51,12 @@ describe('preflight', () => {
     expect(stderr).toContain('OIDC_ISSUER is not a URL');
   });
 
+  it('refuses an API audience that is not a URL', () => {
+    const { status, stderr } = runPreflight({ OIDC_API_AUDIENCE: 'ethos-api' });
+    expect(status).toBe(1);
+    expect(stderr).toContain('OIDC_API_AUDIENCE is not a URL');
+  });
+
   it('refuses a client auth method it does not know', () => {
     const { status, stderr } = runPreflight({ OIDC_ISSUER: ISSUER, OIDC_CLIENT_ID: 'ethos', OIDC_CLIENT_AUTH: 'jwt' });
     expect(status).toBe(1);

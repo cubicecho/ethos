@@ -1,5 +1,6 @@
+import { apiKey } from '@better-auth/api-key';
 import type { DB } from '@ethos/db';
-import { accounts, sessions, users, verifications } from '@ethos/db/schema';
+import { accounts, apikeys, sessions, users, verifications } from '@ethos/db/schema';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { bearer, genericOAuth, magicLink, oneTimeToken } from 'better-auth/plugins';
@@ -19,6 +20,12 @@ import { sendMagicLinkEmail } from './email.ts';
 
 /** better-auth's id for the magic-link plugin. */
 const MAGIC_LINK_PLUGIN_ID = 'magic-link';
+
+/** What every API key Ethos mints starts with, so a leaked one is recognisable as Ethos's. */
+export const API_KEY_PREFIX = 'ethos_';
+
+/** The header another program sends its API key in. */
+export const API_KEY_HEADER = 'x-api-key';
 
 /** What delivering one sign-in link is given. */
 export interface MagicLink {
@@ -69,7 +76,7 @@ export function createAuth(db: DB, { secret = authSecret(), sendMagicLink, oidc 
     // The rc drizzle instance is keyed by relations, so the adapter cannot discover tables itself.
     database: drizzleAdapter(db, {
       provider: 'pg',
-      schema: { user: users, session: sessions, account: accounts, verification: verifications },
+      schema: { user: users, session: sessions, account: accounts, verification: verifications, apikey: apikeys },
     }),
     secret,
     // The OIDC callback is served here (http/sso.ts), which in development is not the app's origin.
@@ -88,6 +95,14 @@ export function createAuth(db: DB, { secret = authSecret(), sendMagicLink, oidc 
     // the login page, which says so, rather than better-auth's own error page.
     onAPIError: { errorURL: `${appUrl()}/login` },
     plugins: [
+      // Keys for other programs. Only the hash is stored, and the plugin's own limit
+      // (ten requests a day) would starve anything that polls.
+      apiKey({
+        defaultPrefix: API_KEY_PREFIX,
+        apiKeyHeaders: API_KEY_HEADER,
+        requireName: true,
+        rateLimit: { enabled: false },
+      }),
       // bearer: mutations return the raw token, and the client sends it back as `Authorization: Bearer`.
       bearer(),
       // How an OIDC sign-in reaches the app: the callback mints one of these, and
@@ -171,4 +186,16 @@ export function sendsMagicLinks(auth: Auth): boolean {
 export async function sessionUserId(auth: Auth, headers: Headers): Promise<string | null> {
   const session = await auth.api.getSession({ headers });
   return session?.user.id ?? null;
+}
+
+/**
+ * Reads whose an API key is.
+ *
+ * @param auth - The auth instance.
+ * @param key - The key as the request sent it.
+ * @returns The owner's id, or null for a key that is unknown, revoked or expired.
+ */
+export async function apiKeyUserId(auth: Auth, key: string): Promise<string | null> {
+  const result = await auth.api.verifyApiKey({ body: { key } }).catch(() => null);
+  return result?.valid && result.key ? result.key.referenceId : null;
 }
