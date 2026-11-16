@@ -1,3 +1,11 @@
+# [5.3.0](https://github.com/cubicecho/ethos/compare/v5.2.1...v5.3.0) (2026-11-16)
+
+### Features
+
+* API keys for other programs to call Ethos ([46e934b](https://github.com/cubicecho/ethos/commit/46e934b6e80414545793fd33fb121779b46cc2e8)), closes [#22](https://github.com/cubicecho/ethos/issues/22)
+* **auth:** accept OIDC provider access tokens as a person's bearer ([d8fe7c0](https://github.com/cubicecho/ethos/commit/d8fe7c04214a29a7d86531981079ab8604d48920))
+* **sso:** register a device client when pairing with a provider ([39ff96a](https://github.com/cubicecho/ethos/commit/39ff96ae3fe9ad6d9f51a67fc559e4627b3142be))
+
 ## [5.2.1](https://github.com/cubicecho/ethos/compare/v5.2.0...v5.2.1) (2026-11-09)
 
 
