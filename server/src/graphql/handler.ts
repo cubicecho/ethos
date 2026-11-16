@@ -1,12 +1,13 @@
 import type { DB } from '@ethos/db';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { type GraphQLSchema, NoSchemaIntrospectionCustomRule } from 'graphql';
 import { createYoga, type Plugin } from 'graphql-yoga';
 import type { AuthHost } from '../auth/auth-host.ts';
-import { readCaller } from '../auth/better-auth.ts';
+import { readCaller } from '../auth/caller.ts';
 import type { RateLimiter } from '../auth/rate-limit.ts';
 import { isProduction } from '../core/config.ts';
 import { type Context, UNKNOWN_IP } from '../core/context.ts';
+import { bearerChallenge } from '../http/protected-resource.ts';
 import { createLoaders } from './loaders.ts';
 import { graphqlLogger } from './logger.ts';
 import { useOperationLimits } from './operation-limits.ts';
@@ -33,9 +34,9 @@ export type ContextFactory = (headers: Headers, ip?: string) => Promise<Context>
  */
 export function createContextFactory({ db, authHost, limiter }: ContextDeps): ContextFactory {
   return async (headers, ip = UNKNOWN_IP) => {
-    // Asked per request: pairing a provider swaps the instance while the server runs.
+    // Asked per request: pairing a provider swaps the instance, and its token verifier with it.
     const auth = authHost.current();
-    const { userId, credential } = await readCaller(auth, headers);
+    const { userId, credential } = await readCaller({ auth, db, providerTokens: authHost.providerTokens() }, headers);
     return {
       db,
       auth,
@@ -53,6 +54,8 @@ export function createContextFactory({ db, authHost, limiter }: ContextDeps): Co
 /** What Express hands Yoga alongside the fetch request. */
 interface ServerContext {
   req?: Request;
+  /** For a header Yoga's own response does not cover. Absent when a test calls `yoga.fetch`. */
+  res?: Response;
 }
 
 /**
@@ -71,6 +74,9 @@ function useNoIntrospection(): Plugin {
 /**
  * Builds the Yoga handler for /graphql.
  *
+ * A refused bearer, while there is an OIDC provider, gets a `WWW-Authenticate` challenge naming the
+ * protected-resource metadata (http/protected-resource.ts), so a device app knows where to get a token.
+ *
  * @param schema - The schema to serve.
  * @param contextFor - Builds a request's context.
  * @returns The Yoga instance, callable as Express middleware.
@@ -83,7 +89,15 @@ export function createGraphQLHandler(schema: GraphQLSchema, contextFor: ContextF
     // Masked errors are logged here with their real cause.
     logging: graphqlLogger,
     plugins: [useOperationLimits(), ...(isProduction() ? [useNoIntrospection()] : [])],
-    // Express's view of the caller, which honours TRUST_PROXY.
-    context: ({ request, req }) => contextFor(request.headers, req?.ip),
+    context: async ({ request, req, res }) => {
+      // Express's view of the caller, which honours TRUST_PROXY.
+      const context = await contextFor(request.headers, req?.ip);
+      const challenge = bearerChallenge(context);
+      // Node merges this with the headers Yoga writes.
+      if (challenge !== null && res !== undefined && res.headersSent === false) {
+        res.setHeader('WWW-Authenticate', challenge);
+      }
+      return context;
+    },
   });
 }

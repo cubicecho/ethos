@@ -2,8 +2,9 @@ import { index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { users } from './users.ts';
 
 /**
- * One way a user signs in at an outside provider. Owned by better-auth, which requires the table;
- * Ethos signs in by link alone, so it stays empty.
+ * One way a user signs in at an outside provider. Owned by better-auth, which writes a row the
+ * first time someone signs in through the OIDC provider: provider `oidc`, the provider's `sub` as
+ * `accountId`. That row is how a provider access token finds its person (server/src/auth/provider-tokens.ts).
  */
 export const accounts = pgTable(
   'accounts',

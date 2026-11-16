@@ -4,13 +4,15 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import * as dbSchema from '@ethos/db/schema';
+import { eq } from 'drizzle-orm';
 import express from 'express';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fixedAuthHost } from '../../auth/auth-host.ts';
 import type { Auth } from '../../auth/better-auth.ts';
 import { createRateLimiter } from '../../auth/rate-limit.ts';
-import type { OidcConfig } from '../../core/config.ts';
+import { OIDC_PROVIDER_ID, type OidcConfig } from '../../core/config.ts';
 import { ErrorCode } from '../../core/errors.ts';
 import { HttpStatus } from '../../core/wire.ts';
 import { createApp } from '../../http/app.ts';
@@ -30,7 +32,7 @@ import {
 // client secret in a Basic header, PKCE, and a signed id token carrying the nonce.
 
 const VERIFY = 'mutation ($token: String!) { verifyOneTimeToken(token: $token) { token userId } }';
-const CONFIG = '{ authConfig { sso { name signInUrl } } }';
+const CONFIG = '{ authConfig { sso { name signInUrl deviceClientId } } }';
 const CLIENT_ID = 'ethos';
 const CLIENT_SECRET = 'ethos-secret';
 
@@ -288,6 +290,9 @@ describe('OIDC sign-in', () => {
     const session = (result.data as Verified).verifyOneTimeToken;
     expect(await sessionUserId(session.token)).toBe(session.userId);
     expect(await nameOf(session.userId)).toBe('Ada');
+    // The provider's `sub` is what an access token from it is mapped back through (auth/provider-tokens.ts).
+    const [account] = await db.select().from(dbSchema.accounts).where(eq(dbSchema.accounts.userId, session.userId));
+    expect(account).toMatchObject({ providerId: OIDC_PROVIDER_ID, accountId: provider.profile.sub });
 
     // Spent, and a spent token is bad input, not a signed-out session.
     const again = await createClient(db, null, { auth }).expectError(VERIFY, { token });
@@ -337,6 +342,18 @@ describe('authConfig.sso', () => {
     vi.stubEnv('OIDC_CLIENT_ID', CLIENT_ID);
     vi.stubEnv('OIDC_NAME', 'heautou');
     const data = await createClient(db, null).expectOk(CONFIG);
-    expect(data.authConfig.sso).toEqual({ name: 'heautou', signInUrl: `${appUrl}${SSO_START_PATH}` });
+    expect(data.authConfig.sso).toEqual({
+      name: 'heautou',
+      signInUrl: `${appUrl}${SSO_START_PATH}`,
+      deviceClientId: null,
+    });
+  });
+
+  it('names the client device apps use, when one is set', async () => {
+    vi.stubEnv('OIDC_ISSUER', provider.issuer);
+    vi.stubEnv('OIDC_CLIENT_ID', CLIENT_ID);
+    vi.stubEnv('OIDC_DEVICE_CLIENT_ID', 'ethos-devices');
+    const data = await createClient(db, null).expectOk(CONFIG);
+    expect(data.authConfig.sso.deviceClientId).toBe('ethos-devices');
   });
 });

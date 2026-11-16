@@ -1,9 +1,8 @@
 import { apikeys } from '@ethos/db/schema';
 import { desc, eq } from 'drizzle-orm';
 import { assertObjectType, extendSchema, type GraphQLSchema, parse } from 'graphql';
-import { type Context, Credential } from '../core/context.ts';
-import { forbidden } from '../core/errors.ts';
-import { requireAuth } from './resolvers.ts';
+import type { Context } from '../core/context.ts';
+import { refuseUnlessSession, requireAuth } from './resolvers.ts';
 
 // API keys: how another program calls Ethos as one of its users. Minting and
 // revoking are better-auth's own `createApiKey` and `deleteApiKey`, served by
@@ -40,34 +39,19 @@ const KEY_COLUMNS = {
   expiresAt: apikeys.expiresAt,
 };
 
-/** What a key that reaches for a person's operations is told. */
-const PEOPLE_ONLY = 'Only a signed-in person can do this. An API key cannot.';
-
 /**
- * The caller's user id, as long as the caller is a person on a session. A key
- * that could mint, list or revoke keys could mint its own successor, so a leaked
- * one would never be revoked for good.
+ * The caller's user id, as long as the caller is a person on a session. A key that could mint, list or revoke keys
+ * could mint its own successor, so a leaked one would never be revoked for good. A provider access token is refused
+ * for the same reason: a key it minted would outlive the token and the provider's say over it.
  *
  * @param context - The request context.
  * @returns The signed-in user's id.
- * @throws UNAUTHENTICATED for nobody, and FORBIDDEN for an API key. Neither says anything about a row.
+ * @throws UNAUTHENTICATED for nobody, and FORBIDDEN for a key or a provider token. Neither says anything about a row.
  */
 export function requireKeyManager(context: Context): string {
   const userId = requireAuth(context);
-  refuseApiKey(context);
+  refuseUnlessSession(context);
   return userId;
-}
-
-/**
- * Refuses an API key, for what is a person's alone: signing in and out, sessions, and keys.
- *
- * @param context - The request context.
- * @throws FORBIDDEN when the request carries an API key.
- */
-export function refuseApiKey(context: Context): void {
-  if (context.credential === Credential.ApiKey) {
-    throw forbidden(PEOPLE_ONLY);
-  }
 }
 
 /**

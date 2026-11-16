@@ -9,6 +9,7 @@ import { createSchema } from '../graphql/build-schema.ts';
 import { createContextFactory, createGraphQLHandler } from '../graphql/handler.ts';
 import { createMcpHandler } from '../graphql/mcp.ts';
 import { checkHealth } from './health.ts';
+import { mountProtectedResource } from './protected-resource.ts';
 import { mountSso } from './sso.ts';
 import { createStaticHandler } from './static.ts';
 
@@ -33,7 +34,8 @@ export interface AppDeps {
 }
 
 /**
- * Builds the Express app: /graphql, /mcp, /healthz, the OIDC redirects and the web client.
+ * Builds the Express app: /graphql, /mcp, /healthz, the OIDC redirects, the protected-resource
+ * metadata and the web client.
  *
  * It does not listen, migrate or read the environment, so a test can build the
  * app production runs.
@@ -80,6 +82,8 @@ export async function createApp({
   // Before the static handler, whose fallback would answer both paths with the app. Always
   // mounted, because a provider can be paired while the server runs.
   mountSso(app, host);
+  // Where a device app learns which provider issues tokens for this API (RFC 9728).
+  mountProtectedResource(app, host);
   if (staticDir !== undefined) {
     const serveStatic = createStaticHandler(staticDir);
     app.use((request, response) => serveStatic(request, response));

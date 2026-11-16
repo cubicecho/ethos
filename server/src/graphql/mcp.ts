@@ -7,7 +7,8 @@ import type { ContextFactory } from './handler.ts';
 // The same schema instance /graphql serves, projected as MCP tools. Every call
 // runs in-process through the same resolvers, so the row scope and
 // `requireAuth` an agent meets are the ones a browser does. An agent signs in with
-// an API key in `x-api-key`, or a session token as `Authorization: Bearer`.
+// an API key in `x-api-key`, or a session token or an access token from the OIDC
+// provider as `Authorization: Bearer` (auth/caller.ts).
 
 /** What an MCP client is told this server is called. */
 export const MCP_NAME = 'ethos';

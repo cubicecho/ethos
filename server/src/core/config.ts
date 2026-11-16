@@ -300,3 +300,24 @@ export function oidcConfig(): OidcConfig | null {
 export function oidcRedirectUri(): string {
   return `${serverUrl()}/api/auth/callback/${OIDC_PROVIDER_ID}`;
 }
+
+/**
+ * What this server is called at the OIDC provider as an API: the `aud` a provider access token must carry to be
+ * accepted as a bearer (auth/provider-tokens.ts), and the `resource` the protected-resource metadata names. A device
+ * app (Home Assistant) asks the provider for a token with this audience.
+ *
+ * @returns `OIDC_API_AUDIENCE`, or `serverUrl()` followed by `/graphql`.
+ */
+export function oidcApiAudience(): string {
+  return process.env.OIDC_API_AUDIENCE?.trim() || `${serverUrl()}/graphql`;
+}
+
+/**
+ * The public client the operator named for device apps to use at the provider for the device flow. Ethos never uses
+ * it itself: it only tells device apps which one to ask for (sso/device-client.ts).
+ *
+ * @returns `OIDC_DEVICE_CLIENT_ID`, or null when unset.
+ */
+export function oidcDeviceClientId(): string | null {
+  return process.env.OIDC_DEVICE_CLIENT_ID?.trim() || null;
+}

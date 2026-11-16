@@ -11,8 +11,9 @@ import { secureLocalNet } from '../core/config.ts';
 import type { Context } from '../core/context.ts';
 import { badInput, notFound } from '../core/errors.ts';
 import { parseOrThrow } from '../core/validation.ts';
-import { refuseApiKey, requireKeyManager } from './api-keys.ts';
+import { requireKeyManager } from './api-keys.ts';
 import { createAuth, sendsMagicLinks, sessionUserId } from './better-auth.ts';
+import { refuseUnlessSession } from './resolvers.ts';
 import { AuthFlow, throttle } from './throttle.ts';
 
 // better-auth's own endpoints, served as GraphQL by @cubicecho/graphql-better-auth:
@@ -20,8 +21,8 @@ import { AuthFlow, throttle } from './throttle.ts';
 // arguments and types are read off the auth config, so a better-auth upgrade
 // moves them with it. What Ethos adds is in the `operations` below: the
 // throttle, SECURE_LOCAL_NET, errors that never sign anyone out, and keys that
-// only a person on a session can manage. Every one of them is a person's, so a
-// request on an API key is refused before any runs.
+// only a person on a session can manage. Every one of them is a session's, so a
+// request on an API key or a provider access token is refused before any runs.
 
 /** The better-auth endpoints served, by name. */
 export const BETTER_AUTH_OPERATIONS = [
@@ -252,8 +253,8 @@ export function applyBetterAuthExtension(schema: GraphQLSchema, db: DB): GraphQL
     include: BETTER_AUTH_OPERATIONS,
     auth: (context) => context.auth,
     headers: (context) => context.headers,
-    // A key has no session, must not reach the ones its owner has, and must not mint its own successor.
-    before: ({ context }) => refuseApiKey(context),
+    // Neither a key nor a provider token has a session, and neither may reach the ones its user has or mint a key.
+    before: ({ context }) => refuseUnlessSession(context),
     operations: { signInMagicLink, magicLinkVerify, verifyOneTimeToken, signOut, createApiKey, deleteApiKey },
   });
   return applyBetterAuthGraphQL(schema, built);

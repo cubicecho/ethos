@@ -13,7 +13,6 @@ import {
   serverUrl,
   smtpConfigured,
 } from '../core/config.ts';
-import { Credential } from '../core/context.ts';
 import { AUTH_DEFAULTS } from '../core/defaults.ts';
 import { SECONDS_PER_DAY, SECONDS_PER_MINUTE } from '../core/wire.ts';
 import { claimFirstAdmin } from './admin.ts';
@@ -189,15 +188,6 @@ export async function sessionUserId(auth: Auth, headers: Headers): Promise<strin
   return session?.user.id ?? null;
 }
 
-/** Who a request is, and what it proved it with. Both are null for nobody. */
-export interface Caller {
-  userId: string | null;
-  credential: Credential | null;
-}
-
-/** A request that carries no credential, or one that does not hold. */
-const ANONYMOUS: Caller = { userId: null, credential: null };
-
 /**
  * Reads whose an API key is.
  *
@@ -208,25 +198,4 @@ const ANONYMOUS: Caller = { userId: null, credential: null };
 export async function apiKeyUserId(auth: Auth, key: string): Promise<string | null> {
   const result = await auth.api.verifyApiKey({ body: { key } }).catch(() => null);
   return result?.valid && result.key ? result.key.referenceId : null;
-}
-
-/**
- * Reads who a request is: an API key in `x-api-key` first, then a session in `Authorization: Bearer`.
- *
- * A key that does not hold is nobody, even beside a live session, so a program
- * whose key was revoked hears UNAUTHENTICATED rather than acting as whoever else
- * the headers name.
- *
- * @param auth - The auth instance.
- * @param headers - The request's headers.
- * @returns The caller, or `ANONYMOUS`.
- */
-export async function readCaller(auth: Auth, headers: Headers): Promise<Caller> {
-  const key = headers.get(API_KEY_HEADER);
-  if (key !== null) {
-    const userId = await apiKeyUserId(auth, key);
-    return userId === null ? ANONYMOUS : { userId, credential: Credential.ApiKey };
-  }
-  const userId = await sessionUserId(auth, headers);
-  return userId === null ? ANONYMOUS : { userId, credential: Credential.Session };
 }

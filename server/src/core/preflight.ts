@@ -57,6 +57,12 @@ const isIssuerUrl = URL.canParse(oidcIssuer);
 if (oidcIssuer !== '' && isIssuerUrl === false) {
   fatal(`OIDC_ISSUER is not a URL: ${oidcIssuer}`);
 }
+// The audience is the protected-resource metadata's `resource`, which RFC 9728 makes a URL.
+const oidcApiAudience = process.env.OIDC_API_AUDIENCE?.trim() ?? '';
+const isAudienceUrl = URL.canParse(oidcApiAudience);
+if (oidcApiAudience !== '' && isAudienceUrl === false) {
+  fatal(`OIDC_API_AUDIENCE is not a URL: ${oidcApiAudience}`);
+}
 const oidcClientAuth = process.env.OIDC_CLIENT_AUTH?.trim() ?? '';
 const isKnownClientAuth = (OIDC_CLIENT_AUTH_METHODS as readonly string[]).includes(oidcClientAuth);
 if (oidcClientAuth !== '' && isKnownClientAuth === false) {

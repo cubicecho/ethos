@@ -65,6 +65,7 @@ ethos/
 │       ├── http/            # Plain HTTP, nothing GraphQL
 │       │   ├── app.ts           # The Express app: every route, in order
 │       │   ├── sso.ts           # The OIDC sign-in's start and callback, which a browser is sent to
+│       │   ├── protected-resource.ts # RFC 9728 metadata, and the challenge a refused bearer gets
 │       │   └── static.ts        # Serves the built web client
 │       ├── graphql/         # The schema, and what applies to every table in it
 │       │   ├── build-schema.ts  # createSchema(db) — buildSchema + extensions
@@ -77,12 +78,14 @@ ethos/
 │       │   ├── write-guards.ts  # onWrite checks the row scope cannot express
 │       │   └── loaders.ts       # Per-request DataLoaders
 │       ├── auth/            # Signing in, and who a request is
-│       │   ├── better-auth.ts   # The better-auth instance, and who a request is: an API key, then a session
-│       │   ├── auth-host.ts     # Holds the current instance, and rebuilds it when the provider changes
+│       │   ├── better-auth.ts   # The better-auth instance, and whose a session or an API key is
+│       │   ├── caller.ts        # Who a request is: an API key, then a provider token, then a session
+│       │   ├── provider-tokens.ts # The OIDC provider's access tokens as a person's bearer (RFC 9068)
+│       │   ├── auth-host.ts     # Holds the current instance and its token verifier, and rebuilds both when the provider changes
 │       │   ├── admin.ts         # The instance's admin: the first account
 │       │   ├── endpoints.ts     # better-auth's own endpoints as GraphQL: signInMagicLink, magicLinkVerify, sessions, signOut, API keys
 │       │   ├── api-keys.ts      # SDL extension: apiKeys, and that only a session manages keys
-│       │   ├── resolvers.ts     # SDL extension: authConfig, and requireAuth
+│       │   ├── resolvers.ts     # SDL extension: authConfig, requireAuth, and what only a session may do
 │       │   ├── email.ts         # Sends a sign-in link through SMTP_URL
 │       │   ├── throttle.ts      # Which sign-in flows are limited, and by what key
 │       │   └── rate-limit.ts    # In-process limiter for sign-in requests
@@ -283,36 +286,69 @@ projects the same schema instance as MCP tools, and `createContextFactory` in
 caller is read and no second auth path to keep in step. It is read-only
 (`includeMutations: false`) and off unless `MCP_ENABLED` is set; switched off,
 the route answers its own 404 so the web client's fallback does not hand an MCP
-client a page. A client signs in with an API key as `x-api-key`, or a session
-token as `Authorization: Bearer`; `apiKeys` is left out too, since keys are a
-person's to manage in Settings.
+client a page. A client signs in with an API key as `x-api-key`, or with a
+session token or an access token from the OIDC provider as `Authorization:
+Bearer`; `apiKeys` is left out too, since keys are a person's to manage in
+Settings.
+
+**Three credentials, and the first one a request carries decides.**
+`readCaller` in `auth/caller.ts` reads `x-api-key` first, then a bearer with a
+JWT's shape as a provider access token, then any other bearer as a session (a
+session token has no dots, so a JWT never costs a session lookup). One that does
+not hold is nobody, never a fall through to the next: a revoked key beside a good
+token is `UNAUTHENTICATED`, as telos does it. Each sets `context.credential`
+(`session`, `apiKey`, `providerToken`) beside the same `userId`, so all three
+meet the same row scope; `credential` only decides what is a session's alone.
 
 **An API key is its owner, except where keys and sessions are concerned.** Keys
 are better-auth's `@better-auth/api-key` plugin, as in telos and philotes: minted
 with the `ethos_` prefix, shown once, stored as a hash in `apikeys` (one of
-`AUTH_TABLES`), and revoked by deleting the row. `readCaller` in
-`auth/better-auth.ts` reads `x-api-key` before `Authorization`, and a key that
-does not verify is nobody even beside a live session, so a revoked or expired key
-hears `UNAUTHENTICATED` rather than acting as whoever else the headers name. A key
-gets its owner's `userId` and so the same row scope as a session, for reads and
-writes alike; `context.credential` is what tells the two apart. Minting and
-revoking are better-auth's `createApiKey` and `deleteApiKey`, served through
-`endpoints.ts` like the rest, and listing is the hand-written `apiKeys`. Every
-better-auth operation refuses a key in its `before`, and `apiKeys` does in
-`requireKeyManager`: a key that could mint keys could mint its own successor. The
-plugin's own rate limit (ten requests a day) is off, because anything that polls
-would hit it by breakfast.
+`AUTH_TABLES`), and revoked by deleting the row. A key that does not verify is
+nobody even beside a live session, so a revoked or expired key hears
+`UNAUTHENTICATED` rather than acting as whoever else the headers name. A key gets
+its owner's `userId` and so the same row scope as a session, for reads and writes
+alike. Minting and revoking are better-auth's `createApiKey` and `deleteApiKey`,
+served through `endpoints.ts` like the rest, and listing is the hand-written
+`apiKeys`. Every better-auth operation refuses a key in its `before`
+(`refuseUnlessSession`), and `apiKeys` does in `requireKeyManager`: a key that
+could mint keys could mint its own successor. The plugin's own rate limit (ten
+requests a day) is off, because anything that polls would hit it by breakfast.
+
+**A provider access token is a person, but not a session.** A device app (Home
+Assistant) runs the device flow at the OIDC provider and sends its access token
+as `Authorization: Bearer`. `auth/provider-tokens.ts` accepts it only while a
+provider is in effect: signed with a key from the provider's JWKS by an
+asymmetric algorithm it advertises (`PROVIDER_TOKEN_ALGORITHMS`; never `none` or
+HS*), `iss` the provider's, `aud` including `OIDC_API_AUDIENCE`, `typ` `at+jwt`,
+inside `AUTH_DEFAULTS.providerTokenClockToleranceSeconds`. Its `sub` becomes a
+user only through the `accounts` row for `OIDC_PROVIDER_ID` (`userForSubject`),
+**never by email**, so the person signs in through the browser once first. It
+reads and writes every row a session can. What it may not do is what a key may
+not: sign in or out, see sessions, or mint, list and revoke keys, all FORBIDDEN by
+`refuseUnlessSession`. better-auth finds no session behind it to act on, and a key
+it minted would outlive a token the provider expires in minutes and can revoke;
+keys are minted on a session, in Settings. The verifier is built with the auth
+instance (`authHost.providerTokens()`), so a new pairing never trusts the last
+provider's keys. `http/protected-resource.ts` serves RFC 9728 metadata at
+`/.well-known/oauth-protected-resource`, and a refused bearer on `/graphql` gets
+a `WWW-Authenticate` challenge on its 200 (GraphQL never answers 401).
+`OIDC_API_AUDIENCE` and `OIDC_DEVICE_CLIENT_ID` are environment only, for a
+paired provider too. Telos ends a live board when the token expires
+(`credential-expiry.ts`); Ethos has no subscriptions, so each request checking
+the token is the whole of it.
 
 **Report `NOT_FOUND`, never `FORBIDDEN`.** "You may not touch this" confirms the
 row exists, which is itself something the caller is not entitled to know. The
 `FORBIDDEN`s are `pairSso`/`unpairSso`, which are about the instance, not a row,
-and an API key reaching for keys, sessions or sign-in, which is about the
-credential: in neither is there a row whose existence would be given away.
+and an API key or a provider token reaching for keys, sessions or sign-in, which
+is about the credential: in neither is there a row whose existence would be given
+away.
 
 **`UNAUTHENTICATED` means the session expired.** The client drops its token on it
 and redirects to `/login`. For a program on an API key it means the key was
-revoked or ran out. A bad magic link is `BAD_USER_INPUT` — it must not
-sign anyone out.
+revoked or ran out; for a device app on a provider token, that the token is bad,
+expired, from another issuer or for nobody who has signed in here, and it fetches
+a fresh one. A bad magic link is `BAD_USER_INPUT` — it must not sign anyone out.
 
 **The palette is cubeui's.** `app/cubeui-tokens.css` comes from the `tokens`
 item of cubeui's native registry (`npx shadcn add @cubeui/tokens` from `app/`;
@@ -504,6 +540,11 @@ one of these has found a decision, not a mistake.
   account is the admin. `OIDC_ISSUER` in the environment wins and is read-only
   from the app. The callback is on `SERVER_URL`, which in development is not
   `APP_URL`.
+- **A device app signs in at the provider, not here.** Home Assistant and the
+  like run the device flow at the OIDC provider and send its access token as a
+  bearer; Ethos serves no device endpoint of its own. It verifies the token
+  (`auth/provider-tokens.ts`) and treats it as its person on every row, but not
+  as a session: keys, sessions and sign-in stay a session's.
 - **`archivedAt` is the soft delete.** A habit has no `deletedAt`: archiving is
   the reversible removal, and a delete really deletes.
 - **No streak, and no all-time percentage.** Ethos shows each period's tally
