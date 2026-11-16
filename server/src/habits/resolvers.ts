@@ -7,7 +7,7 @@ import type { Context } from '../core/context.ts';
 import { HABIT_DEFAULTS } from '../core/defaults.ts';
 import { badInput, notFound } from '../core/errors.ts';
 import { parseOrThrow } from '../core/validation.ts';
-import { entryNote } from './input.ts';
+import { amount as amountRule, entryNote } from './input.ts';
 import { assertDay, daysBetween, periodOf } from './periods.ts';
 import { type EntryLike, type HabitLike, tallyPeriod, tallyRecent } from './tallies.ts';
 
@@ -49,8 +49,19 @@ const HABITS_SDL = parse(`
     Records one day of one habit. \`day\` is the keeper's own \`YYYY-MM-DD\`, and the
     day is the key: marking the same day twice rewrites the one row it has.
     \`partial\` says a smaller version was done. It is still a kept day, counted whole.
+    \`amount\` is how much of the habit the day held, as a total and never a step: left
+    out, a kept day is the habit's whole \`dailyAmount\`. Short of it, the day is a
+    smaller version; past it is allowed. A skip takes no amount.
+    \`note\` is rewritten on every mark, so send the day's note again to keep it.
     """
-    markHabit(habitId: ID!, day: String!, status: String = "done", note: String, partial: Boolean = false): Habit!
+    markHabit(
+      habitId: ID!
+      day: String!
+      status: String = "done"
+      note: String
+      partial: Boolean = false
+      amount: Int
+    ): Habit!
     "Removes a day's entry, leaving it untouched rather than missed."
     clearHabit(habitId: ID!, day: String!): Habit!
   }
@@ -155,6 +166,37 @@ function assertSkipAllowed(habit: AnyRow, entries: readonly { day: string; statu
   );
 }
 
+/** What one day held, and what the habit asked of it when it was written. */
+interface DayMeasure {
+  amount: number;
+  dailyAmount: number;
+}
+
+// A skip has no size, so it stores these neutral values. They mean nothing on one.
+const SKIP_MEASURE: DayMeasure = { amount: 1, dailyAmount: 1 };
+
+/**
+ * The amount a mark records, and the daily amount it is measured against.
+ *
+ * The daily amount is a snapshot of the habit's, so "5 of 8" stays true after
+ * the habit is changed to ask for 10. Left out, a kept day is the whole amount:
+ * that is what a plain tick, a tap on the grid and an older client all mean.
+ *
+ * @param habit - The habit's row.
+ * @param status - The status being recorded.
+ * @param amount - The `amount` argument, as sent.
+ * @returns The measure. Throws BAD_USER_INPUT for an amount on a skip or outside 1 to the cap.
+ */
+function measureDay(habit: AnyRow, status: EntryStatus, amount: number | null): DayMeasure {
+  if (status === ENTRY_SKIPPED) {
+    if (amount != null) {
+      throw badInput('A skipped day has no amount.');
+    }
+    return SKIP_MEASURE;
+  }
+  return { amount: parseOrThrow(amountRule, amount ?? habit.dailyAmount), dailyAmount: habit.dailyAmount };
+}
+
 /**
  * The periods field resolvers share: the habit's entries, as tallies.ts reads them.
  *
@@ -232,7 +274,14 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
 
   mutations.markHabit.resolve = async (
     _parent: unknown,
-    args: { habitId: string; day: string; status: string | null; note: string | null; partial: boolean | null },
+    args: {
+      habitId: string;
+      day: string;
+      status: string | null;
+      note: string | null;
+      partial: boolean | null;
+      amount: number | null;
+    },
     context: Context,
   ) => {
     const userId = requireAuth(context);
@@ -241,11 +290,13 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
     assertNotFuture(day);
     const status = parseStatus(args.status);
     parseOrThrow(entryNote, args.note);
-    const partial = args.partial ?? false;
-    if (partial && status !== ENTRY_DONE) {
+    const declaredPartial = args.partial ?? false;
+    if (declaredPartial && status !== ENTRY_DONE) {
       // A smaller version is a way of having kept the day. A skip has no size.
       throw badInput('Only a kept day can be a smaller version.');
     }
+    const measure = measureDay(habit, status, args.amount);
+    const partial = declaredPartial || measure.amount < measure.dailyAmount;
 
     if (habit.archivedAt != null) {
       // An archived habit is a record, not a practice. Silently accepting the
@@ -260,10 +311,10 @@ export function applyHabitsExtension(schema: GraphQLSchema): GraphQLSchema {
     // are the same tick, and the unique index makes that true with no transaction.
     await context.db
       .insert(dbSchema.habitEntries)
-      .values({ userId, habitId: habit.id, day, status, note: args.note ?? null, partial })
+      .values({ userId, habitId: habit.id, day, status, note: args.note ?? null, partial, ...measure })
       .onConflictDoUpdate({
         target: [dbSchema.habitEntries.habitId, dbSchema.habitEntries.day],
-        set: { status, note: args.note ?? null, partial, updatedAt: new Date() },
+        set: { status, note: args.note ?? null, partial, ...measure, updatedAt: new Date() },
       });
 
     // The loader's answer predates this write, and the request is not over: the

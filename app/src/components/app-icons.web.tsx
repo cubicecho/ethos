@@ -3,4 +3,4 @@
  * `ui/icons.web.tsx`: on web a lucide `<svg>` takes `currentColor` from its
  * parent, so the component is lucide's own.
  */
-export { CalendarCheck, Minimize2 } from 'lucide-react';
+export { CalendarCheck, Minimize2, Minus } from 'lucide-react';

@@ -1,6 +1,7 @@
 import * as dbSchema from '@ethos/db/schema';
 import { Period } from '@ethos/db/schema';
 import { eq } from 'drizzle-orm';
+import { HABIT_DEFAULTS } from '../core/defaults.ts';
 import { badInput } from '../core/errors.ts';
 import { periodLength } from './periods.ts';
 
@@ -46,6 +47,28 @@ export function describeCadenceLimit(period: Period): string {
     return 'A daily habit is kept once a day.';
   }
   return `A ${period} has at most ${maxTargetFor(period)} days, so it cannot ask for more.`;
+}
+
+/**
+ * The most a habit may ask for in one day, and the most one day may record.
+ *
+ * A separate axis from the target: the target counts days in a period, and
+ * this counts what one of those days holds. It depends on no other column, so
+ * it is checked before the write rather than after.
+ *
+ * @returns The ceiling, from `HABIT_DEFAULTS.maxAmount`.
+ */
+export function maxAmount(): number {
+  return HABIT_DEFAULTS.maxAmount;
+}
+
+/**
+ * Why an amount over the limit is refused, as a sentence for the user.
+ *
+ * @returns The sentence.
+ */
+export function describeAmountLimit(): string {
+  return `An amount is a whole number from 1 to ${maxAmount().toLocaleString('en-US')}.`;
 }
 
 /**

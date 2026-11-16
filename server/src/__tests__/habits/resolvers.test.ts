@@ -1,4 +1,5 @@
 import * as dbSchema from '@ethos/db/schema';
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { HABIT_DEFAULTS } from '../../core/defaults.ts';
 import { ErrorCode } from '../../core/errors.ts';
@@ -179,6 +180,105 @@ describe('markHabit', () => {
   it('refuses a request with no session at all', async () => {
     const error = await anonymous.expectError(MARK, { id: habitId, day: today });
     expect(error.code).toBe(ErrorCode.Unauthenticated);
+  });
+});
+
+describe('an amount on a day', () => {
+  const MARK_AMOUNT = `mutation ($id: ID!, $day: String!, $status: String, $amount: Int, $partial: Boolean, $note: String) {
+    markHabit(habitId: $id, day: $day, status: $status, amount: $amount, partial: $partial, note: $note) { id }
+  }`;
+  const DAY = `{ habitEntries(orderBy: { day: { direction: asc, priority: 1 } }) { status amount dailyAmount partial note } }`;
+  let water: string;
+
+  beforeEach(async () => {
+    water = await createHabit(mine, { name: 'Water', dailyAmount: 8 });
+  });
+
+  const entriesNow = async () => (await mine.expectOk(DAY)).habitEntries;
+
+  it('records a day short of its amount as a smaller version, still counted whole', async () => {
+    const data = await mine.expectOk(
+      `mutation ($id: ID!, $day: String!, $today: String!) {
+        markHabit(habitId: $id, day: $day, amount: 5) { current(today: $today) { done met } }
+      }`,
+      { id: water, day: today, today },
+    );
+    expect(data.markHabit.current).toEqual({ done: 1, met: true });
+    expect(await entriesNow()).toEqual([{ status: 'done', amount: 5, dailyAmount: 8, partial: true, note: null }]);
+  });
+
+  it('records the whole amount when it is sent, and when it is left out', async () => {
+    await mine.expectOk(MARK_AMOUNT, { id: water, day: yesterday, amount: 8 });
+    await mine.expectOk(MARK_AMOUNT, { id: water, day: today });
+    expect(await entriesNow()).toEqual([
+      { status: 'done', amount: 8, dailyAmount: 8, partial: false, note: null },
+      { status: 'done', amount: 8, dailyAmount: 8, partial: false, note: null },
+    ]);
+  });
+
+  it('stores an amount past the goal as it was sent, and as a whole day', async () => {
+    await mine.expectOk(MARK_AMOUNT, { id: water, day: today, amount: 10 });
+    expect(await entriesNow()).toEqual([{ status: 'done', amount: 10, dailyAmount: 8, partial: false, note: null }]);
+  });
+
+  it('treats the amount as a total: the same mark twice is one row with one amount', async () => {
+    await mine.expectOk(MARK_AMOUNT, { id: water, day: today, amount: 3 });
+    await mine.expectOk(MARK_AMOUNT, { id: water, day: today, amount: 3 });
+    expect(await entriesNow()).toEqual([{ status: 'done', amount: 3, dailyAmount: 8, partial: true, note: null }]);
+  });
+
+  it('keeps a declared smaller version partial even at the whole amount', async () => {
+    await mine.expectOk(MARK_AMOUNT, { id: water, day: today, amount: 8, partial: true, note: 'Tap water' });
+    expect(await entriesNow()).toEqual([
+      { status: 'done', amount: 8, dailyAmount: 8, partial: true, note: 'Tap water' },
+    ]);
+  });
+
+  it('refuses an amount of nothing, one past the cap, and one on a skip, recording nothing', async () => {
+    for (const variables of [
+      { amount: 0 },
+      { amount: -1 },
+      { amount: HABIT_DEFAULTS.maxAmount + 1 },
+      { amount: 3, status: 'skipped' },
+    ]) {
+      const error = await mine.expectError(MARK_AMOUNT, { id: water, day: today, ...variables });
+      expect(error.code).toBe(ErrorCode.BadUserInput);
+    }
+    expect(await db.select().from(dbSchema.habitEntries)).toHaveLength(0);
+  });
+
+  it('stores a skip with the neutral amount', async () => {
+    await mine.expectOk(MARK_AMOUNT, { id: water, day: today, status: 'skipped' });
+    expect(await entriesNow()).toEqual([{ status: 'skipped', amount: 1, dailyAmount: 1, partial: false, note: null }]);
+  });
+
+  it('keeps what a day measured against after the habit asks for more', async () => {
+    await mine.expectOk(MARK_AMOUNT, { id: water, day: yesterday, amount: 5 });
+    await mine.expectOk(MARK_AMOUNT, { id: water, day: today, amount: 8 });
+    await mine.expectOk(
+      `mutation ($id: UUID!) { updateHabit(set: { dailyAmount: 10 }, where: { id: { eq: $id } }) { id } }`,
+      { id: water },
+    );
+    // "5 of 8" and "8 of 8" were true the days they were written; asking for 10 later rewrites neither.
+    expect(await entriesNow()).toEqual([
+      { status: 'done', amount: 5, dailyAmount: 8, partial: true, note: null },
+      { status: 'done', amount: 8, dailyAmount: 8, partial: false, note: null },
+    ]);
+  });
+
+  it('refuses a short kept day that is not a smaller version, whoever writes it', async () => {
+    const [habit] = await db.select().from(dbSchema.habits).where(eq(dbSchema.habits.id, water));
+    const short = { userId: habit.userId, habitId: water, amount: 5, dailyAmount: 8 };
+    const error = await db
+      .insert(dbSchema.habitEntries)
+      .values({ ...short, day: today, partial: false })
+      .then(
+        () => null,
+        (failure: Error) => failure,
+      );
+    expect(String(error?.cause ?? error)).toContain('ck_habit_entries_short_is_partial');
+    // The same row owned up to as a smaller version is fine.
+    await db.insert(dbSchema.habitEntries).values({ ...short, day: yesterday, partial: true });
   });
 });
 

@@ -1,3 +1,5 @@
+import { HABIT_DEFAULTS } from './defaults';
+import { formatCount } from './format';
 import { Period } from './periods';
 
 /**
@@ -57,13 +59,50 @@ export function maxTargetFor(period: Period): number {
 }
 
 /**
- * "Every day", "3× a week" — the cadence as a line of text under the name.
+ * The most a habit may ask for in one day, and the most one day may record.
+ *
+ * @returns The ceiling. The server's copy in `server/src/habits/cadence.ts` is the one that decides.
+ */
+export function maxAmount(): number {
+  return HABIT_DEFAULTS.maxAmount;
+}
+
+/**
+ * Why an amount over the limit is refused, as a sentence for the user.
+ *
+ * @returns The sentence.
+ */
+export function describeAmountLimit(): string {
+  return `An amount is a whole number from 1 to ${formatCount(maxAmount())}.`;
+}
+
+/**
+ * "Every day", "3× a week", "8× a day, 5 days a week" — the cadence as a line of text under the name.
+ *
+ * @param period - The kind of period.
+ * @param targetCount - Days asked for in each period.
+ * @param dailyAmount - How much of the habit each of those days asks for.
+ * @returns The line.
+ */
+export function describeCadence(period: Period, targetCount: number, dailyAmount: number): string {
+  if (dailyAmount === 1) {
+    return describeDays(period, targetCount);
+  }
+  if (period === Period.Day) {
+    return `${formatCount(dailyAmount)}× every day`;
+  }
+  const days = targetCount === 1 ? `once a ${period}` : `${targetCount} days a ${period}`;
+  return `${formatCount(dailyAmount)}× a day, ${days}`;
+}
+
+/**
+ * The days half of a cadence: "Every day", "Once a week", "3× a month".
  *
  * @param period - The kind of period.
  * @param targetCount - Days asked for in each period.
  * @returns The line.
  */
-export function describeCadence(period: Period, targetCount: number): string {
+function describeDays(period: Period, targetCount: number): string {
   if (period === Period.Day) {
     return 'Every day';
   }
@@ -71,6 +110,20 @@ export function describeCadence(period: Period, targetCount: number): string {
     return `Once a ${period}`;
   }
   return `${targetCount}× a ${period}`;
+}
+
+/**
+ * How much of one day's amount was done: "5 of 8".
+ *
+ * Capped at the goal: a day past it is recorded as it was and reads as the goal
+ * met, so ten glasses on an eight-glass day says "8 of 8".
+ *
+ * @param amount - What the day recorded.
+ * @param of - What the day asked for.
+ * @returns The line.
+ */
+export function describeAmount(amount: number, of: number): string {
+  return `${formatCount(Math.min(amount, of))} of ${formatCount(of)}`;
 }
 
 /**

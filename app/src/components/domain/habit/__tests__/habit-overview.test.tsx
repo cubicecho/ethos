@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { formatDayLong, periodOf } from '@/lib/periods';
 import { HabitOverview } from '../habit-overview';
-import type { HabitOverviewSummary, HabitPeriodSummary } from '../types';
+import type { HabitEntrySummary, HabitOverviewSummary, HabitPeriodSummary } from '../types';
 
 // The overview puts habits of different cadences on one span of days, so what
 // is asserted here is which rows may carry the server's tally and that a press
@@ -35,6 +35,7 @@ const habit = (overrides: Partial<HabitOverviewSummary> = {}): HabitOverviewSumm
   color: '#7c3aed',
   period: 'day',
   targetCount: 1,
+  dailyAmount: 1,
   position: 0,
   archivedAt: null,
   current: tally(TODAY, '2026-09-18'),
@@ -43,7 +44,16 @@ const habit = (overrides: Partial<HabitOverviewSummary> = {}): HabitOverviewSumm
   ...overrides,
 });
 
-const entry = (day: string, status: string) => ({ id: `entry-${day}`, day, status, note: null, partial: false });
+const entry = (day: string, status: string, overrides: Partial<HabitEntrySummary> = {}): HabitEntrySummary => ({
+  id: `entry-${day}`,
+  day,
+  status,
+  note: null,
+  partial: false,
+  amount: 1,
+  dailyAmount: 1,
+  ...overrides,
+});
 
 const row = (name: string) => screen.getByRole('listitem', { name });
 const square = (name: string, day: string) =>
@@ -111,6 +121,13 @@ describe('HabitOverview', () => {
     expect(square('Read', '2026-09-16').getAttribute('aria-label')).toMatch(/— kept$/);
     // Counted whole: two kept days, not one and a half.
     expect(within(row('Read')).getByLabelText('2 days kept')).toBeTruthy();
+  });
+
+  it('says how much of a day’s amount was done, measured against what that day asked', () => {
+    // The habit asks for 10 now; the day was written when it asked for 8.
+    const short = entry('2026-09-15', 'done', { amount: 5, dailyAmount: 8, partial: true });
+    renderOverview([habit({ dailyAmount: 10, rangeEntries: [short] })]);
+    expect(square('Read', '2026-09-15').getAttribute('aria-label')).toMatch(/— kept, 5 of 8, smaller version$/);
   });
 
   it('refuses a day that has not happened', () => {

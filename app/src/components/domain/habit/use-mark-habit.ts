@@ -23,8 +23,17 @@ import { type DayStatus, ENTRY_DONE } from './types';
 export interface Marker {
   /** `null` clears the day, leaving it untouched rather than missed. */
   setDay: (habitId: string, day: string, status: DayStatus) => Promise<void>;
-  /** Keeps the day as a smaller version, with what was done instead. Resolves to whether it was recorded. */
-  markSmaller: (habitId: string, day: string, note: string | null) => Promise<boolean>;
+  /**
+   * Keeps the day as a smaller version, with what was done instead. `amount` keeps a short day's
+   * amount, so rewording the note on 5 of 8 is still 5. Resolves to whether it was recorded.
+   */
+  markSmaller: (habitId: string, day: string, note: string | null, amount?: number) => Promise<boolean>;
+  /**
+   * Records how much of the habit the day held, as a total: 0 clears the day. The note is sent
+   * again because every mark rewrites it, and `partial` is left to the server, which reads it
+   * off the amount.
+   */
+  setAmount: (habitId: string, day: string, amount: number, note: string | null) => Promise<void>;
   isPending: boolean;
   error: string | null;
 }
@@ -63,7 +72,13 @@ type DayVariables = { habitId: string; day: string };
 type SharedVariables = { today: string };
 
 /** What a mark says about the day beyond which day it is. */
-type MarkVariables = { status?: string | null; note?: string | null; partial?: boolean | null };
+type MarkVariables = {
+  status?: string | null;
+  note?: string | null;
+  partial?: boolean | null;
+  /** How much the day held, as a total. Left out, a kept day is the habit's whole daily amount. */
+  amount?: number | null;
+};
 
 /** The two mutations a screen records a day with. Their results differ; what they are sent does not. */
 interface MarkDocuments<TShared extends SharedVariables> {
@@ -93,8 +108,28 @@ function useMarker<TShared extends SharedVariables>(documents: MarkDocuments<TSh
           : mark({ variables: { habitId, day, status, ...shared } }),
       );
     },
-    markSmaller: (habitId, day, note) =>
-      run(() => mark({ variables: { habitId, day, status: ENTRY_DONE, note, partial: true, ...shared } })),
+    markSmaller: (habitId, day, note, amount) =>
+      run(() =>
+        mark({
+          // Left out rather than sent as null when there is none: a mark with no amount is a whole day.
+          variables: {
+            habitId,
+            day,
+            status: ENTRY_DONE,
+            note,
+            partial: true,
+            ...(amount === undefined ? {} : { amount }),
+            ...shared,
+          },
+        }),
+      ),
+    setAmount: async (habitId, day, amount, note) => {
+      await run(() =>
+        amount === 0
+          ? clear({ variables: { habitId, day, ...shared } })
+          : mark({ variables: { habitId, day, status: ENTRY_DONE, amount, note, partial: false, ...shared } }),
+      );
+    },
   };
 }
 

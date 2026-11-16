@@ -20,6 +20,7 @@ const habit = (overrides: Partial<HabitSummary> = {}): HabitSummary => ({
   color: '#7c3aed',
   period: 'day',
   targetCount: 1,
+  dailyAmount: 1,
   position: 0,
   archivedAt: null,
   current: period(TODAY, '2026-09-18'),
@@ -38,12 +39,15 @@ const period = (start: string, end: string, overrides: Partial<HabitPeriodSummar
   ...overrides,
 });
 
-const entry = (day: string, status: string): HabitEntrySummary => ({
+const entry = (day: string, status: string, overrides: Partial<HabitEntrySummary> = {}): HabitEntrySummary => ({
   id: `entry-${day}`,
   day,
   status,
   note: null,
   partial: false,
+  amount: 1,
+  dailyAmount: 1,
+  ...overrides,
 });
 
 /**
@@ -170,6 +174,18 @@ describe('HabitGrid squares', () => {
       ['2026-09-16', 'skipped'],
       ['2026-09-15', null],
     ]);
+  });
+
+  it('says how much of a day’s amount each kept day held', () => {
+    renderGrid({
+      habit: habit({ dailyAmount: 8 }),
+      entries: [
+        entry('2026-09-15', 'done', { amount: 5, dailyAmount: 8, partial: true }),
+        entry('2026-09-16', 'done', { amount: 9, dailyAmount: 8 }),
+      ],
+    });
+    expect(square('2026-09-15')).toHaveAccessibleName(/— kept, 5 of 8, smaller version$/);
+    expect(square('2026-09-16')).toHaveAccessibleName(/— kept, 8 of 8$/);
   });
 
   it('stops taking clicks while a mark is in flight', async () => {

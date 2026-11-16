@@ -1,8 +1,9 @@
 import { Pressable } from 'react-native';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { describeAmount } from '@/lib/cadence';
 import { formatDayLong } from '@/lib/periods';
 import { cn } from '@/lib/utils';
-import { type DayStatus, ENTRY_DONE, ENTRY_SKIPPED, type EntryStatus, nextStatus } from './types';
+import { type DayMeasure, type DayStatus, ENTRY_DONE, ENTRY_SKIPPED, type EntryStatus, nextStatus } from './types';
 
 const STATE_OF = {
   [ENTRY_DONE]: 'kept',
@@ -14,17 +15,26 @@ const STATE_OF = {
  *
  * @param status - What the day is.
  * @param isFuture - Whether the day has not happened yet.
- * @param isSmaller - Whether the day was kept as a smaller version.
+ * @param [measure] - How much the day held, and whether it was a smaller version.
  * @returns The words.
  */
-function describeState(status: DayStatus, isFuture: boolean, isSmaller: boolean): string {
+function describeState(status: DayStatus, isFuture: boolean, measure: DayMeasure | undefined): string {
   if (isFuture) {
     return 'to come';
   }
   if (status === null) {
     return 'not kept';
   }
-  return isSmaller ? `${STATE_OF[status]}, smaller version` : STATE_OF[status];
+  if (status === ENTRY_SKIPPED || measure === undefined) {
+    return STATE_OF[status];
+  }
+  return [
+    STATE_OF[status],
+    measure.dailyAmount > 1 && describeAmount(measure.amount, measure.dailyAmount),
+    measure.partial && 'smaller version',
+  ]
+    .filter(Boolean)
+    .join(', ');
 }
 
 /**
@@ -42,7 +52,7 @@ export function DaySquare({
   color,
   isToday,
   isFuture,
-  isSmaller = false,
+  measure,
   disabled,
   onValueChange,
 }: {
@@ -53,14 +63,17 @@ export function DaySquare({
   isToday: boolean;
   /** A day that has not happened yet: drawn, so the period keeps its shape, but not pressable. */
   isFuture: boolean;
-  /** A kept day that was a smaller version. Said in the label only: it counts whole, so it is drawn whole. */
-  isSmaller?: boolean;
+  /**
+   * How much a kept day held, and whether it was a smaller version. Said in the label only: the
+   * day counts whole, so it is drawn whole.
+   */
+  measure?: DayMeasure;
   disabled?: boolean;
   /** Called with what the day should become — the cycle is this component's. */
   onValueChange: (value: DayStatus) => void;
 }) {
   // The outline is the only other thing that says which square is today, and it cannot be heard.
-  const label = `${formatDayLong(day)}${isToday ? ', today' : ''} — ${describeState(value, isFuture, isSmaller)}`;
+  const label = `${formatDayLong(day)}${isToday ? ', today' : ''} — ${describeState(value, isFuture, measure)}`;
 
   return (
     <Tooltip>

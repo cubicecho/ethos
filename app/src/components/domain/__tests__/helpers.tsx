@@ -33,15 +33,19 @@ export const tally = (overrides: Partial<HabitPeriodSummary> = {}): HabitPeriodS
  *
  * @param day - The day.
  * @param status - What the day says.
- * @returns The entry.
+ * @param [overrides] - The fields a test is about.
+ * @returns The entry: a whole day of a habit that asks for one.
  */
-export const entry = (day: string, status: string): HabitEntrySummary => ({
+export const entry = (day: string, status: string, overrides: Partial<HabitEntrySummary> = {}): HabitEntrySummary => ({
   __typename: 'HabitEntry',
   id: `entry-${day}`,
   day,
   status,
   note: null,
   partial: false,
+  amount: 1,
+  dailyAmount: 1,
+  ...overrides,
 });
 
 /**
@@ -59,6 +63,7 @@ export const habit = (overrides: Partial<HabitSummary> = {}): HabitSummary => ({
   color: '#7c3aed',
   period: 'day',
   targetCount: 1,
+  dailyAmount: 1,
   position: 0,
   archivedAt: null,
   current: tally(),

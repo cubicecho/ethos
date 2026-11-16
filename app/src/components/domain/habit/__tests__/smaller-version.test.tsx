@@ -15,6 +15,8 @@ const entry = (day: string, overrides: Partial<HabitEntrySummary> = {}): HabitEn
   status: 'done',
   note: null,
   partial: false,
+  amount: 1,
+  dailyAmount: 1,
   ...overrides,
 });
 
@@ -80,5 +82,20 @@ describe('SmallerVersions', () => {
     expect(within(items[0]).getByText(formatDayLong('2026-09-16'))).toBeTruthy();
     expect(within(items[0]).getByText('One page')).toBeTruthy();
     expect(within(items[1]).getByText('No note.')).toBeTruthy();
+  });
+
+  it('says how much a short day held, so one with no note still says something', () => {
+    render(
+      <SmallerVersions
+        entries={[
+          entry('2026-09-16', { partial: true, amount: 5, dailyAmount: 8 }),
+          entry('2026-09-15', { partial: true, amount: 9, dailyAmount: 8, note: 'Tap water' }),
+        ]}
+      />,
+    );
+    const items = screen.getAllByRole('listitem');
+    expect(items[0]).toHaveTextContent('5 of 8');
+    expect(items[1]).toHaveTextContent('8 of 8');
+    expect(items[1]).toHaveTextContent('Tap water');
   });
 });

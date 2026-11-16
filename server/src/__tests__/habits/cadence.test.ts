@@ -1,7 +1,15 @@
 import * as dbSchema from '@ethos/db/schema';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { maxAmount as appMaxAmount } from '../../../../app/src/lib/cadence.ts';
+import { HABIT_DEFAULTS } from '../../core/defaults.ts';
 import { ErrorCode } from '../../core/errors.ts';
-import { assertTargetsFitPeriods, describeCadenceLimit, maxTargetFor } from '../../habits/cadence.ts';
+import {
+  assertTargetsFitPeriods,
+  describeAmountLimit,
+  describeCadenceLimit,
+  maxAmount,
+  maxTargetFor,
+} from '../../habits/cadence.ts';
 import { closeTestDb, createTestDb, createUser, resetTestDb, type TestDb } from '../helpers.ts';
 
 let db: TestDb;
@@ -44,6 +52,25 @@ describe('describeCadenceLimit', () => {
   it('names the ceiling it is describing', () => {
     expect(describeCadenceLimit('week')).toContain('7');
     expect(describeCadenceLimit('month')).toContain('28');
+  });
+});
+
+describe('maxAmount', () => {
+  it('is the configured cap, high enough for a step count', () => {
+    expect(maxAmount()).toBe(HABIT_DEFAULTS.maxAmount);
+    expect(maxAmount()).toBeGreaterThanOrEqual(10_000);
+  });
+
+  it('is the same number the app refuses past', () => {
+    // The form refuses an amount while it is typed, so its copy of the cap has
+    // to agree with the one that decides.
+    expect(appMaxAmount()).toBe(maxAmount());
+  });
+});
+
+describe('describeAmountLimit', () => {
+  it('names the range it is describing', () => {
+    expect(describeAmountLimit()).toContain(maxAmount().toLocaleString('en-US'));
   });
 });
 

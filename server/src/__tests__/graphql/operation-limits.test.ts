@@ -63,6 +63,7 @@ const VARIABLES = {
   status: 'done',
   note: null,
   partial: false,
+  amount: null,
   email: 'someone@example.com',
   token: 'a-token',
 };
