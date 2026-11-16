@@ -1,5 +1,6 @@
 import { useQuery } from '@apollo/client';
 import { CardLayout } from '@/components/card-layout';
+import { ApiKeySettings } from '@/components/domain/api-key/api-key-settings';
 import { LoadFailure } from '@/components/domain/query/load-state';
 import { SsoSettings } from '@/components/domain/sso/sso-settings';
 import { PageLayout } from '@/components/page-layout';
@@ -42,6 +43,7 @@ export default function SettingsScreen() {
               )
             }
           />
+          <ApiKeySettings />
           {me?.isAdmin ? (
             <CardLayout
               level={2}

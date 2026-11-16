@@ -122,6 +122,12 @@ says so in its log, and nobody can sign in. A sign-in link works once, lasts 15
 minutes, and is never written to the log or returned by the API. Sessions last
 30 days and are rows in the database, so signing out ends one for good.
 
+Another program — a calendar, a dashboard, an MCP client — calls Ethos with an
+API key made in Settings, sent as `x-api-key`, to `/graphql` or `/mcp`. A key
+acts as the person who made it, is shown once and stored only as a hash, and
+stops working the moment it is revoked. It cannot make, list or revoke keys
+itself.
+
 ## Before you expose it
 
 Registration is **open**: any address that completes a sign-in gets an account.

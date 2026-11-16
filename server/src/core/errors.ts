@@ -22,11 +22,12 @@ const withCode =
 export const badInput = withCode(ErrorCode.BadUserInput);
 /** Missing, or someone else's. Deliberately one code. */
 export const notFound = withCode(ErrorCode.NotFound);
-/** Nobody is signed in, or the session has run out. */
+/** Nobody is signed in, the session has run out, or the API key was revoked or has expired. */
 export const unauthenticated = withCode(ErrorCode.Unauthenticated);
 /**
- * The caller may not change something about the instance itself, such as how it signs people in.
- * Never for a row: a row the caller may not touch is NOT_FOUND, so its existence is not confirmed.
+ * The caller may not change something about the instance itself, such as how it signs people in,
+ * or is an API key reaching for what only a person may do. Never for a row: a row the caller may
+ * not touch is NOT_FOUND, so its existence is not confirmed.
  */
 export const forbidden = withCode(ErrorCode.Forbidden);
 /** The request is fine, but the instance is in a state that refuses it, such as pairing twice. */

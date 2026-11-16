@@ -9,16 +9,19 @@ import { GraphQLError, type GraphQLSchema } from 'graphql';
 import { z } from 'zod';
 import { secureLocalNet } from '../core/config.ts';
 import type { Context } from '../core/context.ts';
-import { badInput } from '../core/errors.ts';
+import { badInput, notFound } from '../core/errors.ts';
 import { parseOrThrow } from '../core/validation.ts';
+import { refuseApiKey, requireKeyManager } from './api-keys.ts';
 import { createAuth, sendsMagicLinks, sessionUserId } from './better-auth.ts';
 import { AuthFlow, throttle } from './throttle.ts';
 
 // better-auth's own endpoints, served as GraphQL by @cubicecho/graphql-better-auth:
-// signing in, and a person's sessions. Fields, arguments and types are read off
-// the auth config, so a better-auth upgrade moves them with it. What Ethos adds
-// is in the `operations` below: the throttle, SECURE_LOCAL_NET, and errors that
-// never sign anyone out.
+// signing in, a person's sessions, and minting and revoking API keys. Fields,
+// arguments and types are read off the auth config, so a better-auth upgrade
+// moves them with it. What Ethos adds is in the `operations` below: the
+// throttle, SECURE_LOCAL_NET, errors that never sign anyone out, and keys that
+// only a person on a session can manage. Every one of them is a person's, so a
+// request on an API key is refused before any runs.
 
 /** The better-auth endpoints served, by name. */
 export const BETTER_AUTH_OPERATIONS = [
@@ -31,6 +34,8 @@ export const BETTER_AUTH_OPERATIONS = [
   'revokeSession',
   'revokeSessions',
   'revokeOtherSessions',
+  'createApiKey',
+  'deleteApiKey',
 ];
 
 /** How an account made by a SECURE_LOCAL_NET sign-in is labelled in better-auth's hooks. */
@@ -43,6 +48,9 @@ const BAD_LINK = 'Invalid or expired sign-in link.';
 const BAD_SSO_TOKEN = 'Invalid or expired sign-in. Sign in again.';
 
 const emailInput = z.email('Enter a valid email address.');
+
+/** Any uuid's shape. A key id that is not one names no key, and must not reach Postgres as one. */
+const keyIdInput = z.guid();
 
 const NULLABLE_STRING: JsonSchema = { type: ['string', 'null'] };
 
@@ -185,6 +193,48 @@ const signOut: OperationOptions<Context> = {
 };
 
 /**
+ * Mints a key for the caller. Offers a name and a lifetime, and nothing better-auth keeps
+ * for the server: the owner, limits, permissions. The key is in this answer and nowhere else.
+ */
+const createApiKey: OperationOptions<Context> = {
+  omitArgs: [
+    'configId',
+    'prefix',
+    'remaining',
+    'metadata',
+    'refillAmount',
+    'refillInterval',
+    'rateLimitTimeWindow',
+    'rateLimitMax',
+    'rateLimitEnabled',
+    'permissions',
+    'userId',
+    'organizationId',
+  ],
+  around: (call, next) => {
+    requireKeyManager(call.context);
+    const name = typeof call.body.name === 'string' ? call.body.name.trim() : '';
+    if (name === '') {
+      throw badInput('A key needs a name.');
+    }
+    call.body.name = name;
+    return next();
+  },
+};
+
+/** Revokes one of the caller's keys. Someone else's, and one that never was, are both NOT_FOUND. */
+const deleteApiKey: OperationOptions<Context> = {
+  omitArgs: ['configId'],
+  around: (call, next) => {
+    requireKeyManager(call.context);
+    if (keyIdInput.safeParse(call.body.keyId).success === false) {
+      throw notFound('API key not found');
+    }
+    return next();
+  },
+};
+
+/**
  * Adds better-auth's endpoints to the schema. Each call goes to the request's
  * own auth instance with the request's headers, which is where better-auth
  * finds the session.
@@ -202,7 +252,9 @@ export function applyBetterAuthExtension(schema: GraphQLSchema, db: DB): GraphQL
     include: BETTER_AUTH_OPERATIONS,
     auth: (context) => context.auth,
     headers: (context) => context.headers,
-    operations: { signInMagicLink, magicLinkVerify, verifyOneTimeToken, signOut },
+    // A key has no session, must not reach the ones its owner has, and must not mint its own successor.
+    before: ({ context }) => refuseApiKey(context),
+    operations: { signInMagicLink, magicLinkVerify, verifyOneTimeToken, signOut, createApiKey, deleteApiKey },
   });
   return applyBetterAuthGraphQL(schema, built);
 }

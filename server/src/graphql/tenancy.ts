@@ -24,8 +24,8 @@ export const USER_OWNED_TABLES = ['habits', 'habitEntries'] as const;
 /** Every table drizzle-graphql will generate fields for. */
 export const ALL_TABLES = ['users', ...USER_OWNED_TABLES] as const;
 
-/** better-auth's tables: sessions, provider accounts and pending sign-in links. */
-export const AUTH_TABLES = ['sessions', 'accounts', 'verifications'] as const;
+/** better-auth's tables: sessions, provider accounts, pending sign-in links and API keys' hashes. */
+export const AUTH_TABLES = ['sessions', 'accounts', 'verifications', 'apikeys'] as const;
 
 /** Tables only the server reads: the OIDC pairing holds a client secret and a registration token. */
 export const SERVER_TABLES = ['oidcSettings'] as const;

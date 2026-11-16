@@ -44,7 +44,7 @@ ethos/
 │   │   │   ├── app-form.tsx # `useAppForm`: cubeui's `createAppForm`, plus the colour field
 │   │   │   ├── app-icons.tsx, app-icons.web.tsx  # The icons cubeui's set does not carry
 │   │   │   ├── page-layout.tsx, card-layout.tsx, section.tsx, sidebar.tsx, …  # cubeui layouts
-│   │   │   └── domain/      # habit/, navigation/ (the app's rail), query/ (`LoadState`), sso/ (pairing)
+│   │   │   └── domain/      # habit/, navigation/ (the app's rail), query/ (`LoadState`), sso/ (pairing), api-key/ (Settings' keys)
 │   │   └── lib/             # apollo, auth, cache writers, periods, cadence, graphql documents, cn()
 │   ├── public/index.html    # HTML shell; applies the theme before first paint
 │   ├── app.json             # Expo config
@@ -77,10 +77,11 @@ ethos/
 │       │   ├── write-guards.ts  # onWrite checks the row scope cannot express
 │       │   └── loaders.ts       # Per-request DataLoaders
 │       ├── auth/            # Signing in, and who a request is
-│       │   ├── better-auth.ts   # The better-auth instance, and who a request's session belongs to
+│       │   ├── better-auth.ts   # The better-auth instance, and who a request is: an API key, then a session
 │       │   ├── auth-host.ts     # Holds the current instance, and rebuilds it when the provider changes
 │       │   ├── admin.ts         # The instance's admin: the first account
-│       │   ├── endpoints.ts     # better-auth's own endpoints as GraphQL: signInMagicLink, magicLinkVerify, sessions, signOut
+│       │   ├── endpoints.ts     # better-auth's own endpoints as GraphQL: signInMagicLink, magicLinkVerify, sessions, signOut, API keys
+│       │   ├── api-keys.ts      # SDL extension: apiKeys, and that only a session manages keys
 │       │   ├── resolvers.ts     # SDL extension: authConfig, and requireAuth
 │       │   ├── email.ts         # Sends a sign-in link through SMTP_URL
 │       │   ├── throttle.ts      # Which sign-in flows are limited, and by what key
@@ -282,15 +283,35 @@ projects the same schema instance as MCP tools, and `createContextFactory` in
 caller is read and no second auth path to keep in step. It is read-only
 (`includeMutations: false`) and off unless `MCP_ENABLED` is set; switched off,
 the route answers its own 404 so the web client's fallback does not hand an MCP
-client a page. Until API keys exist the only credential is a session token.
+client a page. A client signs in with an API key as `x-api-key`, or a session
+token as `Authorization: Bearer`; `apiKeys` is left out too, since keys are a
+person's to manage in Settings.
+
+**An API key is its owner, except where keys and sessions are concerned.** Keys
+are better-auth's `@better-auth/api-key` plugin, as in telos and philotes: minted
+with the `ethos_` prefix, shown once, stored as a hash in `apikeys` (one of
+`AUTH_TABLES`), and revoked by deleting the row. `readCaller` in
+`auth/better-auth.ts` reads `x-api-key` before `Authorization`, and a key that
+does not verify is nobody even beside a live session, so a revoked or expired key
+hears `UNAUTHENTICATED` rather than acting as whoever else the headers name. A key
+gets its owner's `userId` and so the same row scope as a session, for reads and
+writes alike; `context.credential` is what tells the two apart. Minting and
+revoking are better-auth's `createApiKey` and `deleteApiKey`, served through
+`endpoints.ts` like the rest, and listing is the hand-written `apiKeys`. Every
+better-auth operation refuses a key in its `before`, and `apiKeys` does in
+`requireKeyManager`: a key that could mint keys could mint its own successor. The
+plugin's own rate limit (ten requests a day) is off, because anything that polls
+would hit it by breakfast.
 
 **Report `NOT_FOUND`, never `FORBIDDEN`.** "You may not touch this" confirms the
-row exists, which is itself something the caller is not entitled to know. The one
-`FORBIDDEN` is `pairSso`/`unpairSso`: they are about the instance, not a row, and
-there is nothing to hide about whether an instance exists.
+row exists, which is itself something the caller is not entitled to know. The
+`FORBIDDEN`s are `pairSso`/`unpairSso`, which are about the instance, not a row,
+and an API key reaching for keys, sessions or sign-in, which is about the
+credential: in neither is there a row whose existence would be given away.
 
 **`UNAUTHENTICATED` means the session expired.** The client drops its token on it
-and redirects to `/login`. A bad magic link is `BAD_USER_INPUT` — it must not
+and redirects to `/login`. For a program on an API key it means the key was
+revoked or ran out. A bad magic link is `BAD_USER_INPUT` — it must not
 sign anyone out.
 
 **The palette is cubeui's.** `app/cubeui-tokens.css` comes from the `tokens`
@@ -341,7 +362,9 @@ are decided by the server from entries the list screens do not hold, and
 answering on the client would mean reimplementing `server/src/habits/tallies.ts`
 and the skip cap in the browser and keeping them in step. The controls
 disable while the mutation is in flight instead. A create is still optimistic —
-what a new habit's fields are is not in question.
+what a new habit's fields are is not in question. API keys are the other
+exception: the server mints a key and its id together, so a new key refetches
+the list, and a revoked one leaves the cache once the server has said it is gone.
 
 **An empty state means the server said "none", never that we failed to ask.**
 A list renders `LoadState` from `domain/query/load-state.tsx` (cubeui's `LoadState` over
@@ -471,7 +494,7 @@ one of these has found a decision, not a mistake.
   with session tokens, so `/mcp` leaves them out. The exception is the OIDC sign-in in
   `http/sso.ts`, because a browser has to be sent to the provider and back; it
   ends in a one-time token the app swaps for a bearer session
-  (`verifyOneTimeToken`), never in a cookie. better-auth's three tables are
+  (`verifyOneTimeToken`), never in a cookie. better-auth's four tables are
   `AUTH_TABLES` and `oidc_settings` is `SERVER_TABLES`, both in `exclude` in
   `tenancy.ts`, which is why they need no `scope`.
 - **An OIDC provider can be paired from the app.** Pasting a provider's setup

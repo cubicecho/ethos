@@ -3,7 +3,7 @@ import type { Request } from 'express';
 import { type GraphQLSchema, NoSchemaIntrospectionCustomRule } from 'graphql';
 import { createYoga, type Plugin } from 'graphql-yoga';
 import type { AuthHost } from '../auth/auth-host.ts';
-import { sessionUserId } from '../auth/better-auth.ts';
+import { readCaller } from '../auth/better-auth.ts';
 import type { RateLimiter } from '../auth/rate-limit.ts';
 import { isProduction } from '../core/config.ts';
 import { type Context, UNKNOWN_IP } from '../core/context.ts';
@@ -35,12 +35,14 @@ export function createContextFactory({ db, authHost, limiter }: ContextDeps): Co
   return async (headers, ip = UNKNOWN_IP) => {
     // Asked per request: pairing a provider swaps the instance while the server runs.
     const auth = authHost.current();
+    const { userId, credential } = await readCaller(auth, headers);
     return {
       db,
       auth,
       authHost,
       limiter,
-      userId: await sessionUserId(auth, headers),
+      userId,
+      credential,
       headers,
       ip,
       loaders: createLoaders(db),
